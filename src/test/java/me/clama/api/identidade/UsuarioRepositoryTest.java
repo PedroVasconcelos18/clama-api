@@ -2,7 +2,6 @@ package me.clama.api.identidade;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 import me.clama.api.BancoDeTeste;
 import me.clama.api.comum.cripto.CriptoConfig;
@@ -30,7 +29,6 @@ class UsuarioRepositoryTest {
         Usuario u = new Usuario();
         u.setPassword("x");
         u.setEmail(email);
-        u.setDateJoined(OffsetDateTime.now());
         u.setCpfCnpj(cpf);
         return u;
     }
@@ -65,5 +63,40 @@ class UsuarioRepositoryTest {
         repo.saveAndFlush(novo("Ana@X.com", null));
         List<Usuario> r = repo.buscarPorEmailIgnorandoCaixa("ana@x.com");
         assertThat(r).hasSize(1);
+    }
+
+    @Test
+    void novoUsuarioTemDefaultsDoDjango() {
+        Usuario u = new Usuario();
+        u.setEmail("d@x.com");
+        repo.saveAndFlush(u);
+        jdbc.queryForMap("SELECT * FROM users_user WHERE id=?", u.getId()).forEach((k, v) -> {
+            switch (k) {
+                case "nome_format_blog" -> assertThat(v).isEqualTo("compacto");
+                case "date_joined" -> assertThat(v).isNotNull();
+                case "is_active" -> assertThat(v).isEqualTo(true);
+                case "is_staff", "is_superuser", "is_clama_admin", "force_change_password" -> assertThat(v).as(k).isEqualTo(false);
+                case "name", "nome_completo", "sexo", "password" -> assertThat(v).as(k).isEqualTo("");
+                case "last_login", "idade", "freemium_used_at", "cpf_cnpj", "telefone" -> assertThat(v).as(k).isNull();
+                default -> { }
+            }
+        });
+    }
+
+    @Test
+    void atualizarSoCpfRecalculaHashes() {
+        Usuario u = repo.saveAndFlush(novo("a@x.com", "123.456.789-09"));
+        String emailHash = u.getEmailHash();
+        u.setCpfCnpj("987.654.321-00");
+        repo.flush();
+        String col = jdbc.queryForObject("SELECT cpf_hash FROM users_user WHERE id=?", String.class, u.getId());
+        assertThat(col).isEqualTo(hash.hashCpfCnpj("987.654.321-00"));
+        assertThat(u.getEmailHash()).isEqualTo(emailHash).isEqualTo(hash.hashEmail("a@x.com"));
+    }
+
+    @Test
+    void cpfNuloGeraHashDeVazio() {
+        Usuario u = repo.saveAndFlush(novo("n@x.com", null));
+        assertThat(u.getCpfHash()).isEqualTo(hash.hashCpfCnpj(""));
     }
 }

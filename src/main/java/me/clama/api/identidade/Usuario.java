@@ -59,7 +59,7 @@ public class Usuario {
     private boolean active = true;
 
     @Column(name = "date_joined")
-    private OffsetDateTime dateJoined;
+    private OffsetDateTime dateJoined = OffsetDateTime.now();
 
     @Column(name = "nome_completo")
     private String nomeCompleto = "";
@@ -82,7 +82,7 @@ public class Usuario {
     private boolean forceChangePassword;
 
     @Column(name = "nome_format_blog")
-    private String nomeFormatBlog = "";
+    private String nomeFormatBlog = "compacto";
 
     @Column(name = "email_hash")
     private String emailHash = "";
