@@ -167,9 +167,13 @@ class AuthCustomerTest {
         assertThat(r.statusCode()).isEqualTo(400);
         assertThat(corpo(r)).isEqualTo(Map.of("non_field_errors",
                 List.of("Dado inválido. Esperava um dicionário, mas recebeu list.")));
-        r = post("/api/customer/auth/login/", "{");
-        assertThat(r.statusCode()).isEqualTo(400);
-        assertThat((String) ((Map<?, ?>) corpo(r)).get("detail")).startsWith("JSON parse error - ");
+        // nada do Jackson/Java vaza na mensagem, seja qual for o defeito do JSON
+        for (String quebrado : List.of("{", "{\"email\": }", "{\"email\": \"a\"} lixo", "\u0000")) {
+            limiter.limpar(); // login e 5/min por IP
+            r = post("/api/customer/auth/login/", quebrado);
+            assertThat(r.statusCode()).as(quebrado).isEqualTo(400);
+            assertThat(corpo(r)).as(quebrado).isEqualTo(Map.of("detail", "JSON parse error - Invalid JSON"));
+        }
     }
 
     @Test

@@ -18,6 +18,7 @@ import tools.jackson.databind.ObjectMapper;
 @RestControllerAdvice
 public class PastoralExceptionHandler {
     private static final ObjectMapper JSON = new ObjectMapper();
+    static final String JSON_INVALIDO = "JSON parse error - Invalid JSON";
 
     @ExceptionHandler(PastoralException.class)
     ResponseEntity<Map<String, Object>> pastoral(PastoralException e) {
@@ -38,11 +39,13 @@ public class PastoralExceptionHandler {
         return ResponseEntity.badRequest().body(e.erros());
     }
 
-    /** ParseError do DRF. O texto do erro e do parser (Jackson aqui, json do Python la), so o formato bate. */
+    /**
+     * ParseError do DRF ("JSON parse error - " + erro do json do Python). Texto fixo depois do prefixo: a mensagem do
+     * Jackson traz nome de classe e assinatura Java. Corpo vazio nao chega aqui (vira {} no CamposDrf).
+     */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ResponseEntity<Map<String, String>> jsonInvalido(HttpMessageNotReadableException e) {
-        Throwable causa = e.getMostSpecificCause();
-        return ResponseEntity.badRequest().body(Map.of("detail", "JSON parse error - " + causa.getMessage()));
+        return ResponseEntity.badRequest().body(Map.of("detail", JSON_INVALIDO));
     }
 
     /** Para quem responde fora do Spring MVC (filtros de seguranca). */
