@@ -18,4 +18,4 @@ spring:
 clama:
   fila:
     polling: 2s
-    heartbeat: 1m
+    heartbeat: 20s # x6 perdidos (default do db-scheduler) = execucao morta retomada em ~2 min

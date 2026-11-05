@@ -159,6 +159,7 @@ class RedacaoSentryTest {
 		SentryEvent ev = TRANSPORT.eventos.get(0);
 		assertThat(ev.getExceptions().get(0).getValue()).isEqualTo("nao enviou para [EMAIL_REDACTED]");
 		assertThat(ev.getTag("job")).isEqualTo("job-que-falha");
+		assertThat(ev.getTag("job_instancia")).matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
 	}
 
 	@Autowired CapturaDeFiltro filtro;

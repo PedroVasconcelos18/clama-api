@@ -3,6 +3,7 @@ package me.clama.api.comum.fila;
 import com.github.kagkarlsson.scheduler.Scheduler;
 import com.github.kagkarlsson.scheduler.SchedulerClient;
 import com.github.kagkarlsson.scheduler.serializer.Serializer;
+import com.github.kagkarlsson.scheduler.task.ExecutionComplete;
 import com.github.kagkarlsson.scheduler.task.ExecutionContext;
 import com.github.kagkarlsson.scheduler.task.FailureHandler;
 import com.github.kagkarlsson.scheduler.task.Task;
@@ -29,13 +30,15 @@ import tools.jackson.databind.ObjectMapper;
 @Configuration(proxyBeanMethods = false)
 public class FilaConfig {
 	private static final Logger LOG = LoggerFactory.getLogger(FilaConfig.class);
+	/** Redeploy no Railway: o SIGKILL vem depois do draining time, que precisa ser >= 30 s (Etapa 9). */
+	static final Duration ESPERA_NO_SHUTDOWN = Duration.ofSeconds(25);
 
 	/** Unico observador: loga e manda pro Sentry (que e no-op sem DSN). */
 	@Bean
 	ObservadorDeFalhaDeJob observadorDeFalhaDeJob() {
-		return (tipo, erro) -> {
-			LOG.error("Job {} falhou definitivamente", tipo, erro);
-			SentryConfig.capturar("job", tipo, erro);
+		return (tipo, instancia, erro) -> {
+			LOG.error("Job {} ({}) falhou definitivamente", tipo, instancia, erro);
+			SentryConfig.capturar("job", tipo, Map.of("job_instancia", instancia), erro);
 		};
 	}
 
@@ -67,13 +70,13 @@ public class FilaConfig {
 
 	private static <P> OneTimeTask<P> tarefa(TipoDeJob<P> t, ObservadorDeFalhaDeJob observador) {
 		FailureHandler<P> falha = FailureHandler.<P>maxRetries(t.maxRetentativas())
-				.retryEvery(t.esperaEntreTentativas())
-				.thenRemove(c -> observador.falhou(t.nome(), c.getCause().orElse(null)));
+				.withBackoff(t.esperaEntreTentativas(), t.fatorDeBackoff())
+				.thenRemove(c -> desistiu(t, c, observador));
 		return new OneTimeTask<>(t.nome(), t.payload(), falha) {
 			@Override
 			public void executeOnce(TaskInstance<P> instance, ExecutionContext ctx) {
 				try {
-					t.executar(instance.getData());
+					t.executar(instance.getData(), ctx.getExecution().consecutiveFailures);
 				} catch (RuntimeException e) {
 					throw e;
 				} catch (Exception e) {
@@ -81,6 +84,19 @@ public class FilaConfig {
 				}
 			}
 		};
+	}
+
+	/** A linha ja foi removida: nada aqui faz o job rodar de novo. */
+	@SuppressWarnings("unchecked")
+	static <P> void desistiu(TipoDeJob<P> t, ExecutionComplete c, ObservadorDeFalhaDeJob observador) {
+		Throwable erro = c.getCause().orElse(null);
+		TaskInstance<P> instancia = (TaskInstance<P>) c.getExecution().taskInstance;
+		try {
+			t.esgotou(instancia.getData(), erro);
+		} catch (RuntimeException e) {
+			LOG.error("Job {} ({}): esgotou() falhou", t.nome(), instancia.getId(), e);
+		}
+		observador.falhou(t.nome(), instancia.getId(), erro);
 	}
 
 	/** Usa a conexao da transacao Spring corrente: o INSERT entra no commit/rollback do chamador. */
@@ -101,7 +117,8 @@ public class FilaConfig {
 		return Scheduler.create(ds, List.<Task<?>>copyOf(tarefas.porNome().values()))
 				.threads(4)
 				.pollingInterval(polling)
-				.heartbeatInterval(heartbeat)
+				.heartbeatInterval(heartbeat) // 6 heartbeats perdidos (default) = execucao morta, retomada por outra instancia
+				.shutdownMaxWait(ESPERA_NO_SHUTDOWN)
 				.serializer(serializer)
 				.build();
 	}
