@@ -7,18 +7,22 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 import me.clama.api.comum.agenda.TarefaAgendada.ResultadoDaTarefa;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.mock.env.MockEnvironment;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.Trigger;
-import org.springframework.scheduling.support.CronExpression;
+import org.springframework.scheduling.support.SimpleTriggerContext;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class AgendaTest {
 	static class Fake implements TarefaAgendada {
@@ -98,11 +102,30 @@ class AgendaTest {
 
 	@Test
 	void cronUsaFusoDeSaoPaulo() {
-		var cron = CronExpression.parse("0 0 4 * * *");
-		var proxima = cron.next(ZonedDateTime.of(2026, 11, 5, 12, 0, 0, 0, AgendaConfig.FUSO));
-		assertThat(proxima.getHour()).isEqualTo(4);
-		assertThat(proxima.getZone()).isEqualTo(ZoneId.of("America/Sao_Paulo"));
-		assertThat(proxima.toInstant()).isEqualTo(ZonedDateTime.of(2026, 11, 6, 7, 0, 0, 0, ZoneId.of("UTC")).toInstant());
+		// CronTrigger sem zona pega o fuso da JVM na construcao; esta maquina pode estar em -03, entao fixa UTC
+		TimeZone antes = TimeZone.getDefault();
+		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+		try {
+			new AgendaConfig(List.of(new Fake(false, false)),
+					new MockEnvironment().withProperty("clama.agenda.x.cron", "0 0 4 * * *"), scheduler)
+					.afterSingletonsInstantiated();
+		} finally {
+			TimeZone.setDefault(antes);
+		}
+		ArgumentCaptor<Trigger> trigger = ArgumentCaptor.forClass(Trigger.class);
+		verify(scheduler).schedule(any(Runnable.class), trigger.capture());
+		// relogio fixo: sem o FUSO no AgendaConfig, o cron valeria 04:00 UTC
+		var relogio = Clock.fixed(Instant.parse("2026-11-05T15:00:00Z"), ZoneOffset.UTC);
+		Instant proxima = trigger.getValue().nextExecution(new SimpleTriggerContext(relogio));
+		assertThat(proxima).isEqualTo(Instant.parse("2026-11-06T07:00:00Z"));
+		assertThat(proxima.atZone(ZoneId.of("America/Sao_Paulo")).getHour()).isEqualTo(4);
+	}
+
+	@Test
+	void shutdownEsperaATarefaEmAndamento() {
+		var s = AgendaConfig.agendaScheduler();
+		assertThat(ReflectionTestUtils.getField(s, "waitForTasksToCompleteOnShutdown")).isEqualTo(true);
+		assertThat(ReflectionTestUtils.getField(s, "awaitTerminationMillis")).isEqualTo(25_000L);
 	}
 
 	@Test

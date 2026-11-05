@@ -3,6 +3,7 @@ package me.clama.api.comum.agenda;
 import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import me.clama.api.comum.agenda.TarefaAgendada.ResultadoDaTarefa;
 import me.clama.api.comum.observabilidade.SentryConfig;
@@ -33,6 +34,9 @@ public class AgendaConfig implements SmartInitializingSingleton {
 		var s = new ThreadPoolTaskScheduler();
 		s.setPoolSize(2);
 		s.setThreadNamePrefix("agenda-");
+		// redeploy no Railway: deixa a tarefa em andamento terminar (draining time >= 30 s, Etapa 9)
+		s.setWaitForTasksToCompleteOnShutdown(true);
+		s.setAwaitTerminationSeconds(25);
 		return s;
 	}
 
@@ -53,7 +57,7 @@ public class AgendaConfig implements SmartInitializingSingleton {
 			try {
 				modos.put(n, modo == null || modo.isBlank()
 						? (t.alteraDados() ? ModoDeExecucao.LISTAR : ModoDeExecucao.EXECUTAR)
-						: ModoDeExecucao.valueOf(modo.trim().toUpperCase()));
+						: ModoDeExecucao.valueOf(modo.trim().toUpperCase(Locale.ROOT)));
 			} catch (IllegalArgumentException e) {
 				throw new IllegalStateException("Tarefa agendada '" + n + "': clama.agenda." + n + ".modo invalido '" + modo
 						+ "' (use LISTAR, EXECUTAR ou DESLIGADA)", e);
