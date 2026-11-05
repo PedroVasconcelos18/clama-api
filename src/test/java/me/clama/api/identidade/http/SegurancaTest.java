@@ -145,7 +145,7 @@ class SegurancaTest {
         HttpResponse<String> r = chamar("GET", "/api/csrf/");
         assertThat(r.statusCode()).isEqualTo(200);
         String token = (String) ((Map<?, ?>) corpo(r)).get("csrf_token");
-        assertThat(token).isNotBlank();
+        assertThat(token).matches("[a-zA-Z0-9]{32}"); // formato do Django: o rollback aceita o cookie
         List<String> cookies = r.headers().allValues("Set-Cookie");
         assertThat(cookies).hasSize(1);
         assertThat(cookies.getFirst()).startsWith("csrftoken=" + token + ";")
@@ -224,6 +224,20 @@ class SegurancaTest {
                 .isEqualTo(403);
         assertThat(chamar("PATCH", "/api/customer/me/", "Cookie", cookies.split(";")[0], "X-CSRFToken", c[0])
                 .statusCode()).isEqualTo(403);
+    }
+
+    @Test
+    void csrfAceitaTokenMascaradoDoDjangoETrocaCookieForaDoFormato() throws Exception {
+        // aba aberta antes da troca: cookie e token mascarado vindos do Django
+        String cookies = "clama_access=" + access() + "; csrftoken=" + CsrfDjangoTest.SEGREDO;
+        assertThat(chamar("PATCH", "/api/customer/me/", "Cookie", cookies, "X-CSRFToken", CsrfDjangoTest.MASCARADO)
+                .statusCode()).isEqualTo(200);
+        // cookie UUID (formato antigo do Java) nao vale e o /api/csrf/ grava um novo
+        String uuid = "csrftoken=" + UUID.randomUUID();
+        HttpResponse<String> r = chamar("GET", "/api/csrf/", "Cookie", uuid);
+        String novo = (String) ((Map<?, ?>) corpo(r)).get("csrf_token");
+        assertThat(novo).matches("[a-zA-Z0-9]{32}");
+        assertThat(r.headers().firstValue("Set-Cookie").orElseThrow()).startsWith("csrftoken=" + novo + ";");
     }
 
     @Test

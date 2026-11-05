@@ -6,8 +6,6 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -107,9 +105,8 @@ public class FiltroJwtCookie extends OncePerRequestFilter {
             return false;
         }
         CsrfToken salvo = csrf.loadToken(req);
-        String enviado = salvo == null ? null : req.getHeader(salvo.getHeaderName());
-        return enviado != null && MessageDigest.isEqual(salvo.getToken().getBytes(StandardCharsets.UTF_8),
-                enviado.getBytes(StandardCharsets.UTF_8));
+        return salvo != null
+                && CsrfDjango.confere(req.getHeader(salvo.getHeaderName()), CsrfDjango.segredo(salvo.getToken()));
     }
 
     private boolean origemConfiavel(String origem, boolean https, String host) {

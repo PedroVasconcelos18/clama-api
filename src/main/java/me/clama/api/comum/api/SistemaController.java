@@ -4,9 +4,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.Instant;
 import java.util.Map;
+import me.clama.api.identidade.http.CsrfDjango;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
+import org.springframework.security.web.csrf.DefaultCsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -36,15 +38,18 @@ public class SistemaController {
 
 	/**
 	 * CSRFTokenView: o cookie e HttpOnly, entao o token vai no corpo e o front devolve no X-CSRFToken.
-	 * O valor e o proprio cookie (sem mascara XOR), entao o eco no header bate direto.
+	 * O valor e o segredo do cookie (sem a mascara do Django, que tambem aceita assim), entao o eco bate direto.
+	 * Cookie ausente ou fora do formato do Django ganha um segredo novo, como no CsrfViewMiddleware.
 	 */
 	@GetMapping("/api/csrf/")
 	public Map<String, String> csrf(HttpServletRequest req, HttpServletResponse resp) {
-		CsrfToken token = csrf.loadToken(req);
-		if (token == null) {
-			token = csrf.generateToken(req);
+		CsrfToken salvo = csrf.loadToken(req);
+		String segredo = salvo == null ? null : CsrfDjango.segredo(salvo.getToken());
+		if (segredo == null) {
+			segredo = CsrfDjango.novo();
 		}
-		csrf.saveToken(token, req, resp); // ensure_csrf_cookie: regrava sempre, renovando a validade
-		return Map.of("csrf_token", token.getToken());
+		// ensure_csrf_cookie: regrava sempre, renovando a validade
+		csrf.saveToken(new DefaultCsrfToken("X-CSRFToken", "_csrf", segredo), req, resp);
+		return Map.of("csrf_token", segredo);
 	}
 }
