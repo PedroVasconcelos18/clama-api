@@ -15,8 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 /** Mesma semantica do simplejwt 5.5 (ROTATE + BLACKLIST_AFTER_ROTATION, user_id como string). */
 @Service
 public class ServicoDeTokens {
-    static final Duration ACCESS = Duration.ofMinutes(15);
-    static final Duration REFRESH = Duration.ofDays(7);
+    public static final Duration ACCESS = Duration.ofMinutes(15);
+    public static final Duration REFRESH = Duration.ofDays(7);
 
     private final Jwt jwt;
     private final TokenEmitidoRepository emitidos;

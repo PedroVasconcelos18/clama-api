@@ -5,7 +5,7 @@ public final class TextoPython {
     private TextoPython() {}
 
     // str.isspace() do Python (strip() sem argumento)
-    private static boolean pySpace(int c) {
+    public static boolean isSpace(int c) {
         return (c >= 9 && c <= 13) || (c >= 0x1c && c <= 0x20) || c == 0x85 || c == 0xa0 || c == 0x1680
                 || (c >= 0x2000 && c <= 0x200a) || c == 0x2028 || c == 0x2029 || c == 0x202f || c == 0x205f
                 || c == 0x3000;
@@ -14,10 +14,10 @@ public final class TextoPython {
     public static String strip(String v) {
         int i = 0;
         int f = v.length();
-        while (i < f && pySpace(v.charAt(i))) {
+        while (i < f && isSpace(v.charAt(i))) {
             i++;
         }
-        while (f > i && pySpace(v.charAt(f - 1))) {
+        while (f > i && isSpace(v.charAt(f - 1))) {
             f--;
         }
         return v.substring(i, f);
