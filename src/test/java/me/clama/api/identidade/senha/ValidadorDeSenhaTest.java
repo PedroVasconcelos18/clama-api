@@ -19,7 +19,7 @@ class ValidadorDeSenhaTest {
 		assertEquals(List.of(), v.validar("Clama-forte-2026", "a@b.com"));
 		assertEquals(List.of(NUMERICA), v.validar("²²²²²²²²", "a@b.com"));
 		assertEquals(List.of(NUMERICA), v.validar("①②③④⑤⑥⑦⑧", "a@b.com"));
-		assertEquals(List.of(COMUM), v.validar("password\u0020", "a@b.com"));
+		assertEquals(List.of(COMUM), v.validar("password\u00a0", "a@b.com"));
 		assertEquals(List.of(COMUM), v.validar("password\u0085", "a@b.com"));
 	}
 
