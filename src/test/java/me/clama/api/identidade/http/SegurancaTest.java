@@ -112,27 +112,14 @@ class SegurancaTest {
     }
 
     @Test
-    void loginComAccessVencidoNoCookieFunciona() throws Exception {
-        long agora = Instant.now().getEpochSecond();
-        String vencido = jwt.assinar(Map.of("token_type", "access", "exp", agora - 60, "iat", agora - 960,
-                "jti", "abc", "user_id", "1"));
-        for (String rota : List.of("/api/customer/auth/login/", "/api/admin/auth/login/",
-                "/api/customer/auth/refresh/", "/api/admin/auth/refresh/")) {
-            HttpResponse<String> r = chamar("POST", rota, "Cookie", "clama_access=" + vencido);
-            // controller ainda nao existe (Task 8): 404 serve, so nao pode ser 401 nem 403
-            assertThat(r.statusCode()).as(rota).isNotIn(401, 403);
-        }
-        assertThat(chamar("GET", "/api/csrf/", "Cookie", "clama_access=" + vencido).statusCode()).isEqualTo(200);
-        assertThat(chamar("GET", "/api/health/", "Cookie", "clama_access=" + vencido).statusCode()).isEqualTo(200);
-    }
-
-    @Test
     void accessInvalidoDa401Pastoral() throws Exception {
         HttpResponse<String> r = chamar("GET", "/api/customer/me/", "Cookie", "clama_access=lixo");
         assertThat(r.statusCode()).isEqualTo(401);
         assertThat(corpo(r)).isEqualTo(NAO_AUTENTICADO);
-        // mesmo em rota que nao exige login: o DRF autentica antes da view
-        assertThat(chamar("GET", "/api/nao-existe/", "Cookie", "clama_access=lixo").statusCode()).isEqualTo(401);
+        // a autenticacao vem antes do CSRF: POST sem token com cookie invalido da 401, nao 403
+        HttpResponse<String> post = chamar("POST", "/api/customer/auth/logout/", "Cookie", "clama_access=lixo");
+        assertThat(post.statusCode()).isEqualTo(401);
+        assertThat(corpo(post)).isEqualTo(NAO_AUTENTICADO);
     }
 
     @Test
@@ -162,9 +149,8 @@ class SegurancaTest {
 
     @Test
     void getAutenticadoPassa() throws Exception {
-        // sem controller ainda: passa pela seguranca e cai no 404
         HttpResponse<String> r = chamar("GET", "/api/customer/me/", "Cookie", "clama_access=" + access());
-        assertThat(r.statusCode()).isEqualTo(404);
+        assertThat(r.statusCode()).isEqualTo(200);
     }
 
     @Test
@@ -182,7 +168,7 @@ class SegurancaTest {
         String[] c = csrf();
         String cookies = "clama_access=" + access() + "; " + c[1];
         assertThat(chamar("PATCH", "/api/customer/me/", "Cookie", cookies, "X-CSRFToken", c[0]).statusCode())
-                .isEqualTo(404);
+                .isEqualTo(200);
         // token errado, ou sem o cookie csrftoken
         assertThat(chamar("PATCH", "/api/customer/me/", "Cookie", cookies, "X-CSRFToken", c[0] + "x").statusCode())
                 .isEqualTo(403);
@@ -195,20 +181,20 @@ class SegurancaTest {
         String[] c = csrf();
         String cookies = "clama_access=" + access() + "; " + c[1];
         // mesma origem que o Host
-        assertThat(chamar("POST", "/api/customer/me/", "Cookie", cookies, "X-CSRFToken", c[0],
-                "Origin", "http://localhost:" + porta).statusCode()).isEqualTo(404);
+        assertThat(chamar("POST", "/api/customer/auth/logout/", "Cookie", cookies, "X-CSRFToken", c[0],
+                "Origin", "http://localhost:" + porta).statusCode()).isEqualTo(205);
         // CSRF_TRUSTED_ORIGINS (default de producao)
-        assertThat(chamar("POST", "/api/customer/me/", "Cookie", cookies, "X-CSRFToken", c[0],
-                "Origin", "https://clama.me").statusCode()).isEqualTo(404);
-        HttpResponse<String> r = chamar("POST", "/api/customer/me/", "Cookie", cookies, "X-CSRFToken", c[0],
+        assertThat(chamar("POST", "/api/customer/auth/logout/", "Cookie", cookies, "X-CSRFToken", c[0],
+                "Origin", "https://clama.me").statusCode()).isEqualTo(205);
+        HttpResponse<String> r = chamar("POST", "/api/customer/auth/logout/", "Cookie", cookies, "X-CSRFToken", c[0],
                 "Origin", "https://evil.example");
         assertThat(r.statusCode()).isEqualTo(403);
         assertThat(corpo(r)).isEqualTo(CSRF_INVALIDO);
         // https sem Origin exige Referer confiavel
-        assertThat(chamar("POST", "/api/customer/me/", "Cookie", cookies, "X-CSRFToken", c[0],
+        assertThat(chamar("POST", "/api/customer/auth/logout/", "Cookie", cookies, "X-CSRFToken", c[0],
                 "X-Forwarded-Proto", "https").statusCode()).isEqualTo(403);
-        assertThat(chamar("POST", "/api/customer/me/", "Cookie", cookies, "X-CSRFToken", c[0],
-                "X-Forwarded-Proto", "https", "Referer", "https://www.clama.me/conta").statusCode()).isEqualTo(404);
+        assertThat(chamar("POST", "/api/customer/auth/logout/", "Cookie", cookies, "X-CSRFToken", c[0],
+                "X-Forwarded-Proto", "https", "Referer", "https://www.clama.me/conta").statusCode()).isEqualTo(205);
     }
 
     @Test

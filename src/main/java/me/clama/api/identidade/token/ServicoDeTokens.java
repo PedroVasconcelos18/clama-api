@@ -48,6 +48,20 @@ public class ServicoDeTokens {
         revogar(refresh, verificarRefresh(refresh));
     }
 
+    /**
+     * Logout (P-4 da view do Django): so revoga se o refresh for do usuario logado; false se for de outro.
+     * Compara como string, igual ao str(token_user_id) != str(request.user.pk) do Django.
+     */
+    @Transactional
+    public boolean revogarDoUsuario(String refresh, Long usuarioId) {
+        Map<String, Object> c = verificarRefresh(refresh);
+        if (!String.valueOf(c.get("user_id")).equals(String.valueOf(usuarioId))) {
+            return false;
+        }
+        revogar(refresh, c);
+        return true;
+    }
+
     @Transactional
     public void revogarTodos(Long usuarioId) {
         revogados.revogarTodosDoUsuario(usuarioId);

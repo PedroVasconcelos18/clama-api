@@ -15,8 +15,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class CookiesDeAuth {
-    static final String ACCESS = "clama_access";
-    static final String REFRESH = "clama_refresh";
+    public static final String ACCESS = "clama_access";
+    public static final String REFRESH = "clama_refresh";
     private static final String PATH = "/api";
 
     private final boolean secure;

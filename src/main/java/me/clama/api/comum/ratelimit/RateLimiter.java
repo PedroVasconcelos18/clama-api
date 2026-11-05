@@ -33,6 +33,11 @@ public class RateLimiter {
         this.relogio = relogio;
     }
 
+    /** cache.clear() do Django: zera todos os escopos (replay de contrato e testes). */
+    public synchronized void limpar() {
+        escopos.clear();
+    }
+
     /** Vazio = pode passar. Presente = segundos ate liberar. */
     public synchronized OptionalLong permitir(String escopo, String chave, int limite, Duration janela) {
         Instant agora = relogio.instant();

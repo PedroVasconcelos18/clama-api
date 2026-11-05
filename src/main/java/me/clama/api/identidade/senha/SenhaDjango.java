@@ -7,8 +7,10 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
 
 /** Senhas no formato do Django: le argon2, pbkdf2_sha256 e pbkdf2_sha1; grava argon2 (rollback le de volta). */
+@Component
 public class SenhaDjango implements PasswordEncoder {
 	private static final String ARGON2 = "argon2";
 	private static final String PREFIXO_ARGON2 = "argon2$argon2id$v=19$m=102400,t=2,p=8$";

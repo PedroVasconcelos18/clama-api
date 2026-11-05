@@ -13,8 +13,10 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 import me.clama.api.comum.texto.TextoPython;
+import org.springframework.stereotype.Component;
 
 /** Os 4 validadores do AUTH_PASSWORD_VALIDATORS do Django, na mesma ordem e com as mesmas mensagens pt-BR. */
+@Component
 public class ValidadorDeSenha {
     // O Django interpola o verbose_name do campo email ("E-mail"); texto copiado da saida real.
     static final String PARECIDA = "A senha é muito parecida com E-mail";

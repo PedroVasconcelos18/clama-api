@@ -6,7 +6,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import me.clama.api.comum.api.CamposDrf;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -29,6 +31,18 @@ public class PastoralExceptionHandler {
         e.getBindingResult().getFieldErrors()
                 .forEach(f -> corpo.computeIfAbsent(f.getField(), k -> new ArrayList<>()).add(f.getDefaultMessage()));
         return ResponseEntity.badRequest().body(corpo);
+    }
+
+    @ExceptionHandler(CamposDrf.Invalidos.class)
+    ResponseEntity<Map<String, List<String>>> campos(CamposDrf.Invalidos e) {
+        return ResponseEntity.badRequest().body(e.erros());
+    }
+
+    /** ParseError do DRF. O texto do erro e do parser (Jackson aqui, json do Python la), so o formato bate. */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ResponseEntity<Map<String, String>> jsonInvalido(HttpMessageNotReadableException e) {
+        Throwable causa = e.getMostSpecificCause();
+        return ResponseEntity.badRequest().body(Map.of("detail", "JSON parse error - " + causa.getMessage()));
     }
 
     /** Para quem responde fora do Spring MVC (filtros de seguranca). */
