@@ -3,3 +3,7 @@ FREEMIUM_HASH_SECRET: dev-only-do-not-use-in-prod
 DJANGO_SECRET_KEY: test-secret-key-do-not-use-in-production
 AUTH_COOKIE_SECURE: "false"
 LIMITE_ANONIMO_ATIVO: "false"
+clama:
+  fila:
+    polling: 100ms
+    heartbeat: 1s

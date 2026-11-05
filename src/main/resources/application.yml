@@ -11,3 +11,11 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+  flyway:
+    # banco de producao ja existe (Django): baseline em 0 e so migrations aditivas por cima
+    baseline-on-migrate: true
+    baseline-version: "0"
+clama:
+  fila:
+    polling: 2s
+    heartbeat: 1m
