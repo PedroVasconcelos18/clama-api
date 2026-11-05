@@ -4,19 +4,19 @@
     "casos": [
       {
         "claro": "123.456.789-09",
-        "cifrado": "gAAAAABq7M1PIkET7Uzyi2yRf6yWOMI4ieVE1gchx3cvwFqmAnhULcGKjyK2z7PMmRdQJ9ovaXeoKUrPlLH4P9XxRPfmkRJcvA=="
+        "cifrado": "gAAAAABq7M3WS64HLGVd8vErbEFjgxa29BOSTZBbg3ceBcRzI0tCQU7nrtskpXrMj6OMSPPKHP7P9UAAT8Hs25G_QJX2R7Gm9w=="
       },
       {
         "claro": "+5511999990000",
-        "cifrado": "gAAAAABq7M1Pe1FDDbjLCSoEjkNLCRCtQaAri37nXaqAe7QDen4VqHWngkQccA2HAjV4Wr8TuRBErRRbE-yNn7B29bLwYTt-GA=="
+        "cifrado": "gAAAAABq7M3WQpfSNtJm7V7S5ZcL9C3HPEVTbEcnpbs9JKYfrE-x05Hh9AqWimEdJaHTa3EWM3JOTeYvbtxhxo0ZgZkPo4EtZg=="
       },
       {
         "claro": "",
-        "cifrado": "gAAAAABq7M1PnoR-sVtY6N5kGRSiZBMmVsttT-5k4YCV4JDne0hAA5EP1FpCfyv8yDFRLLGRHcJ7QLPOJZtifh-AVGZLa_WtlA=="
+        "cifrado": "gAAAAABq7M3WYmJ_A0UvumUH_VDANgVuwdnZ3b_DUfoowAUab33Yz66OMUjWGN__vF82bccXX_-80JAmEONMk6cR9Gdbfytz7w=="
       },
       {
         "claro": "ção ✝",
-        "cifrado": "gAAAAABq7M1Ph86nQC6ZgQ4U-Y0M9GNAiGDie4KpFaSntJghd8R5X1xk2XeY-Zx-H1GYBiMMi5ksxhJhrtB2ONuF4gMj3ZenAg=="
+        "cifrado": "gAAAAABq7M3WEKyGWlDupBqe1sjcDxT1yn2P6_r35n8W4eJbXIYOdwrdecj1hE8omY8zo1v-arCO6iHy2oWCP2hmphdZyhonog=="
       }
     ],
     "invalido_cru": "texto-puro-antigo"
@@ -70,22 +70,22 @@
     "casos": [
       {
         "senha": "Clama-forte-2026",
-        "hash": "argon2$argon2id$v=19$m=102400,t=2,p=8$OWpvVmZiWVliSlU1UDdXajZlRTNsMQ$9TfbRpS/dZ4qEv69o/jBpXrSrF23xalrWt8mRWRtkDk",
+        "hash": "argon2$argon2id$v=19$m=102400,t=2,p=8$eXR6YUpaeTZHQ3BGR0dDQ1JXNmxNRg$/nedzpnCFv184OKLaRq2IP2CN7SflMwURGefQ6lTkeg",
         "confere": true
       },
       {
         "senha": "Clama-forte-2026",
-        "hash": "pbkdf2_sha256$600000$d5pTKr0w90jfqAULr1imrm$nNXyQ8WsjI/hynohsjpNiUqUmCSNdD72mmrtAEUn5xc=",
+        "hash": "pbkdf2_sha256$600000$EfdeacSwCntHslm40SZ9GI$S03hczpCzav3H3jmZk8fUrL6Em6LMEl0iihbG6HfFYY=",
         "confere": true
       },
       {
         "senha": "Clama-forte-2026",
-        "hash": "pbkdf2_sha1$600000$ZQaLGtY3fQl4ZO3rDKVRiN$XipxDs0z+m3/6mues5CnjJZGQ08=",
+        "hash": "pbkdf2_sha1$600000$UMZiSAwM2dlsOzzRd5ziWX$whMa1+/bnNnSFcVdkCcolAYBBJA=",
         "confere": true
       },
       {
         "senha": "outra",
-        "hash": "argon2$argon2id$v=19$m=102400,t=2,p=8$OWpvVmZiWVliSlU1UDdXajZlRTNsMQ$9TfbRpS/dZ4qEv69o/jBpXrSrF23xalrWt8mRWRtkDk",
+        "hash": "argon2$argon2id$v=19$m=102400,t=2,p=8$eXR6YUpaeTZHQ3BGR0dDQ1JXNmxNRg$/nedzpnCFv184OKLaRq2IP2CN7SflMwURGefQ6lTkeg",
         "confere": false
       },
       {
@@ -118,25 +118,25 @@
     "chave": "chave-jwt-teste",
     "casos": [
       {
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc5NDUwODc1MiwiaWF0IjoxNzkzOTAzOTUyLCJqdGkiOiI3Nzk4NDdkNWJhYjk0ZDU2YTkyMDJhZjlhNmU0MGE2OSIsInVzZXJfaWQiOiIxIn0.UA7DTOY_NxEttH2N9BiAQBPl3LuYL_W9_X1HkZietr8",
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6NDEwMjQ0NDgwMCwiaWF0IjoxNzkzOTA0MDg2LCJqdGkiOiJlYmRhYWIyMTA1NWU0MWQxYWFiOGNlOWQ1ZTliMTY5OCIsInVzZXJfaWQiOiIxIn0.Y6VuRxFl1HxYUVJEPFCTLscMll88CIHMP5LOZcO4m_0",
         "tipo": "refresh",
         "user_id": "1",
         "valido": true
       },
       {
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkzOTA0ODUyLCJpYXQiOjE3OTM5MDM5NTIsImp0aSI6IjczOWUxYWI3NDEzYTQ3Y2RiOTlmMzQwMTg2ZGRkNGJiIiwidXNlcl9pZCI6IjEifQ.NqFTaE4ZHZ0iEGRw1ldhhjThpvXuaL2u7nXghfsSz5g",
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0MTAyNDQ0ODAwLCJpYXQiOjE3OTM5MDQwODYsImp0aSI6IjJlMjZhN2U3MGQ1ZDQ3ZDc5NDIxMjVmYzE4YmE5MzE2IiwidXNlcl9pZCI6IjEifQ.pr_NHIAZt-c7n11cSjNmHVaXPxqH9IsCAa7GozGbjfM",
         "tipo": "access",
         "user_id": "1",
         "valido": true
       },
       {
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxMDAwMDAwMDAwLCJpYXQiOjE3OTM5MDM5NTIsImp0aSI6ImVkZTJmZmQ2MTJjZjQwNzdiNjRlNDQwMzJiYzM3NDE0IiwidXNlcl9pZCI6IjEifQ.7HCYL-xSpas3Be2ZyrqNYuAZBqGK3gZzXBquDPC6b6g",
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxMDAwMDAwMDAwLCJpYXQiOjE3OTM5MDQwODYsImp0aSI6IjAyZjMzYjYzNjY5MTQ0Yjc4YTA3YTg5MDNhZmVkYmNiIiwidXNlcl9pZCI6IjEifQ.JL5yAZG_QFcG0jYHq2pjX-uIVwiK5XeoM14AHS7IlL0",
         "tipo": "access",
         "user_id": "1",
         "valido": false
       },
       {
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkzOTA0ODUyLCJpYXQiOjE3OTM5MDM5NTIsImp0aSI6ImMxZmU0MTlmYzdkZjRhMTRiZmU4N2NhOGQxZjA3ZGFlIiwidXNlcl9pZCI6IjEifQ.AORHB7gH4bh5Rhh60cXyCXE-BFKDG9rQREEVFTsWp4A",
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0MTAyNDQ0ODAwLCJpYXQiOjE3OTM5MDQwODYsImp0aSI6IjAzNWQ5NmIyOWMyMTQzNjViOTM3YTNjNzhlYjBmZWY1IiwidXNlcl9pZCI6IjEifQ.ApiJ-9jcC0ql7EeROsUHyrrMLztoO5J6s_vr_bD6eMY",
         "tipo": "access",
         "user_id": "1",
         "valido": false
