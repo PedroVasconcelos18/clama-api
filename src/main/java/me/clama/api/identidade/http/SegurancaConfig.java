@@ -1,5 +1,6 @@
 package me.clama.api.identidade.http;
 
+import jakarta.servlet.DispatcherType;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -7,6 +8,7 @@ import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.comum.erro.PastoralExceptionHandler;
 import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.identidade.token.ServicoDeTokens;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,14 +17,16 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.servlet.HandlerExecutionChain;
+import org.springframework.web.servlet.HandlerMapping;
+import org.springframework.web.servlet.resource.ResourceHttpRequestHandler;
+import org.springframework.web.util.ServletRequestPathUtils;
 
 @Configuration
 public class SegurancaConfig {
-    /** IsAuthenticated no Django. As views chegam na Task 8. */
-    static final String[] ROTAS_AUTENTICADAS = {"/api/customer/me/", "/api/customer/auth/logout/",
-        "/api/customer/auth/change-password/"};
     static final String SEM_PERMISSAO = "Você não tem permissão para executar essa ação.";
 
     /** CSRF_COOKIE_PATH=/api, CSRF_COOKIE_HTTPONLY=True, SameSite e idade padrao do Django (1 ano). */
@@ -37,7 +41,7 @@ public class SegurancaConfig {
 
     @Bean
     SecurityFilterChain filtros(HttpSecurity http, ServicoDeTokens tokens, UsuarioRepository usuarios,
-            CookieCsrfTokenRepository csrf,
+            CookieCsrfTokenRepository csrf, ObjectProvider<HandlerMapping> mapeamentos,
             @Value("${DJANGO_CSRF_TRUSTED_ORIGINS:https://clama.me,https://www.clama.me}") String confiaveis,
             @Value("${DJANGO_CORS_ALLOWED_ORIGINS:}") String cors) throws Exception {
         // O CSRF fica no FiltroJwtCookie (como no Django, so pra quem autenticou por cookie), nao no CsrfFilter.
@@ -53,9 +57,43 @@ public class SegurancaConfig {
                                 PastoralExceptionHandler.escrever(resp, PastoralException.naoAutenticado()))
                         .accessDeniedHandler((req, resp, ex) ->
                                 PastoralExceptionHandler.escrever(resp, 403, Map.of("detail", SEM_PERMISSAO))))
-                .authorizeHttpRequests(a -> a.requestMatchers(ROTAS_AUTENTICADAS).authenticated()
-                        .anyRequest().permitAll())
+                // nega por padrao: rota nova sob /api/admin/ ja nasce IsClamaAdmin, sem lista pra manter
+                .authorizeHttpRequests(a -> a
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll() // /error de pedido ja autorizado
+                        .requestMatchers(FiltroJwtCookie.PUBLICAS).permitAll()
+                        .requestMatchers(semRota(mapeamentos)).permitAll()
+                        .requestMatchers("/api/admin/**").hasAuthority(FiltroJwtCookie.ADMIN)
+                        .requestMatchers("/api/customer/**").authenticated()
+                        .anyRequest().denyAll())
                 .build();
+    }
+
+    /**
+     * URL que nenhum handler atende (fora o de arquivos estaticos) segue pro 404 do dispatcher, como o Django
+     * responde URL desconhecida. Na duvida (excecao no lookup, ex. metodo errado numa rota que existe) nao libera.
+     */
+    private static RequestMatcher semRota(ObjectProvider<HandlerMapping> mapeamentos) {
+        return req -> {
+            boolean parseado = ServletRequestPathUtils.hasParsedRequestPath(req);
+            if (!parseado) {
+                ServletRequestPathUtils.parseAndCache(req);
+            }
+            try {
+                for (HandlerMapping m : mapeamentos.orderedStream().toList()) {
+                    HandlerExecutionChain h = m.getHandler(req);
+                    if (h != null && !(h.getHandler() instanceof ResourceHttpRequestHandler)) {
+                        return false;
+                    }
+                }
+                return true;
+            } catch (Exception e) {
+                return false;
+            } finally {
+                if (!parseado) {
+                    ServletRequestPathUtils.clearParsedRequestPath(req);
+                }
+            }
+        };
     }
 
     /**

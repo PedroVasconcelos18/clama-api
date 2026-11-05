@@ -18,10 +18,12 @@ import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.identidade.token.JwtInvalido;
 import me.clama.api.identidade.token.ServicoDeTokens;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
@@ -30,8 +32,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * Nao roda nas rotas com authentication_classes vazio (health, csrf, login e refresh).
  */
 public class FiltroJwtCookie extends OncePerRequestFilter {
-    static final Set<String> ROTAS_ANONIMAS = Set.of("/api/health/", "/api/csrf/", "/api/admin/auth/login/",
+    private static final Set<String> ROTAS_PUBLICAS = Set.of("/api/health/", "/api/csrf/", "/api/admin/auth/login/",
             "/api/admin/auth/refresh/", "/api/customer/auth/login/", "/api/customer/auth/refresh/");
+    /** Unica fonte das rotas publicas: o filtro nao autentica nelas e o SegurancaConfig as libera. */
+    static final RequestMatcher PUBLICAS = req -> ROTAS_PUBLICAS.contains(req.getRequestURI());
+    /** IsClamaAdmin. */
+    static final String ADMIN = "ADMIN";
     private static final Set<String> METODOS_SEGUROS = Set.of("GET", "HEAD", "OPTIONS", "TRACE");
 
     private final ServicoDeTokens tokens;
@@ -55,7 +61,7 @@ public class FiltroJwtCookie extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest req) {
-        return ROTAS_ANONIMAS.contains(req.getRequestURI());
+        return PUBLICAS.matches(req);
     }
 
     @Override
@@ -81,7 +87,8 @@ public class FiltroJwtCookie extends OncePerRequestFilter {
             return;
         }
         SecurityContext ctx = SecurityContextHolder.createEmptyContext();
-        ctx.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(usuario, null, List.of()));
+        ctx.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(usuario, null,
+                usuario.isClamaAdmin() ? List.of(new SimpleGrantedAuthority(ADMIN)) : List.of()));
         SecurityContextHolder.setContext(ctx);
         chain.doFilter(req, resp);
     }

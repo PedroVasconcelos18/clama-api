@@ -23,11 +23,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"LIMITE_ANONIMO_ATIVO=true", "DJANGO_CORS_ALLOWED_ORIGINS=http://localhost:5173"})
-@Import(BancoDeTeste.class)
+@Import({BancoDeTeste.class, SegurancaTest.RotasDeTeste.class})
 @ActiveProfiles("test")
 class SegurancaTest {
 
@@ -40,6 +42,17 @@ class SegurancaTest {
             "message", "CSRF verification failed",
             "pastoral_message", "Não conseguimos confirmar que este pedido veio de você. "
                     + "Recarregue a página e tente de novo."));
+
+    static final Map<String, Object> SEM_PERMISSAO = Map.of("detail", "Você não tem permissão para executar essa ação.");
+
+    /** Rotas que nao estao em lista nenhuma: a protecao tem que vir so do prefixo. */
+    @RestController
+    static class RotasDeTeste {
+        @GetMapping({"/api/admin/teste/", "/api/outra/teste/"})
+        Map<String, String> ok() {
+            return Map.of("ok", "sim");
+        }
+    }
 
     @Value("${local.server.port}")
     int porta;
@@ -72,14 +85,51 @@ class SegurancaTest {
     }
 
     Usuario usuario() {
+        return usuario(false);
+    }
+
+    Usuario usuario(boolean admin) {
         Usuario u = new Usuario();
         u.setEmail(UUID.randomUUID() + "@x.com");
         u.setPassword("x");
+        u.setClamaAdmin(admin);
         return usuarios.saveAndFlush(u);
     }
 
     String access() {
         return tokens.emitirPar(usuario()).access();
+    }
+
+    @Test
+    void rotaAdminNovaNasceIsClamaAdmin() throws Exception {
+        HttpResponse<String> anonimo = chamar("GET", "/api/admin/teste/");
+        assertThat(anonimo.statusCode()).isEqualTo(401);
+        assertThat(corpo(anonimo)).isEqualTo(NAO_AUTENTICADO);
+        HttpResponse<String> cliente = chamar("GET", "/api/admin/teste/", "Cookie", "clama_access=" + access());
+        assertThat(cliente.statusCode()).isEqualTo(403);
+        assertThat(corpo(cliente)).isEqualTo(SEM_PERMISSAO);
+        String admin = "clama_access=" + tokens.emitirPar(usuario(true)).access();
+        assertThat(chamar("GET", "/api/admin/teste/", "Cookie", admin).statusCode()).isEqualTo(200);
+    }
+
+    @Test
+    void rotaForaDeAdminECustomerNegadaMesmoAutenticado() throws Exception {
+        assertThat(chamar("GET", "/api/outra/teste/").statusCode()).isEqualTo(401);
+        String admin = "clama_access=" + tokens.emitirPar(usuario(true)).access();
+        HttpResponse<String> r = chamar("GET", "/api/outra/teste/", "Cookie", admin);
+        assertThat(r.statusCode()).isEqualTo(403);
+        assertThat(corpo(r)).isEqualTo(SEM_PERMISSAO);
+    }
+
+    @Test
+    void urlDesconhecidaDa404ComoODjango() throws Exception {
+        String admin = "clama_access=" + tokens.emitirPar(usuario(true)).access();
+        for (String path : List.of("/api/admin/nao-existe/", "/api/customer/nao-existe/", "/api/nao-existe/")) {
+            assertThat(chamar("GET", path).statusCode()).as(path).isEqualTo(404);
+            assertThat(chamar("GET", path, "Cookie", admin).statusCode()).as(path).isEqualTo(404);
+        }
+        // metodo errado numa rota que existe nao conta como "sem rota": anonimo continua barrado
+        assertThat(chamar("GET", "/api/customer/auth/logout/").statusCode()).isEqualTo(401);
     }
 
     /** GET /api/csrf/ e devolve {token, cookie csrftoken}. */
