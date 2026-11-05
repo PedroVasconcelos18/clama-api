@@ -26,7 +26,7 @@ class ServicoDeTokensTest {
 
     private Usuario usuario() {
         Usuario u = new Usuario();
-        u.setEmail("t@x.com");
+        u.setEmail(java.util.UUID.randomUUID() + "@x.com");
         u.setPassword("x");
         return usuarios.saveAndFlush(u);
     }
@@ -67,5 +67,43 @@ class ServicoDeTokensTest {
         servico.revogarTodos(u.getId());
         assertThatThrownBy(() -> servico.rotacionar(a.refresh())).isInstanceOf(JwtInvalido.class);
         assertThatThrownBy(() -> servico.rotacionar(b.refresh())).isInstanceOf(JwtInvalido.class);
+    }
+
+    @Test
+    void formatoEmitido() {
+        Usuario u = usuario();
+        Jwt jwt = new Jwt("test-secret-key-do-not-use-in-production");
+        for (String tk : new String[] {servico.emitirPar(u).access(), servico.emitirPar(u).refresh()}) {
+            java.util.Map<String, Object> c = jwt.verificar(tk);
+            assertThat(c.keySet()).containsExactlyInAnyOrder("token_type", "exp", "iat", "jti", "user_id");
+            assertThat(c.get("user_id")).isEqualTo(String.valueOf(u.getId())).isInstanceOf(String.class);
+            assertThat((String) c.get("jti")).matches("[0-9a-f]{32}");
+        }
+    }
+
+    private String tokenCom(java.util.Map<String, Object> extra, String... remover) {
+        java.util.Map<String, Object> m = new java.util.LinkedHashMap<>(jwtDoTeste.verificar(servico.emitirPar(usuario()).refresh()));
+        for (String r : remover) m.remove(r);
+        m.putAll(extra);
+        return jwtDoTeste.assinar(m);
+    }
+
+    @Autowired Jwt jwtDoTeste;
+
+    @Test
+    void userIdNumericoEhAceito() {
+        Usuario u = usuario();
+        String t = tokenCom(java.util.Map.of("user_id", u.getId()), "user_id");
+        assertThat(servico.rotacionar(t).refresh()).isNotNull();
+    }
+
+    @Test
+    void semJtiOuJtiNaoStringEhJwtInvalido() {
+        for (String t : new String[] {tokenCom(java.util.Map.of(), "jti"), tokenCom(java.util.Map.of("jti", 5))}) {
+            assertThatThrownBy(() -> servico.rotacionar(t)).isInstanceOf(JwtInvalido.class);
+            assertThatThrownBy(() -> servico.revogar(t)).isInstanceOf(JwtInvalido.class);
+        }
+        String acc = tokenCom(java.util.Map.of("token_type", "access"), "jti");
+        assertThatThrownBy(() -> servico.validarAcesso(acc)).isInstanceOf(JwtInvalido.class);
     }
 }

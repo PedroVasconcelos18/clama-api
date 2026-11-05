@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 
@@ -33,18 +32,29 @@ class JwtTest {
         }
     }
 
+    private static String b64(String s) {
+        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(s.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    private static String hs256(String chave, String corpo) throws Exception {
+        var mac = javax.crypto.Mac.getInstance("HmacSHA256");
+        mac.init(new javax.crypto.spec.SecretKeySpec(chave.getBytes(java.nio.charset.StandardCharsets.UTF_8), "HmacSHA256"));
+        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(mac.doFinal(corpo.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+    }
+
+    private static final String CORPO = b64("{\"exp\":4102444800,\"user_id\":\"1\"}");
+
     @Test
-    void formatoEmitido() {
-        Jwt jwt = new Jwt("chave-qualquer");
-        Map<String, Object> m = new java.util.LinkedHashMap<>();
-        m.put("token_type", "access");
-        m.put("exp", System.currentTimeMillis() / 1000 + 60);
-        m.put("iat", System.currentTimeMillis() / 1000);
-        m.put("jti", "ab");
-        m.put("user_id", "7");
-        Map<String, Object> volta = jwt.verificar(jwt.assinar(m));
-        assertThat(volta.keySet()).isEqualTo(Set.of("token_type", "exp", "iat", "jti", "user_id"));
-        assertThat(volta.get("user_id")).isInstanceOf(String.class);
+    void rejeitaAlgNone() {
+        String t = b64("{\"alg\":\"none\"}") + "." + CORPO + ".";
+        assertThatThrownBy(() -> new Jwt("k").verificar(t)).isInstanceOf(JwtInvalido.class);
+    }
+
+    @Test
+    void rejeitaAlgDiferente() throws Exception {
+        String pre = b64("{\"alg\":\"HS512\",\"typ\":\"JWT\"}") + "." + CORPO;
+        String t = pre + "." + hs256("k", pre);
+        assertThatThrownBy(() -> new Jwt("k").verificar(t)).isInstanceOf(JwtInvalido.class);
     }
 
     @Test

@@ -50,14 +50,13 @@ public class ServicoDeTokens {
 
     @Transactional
     public void revogarTodos(Long usuarioId) {
-        for (TokenEmitido t : emitidos.naoRevogadosDoUsuario(usuarioId)) {
-            revogados.save(new TokenRevogado(t.getId()));
-        }
+        revogados.revogarTodosDoUsuario(usuarioId);
     }
 
     public Long validarAcesso(String access) {
         Map<String, Object> c = jwt.verificar(access);
         if (!"access".equals(c.get("token_type"))) throw new JwtInvalido("tipo");
+        jtiDe(c);
         return idDoUsuario(c);
     }
 
@@ -84,7 +83,8 @@ public class ServicoDeTokens {
     private Map<String, Object> verificarRefresh(String refresh) {
         Map<String, Object> c = jwt.verificar(refresh);
         if (!"refresh".equals(c.get("token_type"))) throw new JwtInvalido("tipo");
-        if (revogados.existePorJti((String) c.get("jti"))) throw new JwtInvalido("revogado");
+        if (!(c.get("iat") instanceof Number)) throw new JwtInvalido("iat");
+        if (revogados.existePorJti(jtiDe(c))) throw new JwtInvalido("revogado");
         return c;
     }
 
@@ -94,18 +94,27 @@ public class ServicoDeTokens {
 
     private static Long idDoUsuario(Map<String, Object> c) {
         try {
-            return Long.valueOf((String) c.get("user_id"));
+            Object v = c.get("user_id");
+            if (v instanceof Number n) return n.longValue();
+            return Long.valueOf((String) v);
         } catch (RuntimeException e) {
             throw new JwtInvalido("user_id");
         }
     }
 
+    /** simplejwt exige jti ("Token has no id"). */
+    private static String jtiDe(Map<String, Object> c) {
+        if (c.get("jti") instanceof String s && !s.isEmpty()) return s;
+        throw new JwtInvalido("jti");
+    }
+
     /** Como BlacklistMixin.blacklist: cria o outstanding se faltar (get_or_create). */
     private void revogar(String refresh, Map<String, Object> c) {
-        String jti = (String) c.get("jti");
-        TokenEmitido t = emitidos.findByJti(jti).orElseGet(() -> emitidos.save(new TokenEmitido(jti, refresh,
-                odt(((Number) c.get("iat")).longValue()), odt(((Number) c.get("exp")).longValue()), idDoUsuario(c))));
-        if (!revogados.existsByTokenId(t.getId())) revogados.save(new TokenRevogado(t.getId()));
+        String jti = jtiDe(c);
+        // ON CONFLICT = get_or_create do simplejwt sem abortar a transacao em corrida.
+        emitidos.inserirSeFaltar(jti, refresh, odt(((Number) c.get("iat")).longValue()),
+                odt(((Number) c.get("exp")).longValue()), idDoUsuario(c));
+        revogados.revogar(emitidos.findByJti(jti).orElseThrow().getId());
     }
 
     private static OffsetDateTime odt(long epoch) {
