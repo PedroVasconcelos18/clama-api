@@ -17,10 +17,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitialization;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 import tools.jackson.databind.ObjectMapper;
@@ -54,7 +54,11 @@ public class FilaConfig {
 	@Bean
 	TarefasDaFila tarefasDaFila(ObjectProvider<TipoDeJob<?>> tipos, ObservadorDeFalhaDeJob observador) {
 		Map<String, OneTimeTask<?>> m = new LinkedHashMap<>();
-		tipos.orderedStream().forEach(t -> m.put(t.nome(), tarefa(t, observador)));
+		tipos.orderedStream().forEach(t -> {
+			if (m.put(t.nome(), tarefa(t, observador)) != null) {
+				throw new IllegalStateException("TipoDeJob duplicado: ja existe um job com nome '" + t.nome() + "'");
+			}
+		});
 		return new TarefasDaFila(m);
 	}
 
@@ -85,6 +89,8 @@ public class FilaConfig {
 				.build();
 	}
 
+	// so inicia o polling depois do Flyway: na 1a subida em prod scheduled_tasks ainda nao existe
+	@DependsOnDatabaseInitialization
 	// ponytail: uma instancia e 4 threads; aumentar se a fila acumular
 	@Bean(initMethod = "start", destroyMethod = "stop")
 	Scheduler scheduler(DataSource ds, TarefasDaFila tarefas, Serializer serializer,

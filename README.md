@@ -33,3 +33,9 @@ O Django roda com `ATOMIC_REQUESTS=True`: a view inteira e uma transacao. Aqui n
 3. Os cookies (`CookiesDeAuth.gravar` e `apagar`) so sao escritos depois que a transacao retorna (o template ou o metodo do servico), ou seja, depois do commit.
 
 O motivo e que um cookie ja escrito na resposta nao volta atras. Se o commit falhar, por exemplo num conflito na rotacao do refresh, o cliente nao pode ficar com um par de tokens que o banco nao registrou, nem perder a sessao por um logout que nao aconteceu. Uma excecao dentro do template faz rollback e vira resposta pelo `PastoralExceptionHandler`, sem cookie nenhum.
+
+## Flyway e fila de jobs (producao)
+
+O Flyway agora roda no boot, so com migrations **aditivas** (tabelas novas, nunca `ALTER`/`DROP` em tabela do Django) ate o cutover estar estavel. Na primeira subida contra o banco do Django ele faz baseline na versao 0 e cria `flyway_schema_history` e `scheduled_tasks` (a fila do db-scheduler, que substitui Celery+Redis). O usuario do banco precisa de permissao `CREATE`. O scheduler so inicia depois das migrations.
+
+O Django ignora essas tabelas, entao voltar para ele e seguro. Mas jobs pendentes em `scheduled_tasks` ficam invisiveis para o Django: no rollback eles nao rodam.
