@@ -40,7 +40,8 @@ class ResendEnviadorTest {
 					ex.getRequestHeaders().getFirst("Accept")});
 			int i = corpos.size() - 1;
 			int status = i < respostas.size() ? respostas.get(i) : 200;
-			byte[] b = "{\"id\":\"abc\"}".getBytes(StandardCharsets.UTF_8);
+			byte[] b = (status == 422 ? "{\"name\":\"validation_error\",\"message\":\"Invalid `to` field\"}"
+					: "{\"id\":\"abc\"}").getBytes(StandardCharsets.UTF_8);
 			ex.sendResponseHeaders(status, b.length);
 			ex.getResponseBody().write(b);
 			ex.close();
@@ -87,6 +88,27 @@ class ResendEnviadorTest {
 		assertThatThrownBy(() -> enviador().enviar(EMAIL)).isInstanceOf(HttpStatusException.class);
 		assertThat(corpos).hasSize(1);
 		assertThat(dormiu).isEmpty();
+	}
+
+	@Test
+	void redirect3xxEErroSemRetentar() {
+		respostas.add(301);
+		assertThatThrownBy(() -> enviador().enviar(EMAIL)).isInstanceOf(HttpStatusException.class)
+				.hasMessageStartingWith("HTTP 301");
+		assertThat(corpos).hasSize(1);
+		assertThat(dormiu).isEmpty();
+	}
+
+	@Test
+	void corpoDoErroVaiNaMensagem() {
+		respostas.add(422);
+		assertThatThrownBy(() -> enviador().enviar(EMAIL))
+				.hasMessage("HTTP 422: {\"name\":\"validation_error\",\"message\":\"Invalid `to` field\"}");
+	}
+
+	@Test
+	void mensagemCortaOCorpoEm500() {
+		assertThat(new HttpStatusException(500, "x".repeat(800)).getMessage()).isEqualTo("HTTP 500: " + "x".repeat(500));
 	}
 
 	@Test

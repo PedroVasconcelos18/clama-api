@@ -53,8 +53,9 @@ public class ResendEnviador implements EnviadorDeEmail {
                 .build();
         Retentativa.executar(() -> {
             try {
-                int status = http.send(req, HttpResponse.BodyHandlers.discarding()).statusCode();
-                if (status >= 400) throw new HttpStatusException(status);
+                HttpResponse<String> r = http.send(req, HttpResponse.BodyHandlers.ofString());
+                // 3xx tambem e erro (o HttpClient nao segue redirect); so 5xx e retentado
+                if (r.statusCode() / 100 != 2) throw new HttpStatusException(r.statusCode(), r.body());
                 return null;
             } catch (IOException ex) {
                 throw new UncheckedIOException(ex);
