@@ -1,0 +1,25 @@
+{
+  "cenario": "admin_login_campos_faltando",
+  "usuarios": [],
+  "passos": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login/",
+        "body": {}
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "email": [
+            "Este campo é obrigatório."
+          ],
+          "password": [
+            "Este campo é obrigatório."
+          ]
+        },
+        "cookies": []
+      }
+    }
+  ]
+}

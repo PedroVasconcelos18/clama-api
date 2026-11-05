@@ -1,0 +1,38 @@
+{
+  "cenario": "admin_login_nao_admin",
+  "usuarios": [
+    {
+      "email": "Ana@Exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Ana Souza",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    }
+  ],
+  "passos": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login/",
+        "body": {
+          "email": "Ana@Exemplo.com",
+          "password": "Clama-forte-2026"
+        }
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "error": {
+            "code": "not_admin",
+            "message": "User is not a Clama admin",
+            "pastoral_message": "Esse espaço é só para admins do Clama."
+          }
+        },
+        "cookies": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "cenario": "health",
+  "usuarios": [],
+  "passos": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/health/"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "status": "ok",
+          "version": "0.1.0",
+          "timestamp": "<ts>",
+          "database": "ok"
+        },
+        "cookies": []
+      }
+    }
+  ]
+}

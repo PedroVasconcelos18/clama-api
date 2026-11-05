@@ -1,0 +1,146 @@
+{
+  "fernet": {
+    "chave": "-dPyxte5HDDyxBQExFzkphbnXt2xhs9FWlMLPFQpeuw=",
+    "casos": [
+      {
+        "claro": "123.456.789-09",
+        "cifrado": "gAAAAABq7M1PIkET7Uzyi2yRf6yWOMI4ieVE1gchx3cvwFqmAnhULcGKjyK2z7PMmRdQJ9ovaXeoKUrPlLH4P9XxRPfmkRJcvA=="
+      },
+      {
+        "claro": "+5511999990000",
+        "cifrado": "gAAAAABq7M1Pe1FDDbjLCSoEjkNLCRCtQaAri37nXaqAe7QDen4VqHWngkQccA2HAjV4Wr8TuRBErRRbE-yNn7B29bLwYTt-GA=="
+      },
+      {
+        "claro": "",
+        "cifrado": "gAAAAABq7M1PnoR-sVtY6N5kGRSiZBMmVsttT-5k4YCV4JDne0hAA5EP1FpCfyv8yDFRLLGRHcJ7QLPOJZtifh-AVGZLa_WtlA=="
+      },
+      {
+        "claro": "ção ✝",
+        "cifrado": "gAAAAABq7M1Ph86nQC6ZgQ4U-Y0M9GNAiGDie4KpFaSntJghd8R5X1xk2XeY-Zx-H1GYBiMMi5ksxhJhrtB2ONuF4gMj3ZenAg=="
+      }
+    ],
+    "invalido_cru": "texto-puro-antigo"
+  },
+  "hmac": {
+    "segredo": "segredo-de-teste",
+    "casos": [
+      {
+        "tipo": "email",
+        "entrada": "A.L.I.C.E+spam@GMail.com",
+        "hash": "5069080fa1bbbe62cd8aaaf7819a0f5cf980187d4d9e7a95f045c96b6da2537f"
+      },
+      {
+        "tipo": "email",
+        "entrada": "alice@googlemail.com",
+        "hash": "5069080fa1bbbe62cd8aaaf7819a0f5cf980187d4d9e7a95f045c96b6da2537f"
+      },
+      {
+        "tipo": "email",
+        "entrada": " Bob@Outlook.com ",
+        "hash": "7448312f575a8874fb1060b8376d2e5e89f1e8244030d535d606f9813f9cd16e"
+      },
+      {
+        "tipo": "email",
+        "entrada": "sem-arroba",
+        "hash": "7635914020e60a327daaa17e35a7a0e900b0d0346bcea491a0efb36b312f880e"
+      },
+      {
+        "tipo": "cpf",
+        "entrada": "123.456.789-09",
+        "hash": "31c7f8f8dfe5604267d08e7b9df2224d3849b8253d223142cf6c40f1aacb39a0"
+      },
+      {
+        "tipo": "cpf",
+        "entrada": "",
+        "hash": "ce720bd5d7c5ac6fc78d52d5da2e741627614f566f614543547e4576c000e8d8"
+      },
+      {
+        "tipo": "telefone",
+        "entrada": "+55 (11) 99999-0000",
+        "hash": "c1be8c3514a1cbed47c1c934ed7babbb2eec6b941c2c0871c735124fa5625fd9"
+      },
+      {
+        "tipo": "ip",
+        "entrada": " 2001:DB8::1 ",
+        "hash": "0b138f0154dcedee0098e340a358c956f6b98f58c3410909a5b735ad5e559675"
+      }
+    ]
+  },
+  "senhas": {
+    "casos": [
+      {
+        "senha": "Clama-forte-2026",
+        "hash": "argon2$argon2id$v=19$m=102400,t=2,p=8$OWpvVmZiWVliSlU1UDdXajZlRTNsMQ$9TfbRpS/dZ4qEv69o/jBpXrSrF23xalrWt8mRWRtkDk",
+        "confere": true
+      },
+      {
+        "senha": "Clama-forte-2026",
+        "hash": "pbkdf2_sha256$600000$d5pTKr0w90jfqAULr1imrm$nNXyQ8WsjI/hynohsjpNiUqUmCSNdD72mmrtAEUn5xc=",
+        "confere": true
+      },
+      {
+        "senha": "Clama-forte-2026",
+        "hash": "pbkdf2_sha1$600000$ZQaLGtY3fQl4ZO3rDKVRiN$XipxDs0z+m3/6mues5CnjJZGQ08=",
+        "confere": true
+      },
+      {
+        "senha": "outra",
+        "hash": "argon2$argon2id$v=19$m=102400,t=2,p=8$OWpvVmZiWVliSlU1UDdXajZlRTNsMQ$9TfbRpS/dZ4qEv69o/jBpXrSrF23xalrWt8mRWRtkDk",
+        "confere": false
+      },
+      {
+        "senha": "Clama-forte-2026",
+        "hash": "!abc",
+        "confere": false
+      }
+    ]
+  },
+  "similaridade": {
+    "casos": [
+      {
+        "senha": "joaosilva",
+        "email": "joao.silva@exemplo.com",
+        "rejeita": true
+      },
+      {
+        "senha": "exemplo123",
+        "email": "joao.silva@exemplo.com",
+        "rejeita": true
+      },
+      {
+        "senha": "Clama-forte-2026",
+        "email": "joao.silva@exemplo.com",
+        "rejeita": false
+      }
+    ]
+  },
+  "jwt": {
+    "chave": "chave-jwt-teste",
+    "casos": [
+      {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc5NDUwODc1MiwiaWF0IjoxNzkzOTAzOTUyLCJqdGkiOiI3Nzk4NDdkNWJhYjk0ZDU2YTkyMDJhZjlhNmU0MGE2OSIsInVzZXJfaWQiOiIxIn0.UA7DTOY_NxEttH2N9BiAQBPl3LuYL_W9_X1HkZietr8",
+        "tipo": "refresh",
+        "user_id": "1",
+        "valido": true
+      },
+      {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkzOTA0ODUyLCJpYXQiOjE3OTM5MDM5NTIsImp0aSI6IjczOWUxYWI3NDEzYTQ3Y2RiOTlmMzQwMTg2ZGRkNGJiIiwidXNlcl9pZCI6IjEifQ.NqFTaE4ZHZ0iEGRw1ldhhjThpvXuaL2u7nXghfsSz5g",
+        "tipo": "access",
+        "user_id": "1",
+        "valido": true
+      },
+      {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxMDAwMDAwMDAwLCJpYXQiOjE3OTM5MDM5NTIsImp0aSI6ImVkZTJmZmQ2MTJjZjQwNzdiNjRlNDQwMzJiYzM3NDE0IiwidXNlcl9pZCI6IjEifQ.7HCYL-xSpas3Be2ZyrqNYuAZBqGK3gZzXBquDPC6b6g",
+        "tipo": "access",
+        "user_id": "1",
+        "valido": false
+      },
+      {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkzOTA0ODUyLCJpYXQiOjE3OTM5MDM5NTIsImp0aSI6ImMxZmU0MTlmYzdkZjRhMTRiZmU4N2NhOGQxZjA3ZGFlIiwidXNlcl9pZCI6IjEifQ.AORHB7gH4bh5Rhh60cXyCXE-BFKDG9rQREEVFTsWp4A",
+        "tipo": "access",
+        "user_id": "1",
+        "valido": false
+      }
+    ]
+  }
+}
