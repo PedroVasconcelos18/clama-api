@@ -44,13 +44,15 @@ public class ResendEnviador implements EnviadorDeEmail {
         corpo.put("text", e.texto());
         if (e.html() != null) corpo.put("html", e.html());
         corpo.put("reply_to", List.of(REPLY_TO));
-        HttpRequest req = HttpRequest.newBuilder(URI.create(url))
+        HttpRequest.Builder b = HttpRequest.newBuilder(URI.create(url))
                 .timeout(Duration.ofSeconds(30))
                 .header("Authorization", "Bearer " + chave)
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(corpo)))
-                .build();
+                .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(corpo)));
+        // retentativa (aqui ou do job) com a mesma chave nao duplica o e-mail por 24 h
+        if (e.chaveDeIdempotencia() != null) b.header("Idempotency-Key", e.chaveDeIdempotencia());
+        HttpRequest req = b.build();
         Retentativa.executar(() -> {
             try {
                 HttpResponse<String> r = http.send(req, HttpResponse.BodyHandlers.ofString());

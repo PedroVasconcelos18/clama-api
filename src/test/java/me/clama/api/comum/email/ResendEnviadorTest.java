@@ -37,7 +37,8 @@ class ResendEnviadorTest {
 					ex.getRequestMethod(),
 					ex.getRequestHeaders().getFirst("Authorization"),
 					ex.getRequestHeaders().getFirst("Content-Type"),
-					ex.getRequestHeaders().getFirst("Accept")});
+					ex.getRequestHeaders().getFirst("Accept"),
+					ex.getRequestHeaders().getFirst("Idempotency-Key")});
 			int i = corpos.size() - 1;
 			int status = i < respostas.size() ? respostas.get(i) : 200;
 			byte[] b = (status == 422 ? "{\"name\":\"validation_error\",\"message\":\"Invalid `to` field\"}"
@@ -66,7 +67,22 @@ class ResendEnviadorTest {
 				{"from":"Clama <oracao@clama.me>","to":["ana@exemplo.com"],"subject":"Assunto",
 				 "text":"texto","html":"<p>html</p>","reply_to":["contato@clama.me"]}""");
 		assertThat(JSON.readTree(corpos.get(0))).isEqualTo(esperado);
-		assertThat(headers.get(0)).containsExactly("POST", "Bearer re_chave", "application/json", "application/json");
+		assertThat(headers.get(0)).containsExactly("POST", "Bearer re_chave", "application/json", "application/json", null);
+	}
+
+	@Test
+	void chaveDeIdempotenciaViraHeaderEmTodaTentativa() {
+		respostas.addAll(List.of(500, 200));
+		enviador().enviar(EMAIL.comChave("oracao/42"));
+		assertThat(headers).extracting(h -> h[4]).containsExactly("oracao/42", "oracao/42");
+		assertThat(JSON.readTree(corpos.get(0))).isEqualTo(JSON.readTree(corpos.get(1)));
+	}
+
+	@Test
+	void chaveForaDoLimiteDaResendNaoMonta() {
+		assertThatThrownBy(() -> EMAIL.comChave("")).isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> EMAIL.comChave("x".repeat(257))).isInstanceOf(IllegalArgumentException.class);
+		assertThat(EMAIL.comChave("x".repeat(256)).chaveDeIdempotencia()).hasSize(256);
 	}
 
 	@Test

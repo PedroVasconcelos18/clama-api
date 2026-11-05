@@ -39,3 +39,20 @@ O motivo e que um cookie ja escrito na resposta nao volta atras. Se o commit fal
 O Flyway agora roda no boot, so com migrations **aditivas** (tabelas novas, nunca `ALTER`/`DROP` em tabela do Django) ate o cutover estar estavel. Na primeira subida contra o banco do Django ele faz baseline na versao 0 e cria `flyway_schema_history` e `scheduled_tasks` (a fila do db-scheduler, que substitui Celery+Redis). O usuario do banco precisa de permissao `CREATE`. O scheduler so inicia depois das migrations.
 
 O Django ignora essas tabelas, entao voltar para ele e seguro. Mas jobs pendentes em `scheduled_tasks` ficam invisiveis para o Django: no rollback eles nao rodam.
+
+## Regras para jobs (Etapa 4+)
+
+- **Payload so leva IDs.** Nada de PII, senha ou texto de oracao: o payload fica em texto puro em `scheduled_tasks.task_data`. O job busca o resto no banco.
+- Backoff: `esperaEntreTentativas()` e a 1a espera, `fatorDeBackoff()` multiplica a cada falha. O `countdown = 30 * 2**retries` do Celery e `30 s` com fator `2.0` (30, 60, 120 s). `executar(payload, retentativa)` recebe o `self.request.retries` (0 na 1a execucao). `esgotou(payload, erro)` roda uma vez quando o job desiste, antes do Sentry; `erro` pode ser nulo.
+
+## Regras para jobs que enviam e-mail (Etapa 4+)
+
+A fila e at-least-once: um job pode rodar de novo depois de ja ter enviado (processo morto entre o envio e o fim do job, redeploy, retentativa).
+
+1. Passe uma chave de idempotencia estavel: `modelos.oracao(...).comChave("oracao/" + pedidoId)`. Ela vira o header `Idempotency-Key` da Resend, que nao reenvia a mesma chave por 24 h. O conteudo precisa ser o mesmo nas retentativas (a Resend responde 409 se a chave voltar com outro payload): nao gere senha temporaria nova dentro do job que reenvia.
+2. Envie fora de transacao de banco: nao segure conexao durante o HTTP, e um rollback nao desfaz um e-mail.
+3. Logo depois do envio, marque o estado "enviado" numa transacao propria e curta.
+
+## Shutdown no redeploy (Etapa 9)
+
+No SIGTERM, a fila (db-scheduler, `shutdownMaxWait` 25 s) e a agenda (`ThreadPoolTaskScheduler`, `awaitTermination` 25 s) esperam o que esta rodando terminar. **No Railway, o draining time do servico precisa ser >= 30 s**, senao o SIGKILL chega antes. Se a fila e a agenda estiverem ocupadas ao mesmo tempo, as esperas podem somar. Um job morto no meio (heartbeat de 20 s, 6 perdidos) e retomado por outra instancia em cerca de 2 min.
