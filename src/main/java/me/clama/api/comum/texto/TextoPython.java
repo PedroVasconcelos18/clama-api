@@ -1,5 +1,8 @@
 package me.clama.api.comum.texto;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /** Equivalentes de str.strip() e str.isdigit() do Python (o Django depende deles). */
 public final class TextoPython {
     private TextoPython() {}
@@ -21,6 +24,26 @@ public final class TextoPython {
             f--;
         }
         return v.substring(i, f);
+    }
+
+    /** str.split() sem argumento: separa por corridas de whitespace do Python e descarta vazios. */
+    public static List<String> split(String v) {
+        List<String> partes = new ArrayList<>();
+        int ini = -1;
+        for (int i = 0; i < v.length(); i++) {
+            if (isSpace(v.charAt(i))) {
+                if (ini >= 0) {
+                    partes.add(v.substring(ini, i));
+                    ini = -1;
+                }
+            } else if (ini < 0) {
+                ini = i;
+            }
+        }
+        if (ini >= 0) {
+            partes.add(v.substring(ini));
+        }
+        return partes;
     }
 
     // Numeric_Type=Digit fora de Nd, gerado do str.isdigit() do Python 3.14 (pares inicio,fim)
