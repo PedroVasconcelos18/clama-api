@@ -1,6 +1,7 @@
 package me.clama.api.identidade.senha;
 
 import java.io.BufferedReader;
+import me.clama.api.comum.texto.TextoPython;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -29,7 +30,7 @@ public class ValidadorDeSenha {
 		try (var in = ValidadorDeSenha.class.getResourceAsStream("/common-passwords.txt.gz");
 				var r = new BufferedReader(new InputStreamReader(new GZIPInputStream(in), StandardCharsets.UTF_8))) {
 			Set<String> s = new HashSet<>();
-			r.lines().forEach(l -> s.add(l.strip()));
+			r.lines().forEach(l -> s.add(TextoPython.strip(l)));
 			return s;
 		} catch (Exception e) {
 			throw new IllegalStateException(e);
@@ -44,10 +45,10 @@ public class ValidadorDeSenha {
 		if (senha.codePointCount(0, senha.length()) < 8) {
 			erros.add(CURTA);
 		}
-		if (comuns.contains(senha.toLowerCase(Locale.ROOT).strip())) {
+		if (comuns.contains(TextoPython.strip(senha.toLowerCase(Locale.ROOT)))) {
 			erros.add(COMUM);
 		}
-		if (!senha.isEmpty() && senha.codePoints().allMatch(Character::isDigit)) {
+		if (!senha.isEmpty() && senha.codePoints().allMatch(TextoPython::isDigit)) {
 			erros.add(NUMERICA);
 		}
 		return erros;
