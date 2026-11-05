@@ -5,6 +5,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.time.Instant;
 import java.util.Map;
 import me.clama.api.identidade.http.CsrfDjango;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class SistemaController {
+	private static final Logger LOG = LoggerFactory.getLogger(SistemaController.class);
 
 	private final JdbcTemplate jdbc;
 	private final CsrfTokenRepository csrf;
@@ -30,6 +33,7 @@ public class SistemaController {
 			jdbc.queryForObject("SELECT 1", Integer.class);
 			banco = "ok";
 		} catch (Exception e) {
+			LOG.warn("Health: SELECT 1 falhou", e);
 			banco = "error";
 		}
 		return Map.of("status", "ok", "version", "0.1.0", "database", banco,

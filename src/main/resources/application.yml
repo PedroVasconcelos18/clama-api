@@ -19,3 +19,7 @@ clama:
   fila:
     polling: 2s
     heartbeat: 1m
+sentry:
+  # o Django cria LoggingIntegration(level=None, event_level=None): log nao vira evento; captura so de excecao
+  logging:
+    enabled: false

@@ -66,6 +66,11 @@
 			<version>17.0.0</version>
 		</dependency>
 		<dependency>
+			<groupId>io.sentry</groupId>
+			<artifactId>sentry-spring-boot-4</artifactId>
+			<version>8.63.0</version>
+		</dependency>
+		<dependency>
 			<groupId>org.bouncycastle</groupId>
 			<artifactId>bcprov-jdk18on</artifactId>
 			<version>1.84</version>
@@ -128,6 +133,10 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<!-- perfil test em todo contexto de teste: o DataSource do DATABASE_URL fica fora (DatabaseUrlConfig) -->
+					<!-- nunca mandar evento real a partir do ambiente do desenvolvedor -->
+					<environmentVariables>
+						<SENTRY_DSN></SENTRY_DSN>
+					</environmentVariables>
 					<systemPropertyVariables>
 						<spring.profiles.active>test</spring.profiles.active>
 					</systemPropertyVariables>

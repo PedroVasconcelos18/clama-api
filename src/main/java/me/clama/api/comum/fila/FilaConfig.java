@@ -12,13 +12,13 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import me.clama.api.comum.observabilidade.SentryConfig;
 import javax.sql.DataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitialization;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -30,10 +30,13 @@ import tools.jackson.databind.ObjectMapper;
 public class FilaConfig {
 	private static final Logger LOG = LoggerFactory.getLogger(FilaConfig.class);
 
+	/** Unico observador: loga e manda pro Sentry (que e no-op sem DSN). */
 	@Bean
-	@ConditionalOnMissingBean
 	ObservadorDeFalhaDeJob observadorDeFalhaDeJob() {
-		return (tipo, erro) -> LOG.error("Job {} falhou definitivamente", tipo, erro);
+		return (tipo, erro) -> {
+			LOG.error("Job {} falhou definitivamente", tipo, erro);
+			SentryConfig.capturar("job", tipo, erro);
+		};
 	}
 
 	@Bean

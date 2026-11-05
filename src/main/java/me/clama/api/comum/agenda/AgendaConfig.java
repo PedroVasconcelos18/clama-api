@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import me.clama.api.comum.agenda.TarefaAgendada.ResultadoDaTarefa;
+import me.clama.api.comum.observabilidade.SentryConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
@@ -91,8 +92,9 @@ public class AgendaConfig implements SmartInitializingSingleton {
 		}
 	}
 
-	/** Unico ponto de falha de tarefa agendada (a Task 5 liga o Sentry aqui). */
+	/** Unico ponto de falha de tarefa agendada. */
 	void falhou(String nome, Exception e) {
 		LOG.error("Tarefa agendada '{}' falhou", nome, e);
+		SentryConfig.capturar("tarefa_agendada", nome, e);
 	}
 }
