@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-class CriptoConfig {
+public class CriptoConfig {
     @Bean
     Fernet fernet(@Value("${FIELD_ENCRYPTION_KEY}") String chave) {
         Fernet f = new Fernet(chave);
