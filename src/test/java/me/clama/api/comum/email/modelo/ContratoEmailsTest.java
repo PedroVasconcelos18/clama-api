@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.stream.Stream;
 import me.clama.api.comum.email.Email;
 import org.junit.jupiter.api.Named;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import tools.jackson.databind.JsonNode;
@@ -53,6 +54,24 @@ class ContratoEmailsTest {
         assertThat(obtido.assunto()).isEqualTo(esperado.assunto());
         assertThat(obtido.texto()).isEqualTo(esperado.texto());
         assertThat(obtido.html()).isEqualTo(esperado.html());
+    }
+
+    @Test
+    void credenciaisNulasRendemComoSemCredenciais() throws Exception {
+        JsonNode c = new ObjectMapper().readTree(Files.readString(CENARIOS.resolve("oracao_freemium_sem_credenciais.json")));
+        JsonNode e = c.get("entrada");
+        Email obtido = modelos.oracaoFreemium(s(e, "para"), s(e, "nome"), s(e, "oracao"), null, null);
+        assertThat(obtido.texto()).isEqualTo(c.get("texto").asString()).doesNotContain("CREDENCIAIS");
+        assertThat(obtido.html()).isEqualTo(c.get("html").asString());
+    }
+
+    @Test
+    void nuloNaoEstouraENomeNuloViraAmada() {
+        assertThat(modelos.oracao("a@b.com", null, null).assunto()).isEqualTo("Sua oração, Amada 🙏");
+        assertThat(modelos.oracaoFreemium("a@b.com", null, null, null, null).assunto()).isEqualTo("Sua oração chegou, Amada");
+        assertThat(modelos.confirmacaoFreemium("a@b.com", null, null).texto()).contains("Amada");
+        assertThat(modelos.recuperacaoSenha("a@b.com", null, null).texto()).contains("Amada");
+        assertThat(modelos.boasVindasDoador("a@b.com", null, null, null).texto()).contains("Amada");
     }
 
     static String s(JsonNode n, String campo) {
