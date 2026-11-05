@@ -17,7 +17,7 @@ public final class RedacaoSentry {
 	private static final Set<String> PII_FIELDS = Set.of("email", "telefone", "nome", "pedido_oracao", "oracao_gerada",
 			"phone", "name", "password", "senha", "token", "refresh", "access");
 	private static final Pattern EMAIL = Pattern.compile("[a-zA-Z0-9_.+\\-]+@[a-zA-Z0-9\\-]+\\.[a-zA-Z0-9\\-.]+");
-	private static final Pattern PHONE = Pattern.compile("\\(?\\d{2}\\)?\\s*\\d{4,5}[-\\s]?\\d{4}");
+	private static final Pattern PHONE = Pattern.compile("\\(?\\d{2}\\)?\\s*\\d{4,5}[-\\s]?\\d{4}", Pattern.UNICODE_CHARACTER_CLASS);
 
 	private RedacaoSentry() {}
 
@@ -29,7 +29,16 @@ public final class RedacaoSentry {
 				req.setData(dict(m));
 			}
 			if (req.getHeaders() != null) {
-				req.setHeaders(strings(req.getHeaders()));
+				req.setHeaders(strings(semIpEGeo(req.getHeaders())));
+			}
+		}
+		if (e.getMessage() != null) {
+			var msg = e.getMessage();
+			if (msg.getMessage() != null) {
+				msg.setMessage((String) valor("message", msg.getMessage()));
+			}
+			if (msg.getFormatted() != null) {
+				msg.setFormatted((String) valor("message", msg.getFormatted()));
 			}
 		}
 		if (e.getExtras() != null) {
@@ -89,6 +98,16 @@ public final class RedacaoSentry {
 			} else {
 				out.put(chave, valor(chave, v));
 			}
+		});
+		return out;
+	}
+
+	/** Alem do Python: IP e geo do cliente que o Vercel injeta nos headers (X-Forwarded-For, X-Vercel-*, *-IP). */
+	private static Map<String, String> semIpEGeo(Map<String, String> headers) {
+		Map<String, String> out = new LinkedHashMap<>(headers);
+		out.keySet().removeIf(k -> {
+			String n = k.toLowerCase(Locale.ROOT);
+			return n.contains("forwarded") || n.startsWith("x-vercel-") || n.contains("-ip");
 		});
 		return out;
 	}

@@ -1,6 +1,7 @@
 package me.clama.api.comum.observabilidade;
 
 import io.sentry.Sentry;
+import io.sentry.SentryLevel;
 import io.sentry.SentryOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -35,12 +36,13 @@ public class SentryConfig {
 
 	/** Falha tratada que mesmo assim precisa de alerta (job esgotado, tarefa agendada). No-op com o Sentry desligado. */
 	public static void capturar(String tag, String nome, Throwable erro) {
-		if (erro == null) {
-			return;
-		}
 		Sentry.withScope(scope -> {
 			scope.setTag(tag, nome);
-			Sentry.captureException(erro);
+			if (erro == null) {
+				Sentry.captureMessage("Falha sem excecao (" + tag + " " + nome + ")", SentryLevel.ERROR);
+			} else {
+				Sentry.captureException(erro);
+			}
 		});
 	}
 }

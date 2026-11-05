@@ -1,9 +1,13 @@
 package me.clama.api.comum.observabilidade;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import io.sentry.Breadcrumb;
+import jakarta.servlet.ServletException;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import io.sentry.Sentry;
 import io.sentry.SentryEvent;
 import io.sentry.protocol.Request;
@@ -102,13 +106,27 @@ class RedacaoSentryTest {
 		assertThat(RedacaoSentry.valor("x", "sem pii")).isEqualTo("sem pii");
 	}
 
+	// mesma tecnica: _redact_value("obs", v) no venv do clama-backend; \d e \s do Python 3 sao Unicode
+	@Test
+	void telefonesUnicodeComoOPython() {
+		assertThat(RedacaoSentry.valor("obs", "ligue (11)\u00a098765-4321 ja")).isEqualTo("ligue [PHONE_REDACTED] ja");
+		assertThat(RedacaoSentry.valor("obs", "fone 11\u200298765\u20024321 ok")).isEqualTo("fone [PHONE_REDACTED] ok");
+		assertThat(RedacaoSentry.valor("obs", "\u0661\u0661 \u0669\u0668\u0667\u0666\u0665-\u0664\u0663\u0662\u0661"))
+				.isEqualTo("[PHONE_REDACTED]");
+		assertThat(RedacaoSentry.valor("obs", "\uff11\uff11 \uff19\uff18\uff17\uff16\uff15-\uff14\uff13\uff12\uff11"))
+				.isEqualTo("[PHONE_REDACTED]");
+		// e-mail nao muda: o Python tambem nao casa "\u00e9@" nem "\u0661@"
+		assertThat(RedacaoSentry.valor("obs", "a\u00e9@b.com e \u0661@x.com")).isEqualTo("a\u00e9@b.com e \u0661@x.com");
+	}
+
 	@Test
 	@SuppressWarnings("unchecked")
 	void redigeOsLocaisDoEvento() {
 		var ev = new SentryEvent();
 		var req = new Request();
 		req.setData(new LinkedHashMap<>(Map.of("email", "a@b.com", "ok", "1")));
-		req.setHeaders(new LinkedHashMap<>(Map.of("X-Fone", "11 98765-4321")));
+		req.setHeaders(new LinkedHashMap<>(Map.of("X-Fone", "11 98765-4321", "Accept", "json",
+				"X-Forwarded-For", "1.2.3.4", "X-Vercel-IP-Country", "BR", "CF-Connecting-IP", "1.2.3.4", "Forwarded", "for=1.2.3.4")));
 		ev.setRequest(req);
 		ev.setExtra("telefone", "11987654321");
 		ev.setTag("quem", "a@b.com");
@@ -122,7 +140,7 @@ class RedacaoSentryTest {
 		RedacaoSentry.redigir(ev);
 
 		assertThat((Map<String, Object>) req.getData()).containsEntry("email", "[REDACTED]").containsEntry("ok", "1");
-		assertThat(req.getHeaders()).containsEntry("X-Fone", "[PHONE_REDACTED]");
+		assertThat(req.getHeaders()).containsOnlyKeys("X-Fone", "Accept").containsEntry("X-Fone", "[PHONE_REDACTED]");
 		assertThat(ev.getExtras()).containsEntry("telefone", "[REDACTED]");
 		assertThat(ev.getTags()).containsEntry("quem", "[EMAIL_REDACTED]");
 		assertThat(bc.getMessage()).isEqualTo("ligou [PHONE_REDACTED]");
@@ -131,14 +149,50 @@ class RedacaoSentryTest {
 	}
 
 	@Test
-	void falhaDefinitivaDeJobVaiProSentry() {
+	void falhaDefinitivaDeJobVaiProSentry() throws Exception {
 		BancoDeTeste.exigirContainer(jdbc);
 		TRANSPORT.eventos.clear();
 		tx.executeWithoutResult(s -> fila.enfileirar(jobQueSempreFalha, new Falha()));
 		await().atMost(Duration.ofSeconds(10)).until(() -> !TRANSPORT.eventos.isEmpty());
+		Thread.sleep(700);
 		assertThat(TRANSPORT.eventos).hasSize(1);
 		SentryEvent ev = TRANSPORT.eventos.get(0);
 		assertThat(ev.getExceptions().get(0).getValue()).isEqualTo("nao enviou para [EMAIL_REDACTED]");
 		assertThat(ev.getTag("job")).isEqualTo("job-que-falha");
+	}
+
+	@Autowired CapturaDeFiltro filtro;
+
+	@Test
+	void excecaoEscapandoDoFiltroVaiProSentry() throws Exception {
+		TRANSPORT.eventos.clear();
+		var ex = new IllegalStateException("banco fora para a@b.com");
+		assertThatThrownBy(() -> filtro.doFilter(new MockHttpServletRequest(), new MockHttpServletResponse(),
+				(rq, rs) -> { throw ex; })).isSameAs(ex);
+		await().atMost(Duration.ofSeconds(5)).until(() -> !TRANSPORT.eventos.isEmpty());
+		Thread.sleep(500);
+		assertThat(TRANSPORT.eventos).hasSize(1);
+		assertThat(TRANSPORT.eventos.get(0).getExceptions().get(0).getValue()).isEqualTo("banco fora para [EMAIL_REDACTED]");
+	}
+
+	@Test
+	void excecaoJaCapturadaPeloMvcNaoDuplica() throws Exception {
+		TRANSPORT.eventos.clear();
+		var ex = new IllegalStateException("erro de controller");
+		Sentry.captureException(ex); // o que o SentryExceptionResolver faz
+		assertThatThrownBy(() -> filtro.doFilter(new MockHttpServletRequest(), new MockHttpServletResponse(),
+				(rq, rs) -> { throw new ServletException(ex); })).isInstanceOf(ServletException.class);
+		await().atMost(Duration.ofSeconds(5)).until(() -> !TRANSPORT.eventos.isEmpty());
+		Thread.sleep(500);
+		assertThat(TRANSPORT.eventos).hasSize(1);
+	}
+
+	@Test
+	void falhaSemExcecaoViraMensagem() throws Exception {
+		TRANSPORT.eventos.clear();
+		SentryConfig.capturar("job", "job-x", null);
+		await().atMost(Duration.ofSeconds(5)).until(() -> !TRANSPORT.eventos.isEmpty());
+		assertThat(TRANSPORT.eventos.get(0).getMessage().getFormatted()).isEqualTo("Falha sem excecao (job job-x)");
+		assertThat(TRANSPORT.eventos.get(0).getTag("job")).isEqualTo("job-x");
 	}
 }
