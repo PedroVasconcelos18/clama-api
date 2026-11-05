@@ -3,9 +3,15 @@ package me.clama.api.identidade.senha;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import tools.jackson.databind.ObjectMapper;
 
 class SenhaDjangoTest {
@@ -46,5 +52,46 @@ class SenhaDjangoTest {
 		String pbkdf2 = (String) casos("senhas").get(1).get("hash");
 		assertTrue(senha.upgradeEncoding(pbkdf2));
 		assertFalse(senha.upgradeEncoding(senha.encode("x")));
+	}
+
+	@Test
+	void noMaximo3HashesArgon2AoMesmoTempo() throws Exception {
+		AtomicInteger dentro = new AtomicInteger();
+		AtomicInteger pico = new AtomicInteger();
+		PasswordEncoder lento = new PasswordEncoder() {
+			String medir() {
+				pico.accumulateAndGet(dentro.incrementAndGet(), Math::max);
+				try {
+					Thread.sleep(30);
+				} catch (InterruptedException e) {
+					throw new IllegalStateException(e);
+				}
+				dentro.decrementAndGet();
+				return "$x";
+			}
+
+			@Override
+			public String encode(CharSequence s) {
+				return medir();
+			}
+
+			@Override
+			public boolean matches(CharSequence s, String h) {
+				medir();
+				return true;
+			}
+		};
+		SenhaDjango senhas = new SenhaDjango(lento);
+		try (ExecutorService ex = Executors.newFixedThreadPool(12)) {
+			List<Future<?>> fs = new ArrayList<>();
+			for (int i = 0; i < 24; i++) {
+				int n = i;
+				fs.add(ex.submit(() -> n % 2 == 0 ? senhas.encode("s") : senhas.matches("s", "argon2$h")));
+			}
+			for (Future<?> f : fs) {
+				f.get();
+			}
+		}
+		assertEquals(3, pico.get());
 	}
 }

@@ -3,6 +3,8 @@ package me.clama.api.identidade.senha;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Base64;
+import java.util.concurrent.Semaphore;
+import java.util.function.Supplier;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
@@ -14,12 +16,33 @@ import org.springframework.stereotype.Component;
 public class SenhaDjango implements PasswordEncoder {
 	private static final String ARGON2 = "argon2";
 	private static final String PREFIXO_ARGON2 = "argon2$argon2id$v=19$m=102400,t=2,p=8$";
-	// saltLength 16, hashLength 32, parallelism 8, memory 102400 KiB, iterations 2 (Django 4.2)
-	private final Argon2PasswordEncoder argon2 = new Argon2PasswordEncoder(16, 32, 8, 102400, 2);
+	// ponytail: teto global de 3 hashes argon2 ao mesmo tempo (~100 MiB cada, e o login gasta um hash ate pra
+	// e-mail inexistente); com 200 threads do Tomcat sem isso e OOM. Logins alem disso esperam na fila.
+	// Subir as licencas se o heap crescer (cada uma custa ~100 MiB).
+	private static final Semaphore VAGAS_ARGON2 = new Semaphore(3, true);
+	private final PasswordEncoder argon2;
+
+	public SenhaDjango() {
+		// saltLength 16, hashLength 32, parallelism 8, memory 102400 KiB, iterations 2 (Django 4.2)
+		this(new Argon2PasswordEncoder(16, 32, 8, 102400, 2));
+	}
+
+	SenhaDjango(PasswordEncoder argon2) {
+		this.argon2 = argon2;
+	}
 
 	@Override
 	public String encode(CharSequence senha) {
-		return ARGON2 + argon2.encode(senha);
+		return ARGON2 + comVaga(() -> argon2.encode(senha));
+	}
+
+	private static <T> T comVaga(Supplier<T> hash) {
+		VAGAS_ARGON2.acquireUninterruptibly();
+		try {
+			return hash.get();
+		} finally {
+			VAGAS_ARGON2.release();
+		}
 	}
 
 	@Override
@@ -29,7 +52,7 @@ public class SenhaDjango implements PasswordEncoder {
 		}
 		try {
 			if (hash.startsWith(ARGON2 + "$")) {
-				return argon2.matches(senha, hash.substring(ARGON2.length()));
+				return comVaga(() -> argon2.matches(senha, hash.substring(ARGON2.length())));
 			}
 			String[] p = hash.split("\\$", -1);
 			if (p.length != 4) {
