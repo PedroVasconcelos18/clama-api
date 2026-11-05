@@ -7,6 +7,7 @@ import java.util.Base64;
 import java.util.Map;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import me.clama.api.comum.cripto.CriptoConfig;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
@@ -20,8 +21,8 @@ public class Jwt {
 
     private final byte[] chave;
 
-    public Jwt(@Value("${DJANGO_SECRET_KEY}") String chave) {
-        this.chave = chave.getBytes(StandardCharsets.UTF_8);
+    public Jwt(@Value("${DJANGO_SECRET_KEY:}") String chave) {
+        this.chave = CriptoConfig.exigir("DJANGO_SECRET_KEY", chave).getBytes(StandardCharsets.UTF_8);
     }
 
     public String assinar(Map<String, Object> claims) {
