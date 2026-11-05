@@ -26,7 +26,6 @@ class FernetTest {
     void idaEVolta() throws Exception {
         String claro = "Maria da Conceição 123";
         String token = fernet.cifrar(claro);
-        System.out.println("TOKEN_JAVA=" + token);
         assertThat(token).startsWith("gAAAAA");
         assertThat(fernet.decifrar(token)).isEqualTo(claro);
     }
