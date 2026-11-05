@@ -37,6 +37,7 @@ class RotacaoConcorrenteTest {
 
     @AfterEach
     void limpa() {
+        BancoDeTeste.exigirContainer(jdbc);
         jdbc.update("delete from token_blacklist_blacklistedtoken");
         jdbc.update("delete from token_blacklist_outstandingtoken");
         jdbc.update("delete from users_user");

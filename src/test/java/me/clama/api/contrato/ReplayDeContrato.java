@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import me.clama.api.BancoDeTeste;
 import me.clama.api.comum.ratelimit.RateLimiter;
 import me.clama.api.identidade.Usuario;
 import me.clama.api.identidade.UsuarioRepository;
@@ -64,6 +65,7 @@ public class ReplayDeContrato {
 
     public void executar(Path cenarioJson, URI base) throws Exception {
         JsonNode cenario = JSON.readTree(cenarioJson.toFile());
+        BancoDeTeste.exigirContainer(jdbc); // o TRUNCATE ... CASCADE apagaria pedidos, blog e tokens de um banco real
         jdbc.execute("TRUNCATE " + String.join(", ", tabelas) + " RESTART IDENTITY CASCADE");
         limiter.limpar(); // cache.clear() do gravador
         for (JsonNode u : cenario.path("usuarios")) {
