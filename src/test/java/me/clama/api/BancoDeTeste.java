@@ -15,12 +15,24 @@ import org.testcontainers.utility.DockerImageName;
 public class BancoDeTeste {
 	static final String BANCO = "clama_testcontainers";
 
-	@Bean
+	/** Um unico container por JVM, compartilhado por todos os contextos (os testes ja limpam suas tabelas). */
+	private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(DockerImageName.parse("postgres:18")) {
+		/** O Spring Boot para o container quando o 1o contexto fecha; os outros contextos ainda precisam do banco. */
+		@Override
+		public void stop() {
+		}
+	}.withDatabaseName(BANCO)
+			.withCommand("postgres", "-c", "max_connections=300") // um pool por contexto em cache
+			.withInitScript("db/schema-prod.sql");
+
+	static {
+		POSTGRES.start(); // o Ryuk do Testcontainers derruba no fim da JVM
+	}
+
+	@Bean(destroyMethod = "")
 	@ServiceConnection
 	PostgreSQLContainer postgres() {
-		return new PostgreSQLContainer(DockerImageName.parse("postgres:18"))
-				.withDatabaseName(BANCO)
-				.withInitScript("db/schema-prod.sql");
+		return POSTGRES;
 	}
 
 	/** Chamar antes de qualquer TRUNCATE/DELETE de limpeza: recusa se o JdbcTemplate nao for o do container. */
