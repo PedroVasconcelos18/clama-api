@@ -151,4 +151,46 @@ class CheckoutConcorrenciaTest {
         assertThat(jdbc.queryForObject("select provider_payment_id from orders_pedido where id = ?", String.class, id))
                 .isEqualTo("1325814423");
     }
+
+    @Autowired
+    javax.sql.DataSource dataSource;
+
+    /** Outra transacao segura a linha: o checkout espera o lock_timeout e responde 503 pastoral, nao 500. */
+    @Test
+    void lockPresoViraPastoral503() throws Exception {
+        limiter.limpar();
+        UUID id = semearPedido();
+        CRIACOES.set(0);
+        CountDownLatch preso = new CountDownLatch(1);
+        CountDownLatch solta = new CountDownLatch(1);
+        Thread segura = Thread.ofPlatform().start(() -> {
+            try (var c = dataSource.getConnection()) {
+                c.setAutoCommit(false);
+                try (var st = c.prepareStatement("select 1 from orders_pedido where id = ? for update")) {
+                    st.setObject(1, id);
+                    st.executeQuery();
+                }
+                preso.countDown();
+                solta.await();
+                c.rollback();
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+        });
+        preso.await();
+        try {
+            HttpRequest req = HttpRequest.newBuilder(URI.create("http://localhost:" + porta + "/api/pedidos/" + id
+                    + "/checkout/")).POST(HttpRequest.BodyPublishers.noBody()).build();
+            long t0 = System.nanoTime();
+            HttpResponse<String> r = HttpClient.newHttpClient().send(req, HttpResponse.BodyHandlers.ofString());
+            long ms = (System.nanoTime() - t0) / 1_000_000;
+            assertThat(r.statusCode()).as(r.body()).isEqualTo(503);
+            assertThat(JSON.readTree(r.body()).at("/error/code").asString()).isEqualTo("payment_provider_error");
+            assertThat(ms).as("espera o lock_timeout de 15 s (PedidoRepository.travar)").isBetween(14_000L, 20_000L);
+            assertThat(CRIACOES.get()).as("nao chegou ao MP").isZero();
+        } finally {
+            solta.countDown();
+            segura.join();
+        }
+    }
 }

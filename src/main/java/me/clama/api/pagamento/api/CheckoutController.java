@@ -17,6 +17,7 @@ import me.clama.api.pedido.StatusPedido;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -59,6 +60,16 @@ class CheckoutController {
     @PostMapping("/api/pedidos/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/checkout/")
     @LimiteDeTaxa(escopo = "pedidos_checkout", limite = 10, janelaSegundos = 60)
     Pix checkout(@PathVariable UUID id) {
+        try {
+            return checkoutTravado(id);
+        } catch (PessimisticLockingFailureException e) {
+            // outra requisicao segurou o pedido alem do lock_timeout (ex.: MP lento): pede para tentar de novo
+            LOG.warn("Checkout lock timeout (event=checkout_lock_timeout, pedido_id={})", id);
+            throw new PastoralException(503, "payment_provider_error", "Pedido em processamento", PASTORAL_PADRAO);
+        }
+    }
+
+    private Pix checkoutTravado(UUID id) {
         return tx.execute(st -> {
             Pedido p = pedidos.travar(id).orElseThrow(() -> new PastoralException(404, "not_found",
                     "Pedido não encontrado", "Não encontramos esse pedido. Verifique se o link está correto."));
