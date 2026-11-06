@@ -1,6 +1,8 @@
 package me.clama.api.pagamento.webhook;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
@@ -75,5 +77,12 @@ class AssinaturaMercadoPagoTest {
         assertThat(valida(null, "req-contrato-1", "ts=1762434000,v1=" + OK)).as("sem query").isFalse();
         assertThat(AssinaturaMercadoPago.valida("", "data.id=1325814423", "req-contrato-1", "ts=1762434000,v1=" + OK))
                 .as("segredo vazio").isFalse();
+    }
+
+    @Test
+    void foraDoPerfilTestSegredoEmBrancoImpedeOBoot() {
+        assertThatThrownBy(() -> new AssinaturaMercadoPago("", false)).isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("MERCADOPAGO_WEBHOOK_SECRET");
+        assertThatCode(() -> new AssinaturaMercadoPago("", true)).doesNotThrowAnyException();
     }
 }

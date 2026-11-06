@@ -22,7 +22,12 @@ export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
 ## Configuracao
 
 - `DATABASE_URL` (formato Railway) vira o DataSource via `DatabaseUrlConfig`, fora do perfil `test`. Sem ela vale a config padrao do Spring.
-- `DJANGO_SECRET_KEY`, `FIELD_ENCRYPTION_KEY` e `FREEMIUM_HASH_SECRET` sao obrigatorias e nao tem default. Se faltar alguma, ou se vier em branco, a aplicacao nao sobe. Os valores de teste ficam so em `src/test/resources/application-test.yml`.
+- `DJANGO_SECRET_KEY`, `FIELD_ENCRYPTION_KEY`, `FREEMIUM_HASH_SECRET` e `MERCADOPAGO_WEBHOOK_SECRET` (esta so fora do perfil `test`) sao obrigatorias e nao tem default. Se faltar alguma, ou se vier em branco, a aplicacao nao sobe. Os valores de teste ficam so em `src/test/resources/application-test.yml`.
+- Opcionais, mas com efeito se faltarem:
+  - `ANTHROPIC_API_KEY`: a aplicacao sobe, mas loga ERROR e manda um evento ao Sentry no boot; toda geracao de oracao falha (fora do perfil `test` nao ha oracao mock).
+  - `ADMIN_ALERT_EMAIL`: o alerta de pedido em erro vai para `contato@clama.me`.
+  - `FRONTEND_URL` (ou `FRONTEND_BASE_URL`): o link de login dos e-mails aponta para `http://localhost:5173/login`.
+  - `FREEMIUM_TEMP_PWD_KEY`: gera-se uma chave aleatoria por processo; a senha temporaria guardada para o e-mail de boas-vindas nao sobrevive a um restart, e o job de boas-vindas entao nao tem o que enviar (WARN e Sentry se o doador nunca entrou).
 
 ## Transacao por requisicao
 

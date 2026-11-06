@@ -18,7 +18,11 @@ import me.clama.api.comum.erro.PastoralExceptionHandler;
 import me.clama.api.comum.texto.TextoPython;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import me.clama.api.comum.cripto.CriptoConfig;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -35,8 +39,15 @@ public class AssinaturaMercadoPago extends OncePerRequestFilter {
 
     private final String segredo;
 
-    AssinaturaMercadoPago(@Value("${MERCADOPAGO_WEBHOOK_SECRET:}") String segredo) {
-        this.segredo = segredo;
+    @Autowired
+    AssinaturaMercadoPago(@Value("${MERCADOPAGO_WEBHOOK_SECRET:}") String segredo, Environment env) {
+        this(segredo, env.acceptsProfiles(Profiles.of("test")));
+    }
+
+    /** Fora do perfil test o segredo e obrigatorio no boot (o Django nao sobe sem ele). */
+    AssinaturaMercadoPago(String segredo, boolean perfilTest) {
+        this.segredo = perfilTest ? (segredo == null ? "" : segredo)
+                : CriptoConfig.exigir("MERCADOPAGO_WEBHOOK_SECRET", segredo);
     }
 
     @Override
