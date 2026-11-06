@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
 import me.clama.api.BancoDeTeste;
+import me.clama.api.MidiaDeTeste;
 import me.clama.api.comum.ratelimit.RateLimiter;
 import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.identidade.token.ServicoDeTokens;
@@ -21,10 +22,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.util.FileSystemUtils;
 
 /** Cenarios gravados por clama-backend/contrato/test_gravar_catalogo.py. */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+// propriedades inline vencem as variaveis do SO: nunca a chave real da Anthropic nem o ./media do desenvolvedor
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = {"ANTHROPIC_API_KEY=", "clama.media-root=target/media-test"})
 @Import(BancoDeTeste.class)
 @ActiveProfiles("test")
 class ContratoCatalogoTest {
@@ -78,7 +80,7 @@ class ContratoCatalogoTest {
     @ParameterizedTest(name = "{0}")
     @MethodSource("cenarios")
     void cenario(Path json) throws Exception {
-        FileSystemUtils.deleteRecursively(media); // MEDIA_ROOT novo por cenario, como o TemporaryDirectory do gravador
+        MidiaDeTeste.apagar(media); // MEDIA_ROOT novo por cenario, como o TemporaryDirectory do gravador
         new ReplayDeContrato(jdbc, usuarios, tokens, limiter, TABELAS)
                 .executar(json, URI.create("http://localhost:" + porta));
     }

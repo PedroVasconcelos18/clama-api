@@ -41,6 +41,7 @@ import tools.jackson.databind.ObjectMapper;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "ANTHROPIC_API_KEY=sk-ant-teste",
+        "clama.media-root=target/media-test",
         "clama.documentos.tamanho-maximo=4KB",
         "spring.servlet.multipart.max-file-size=8KB",
         "spring.servlet.multipart.max-request-size=9KB"})
