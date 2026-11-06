@@ -1,6 +1,8 @@
 package me.clama.api.conta;
 
 import java.time.Duration;
+import java.util.Map;
+import me.clama.api.comum.observabilidade.SentryConfig;
 import me.clama.api.comum.email.EnviadorDeEmail;
 import me.clama.api.comum.email.ResultadoEnvio;
 import me.clama.api.comum.email.modelo.ModelosDeEmail;
@@ -74,6 +76,13 @@ public class JobBoasVindas implements TipoDeJob<Long> {
         String chave = ProvisionamentoDeConta.PREFIXO_SENHA + userId;
         String senha = senhas.ler(chave).orElse("");
         if (senha.isEmpty()) {
+            if (u.isForceChangePassword() && u.getLastLogin() == null) {
+                // o doador nunca recebeu credenciais e a senha sumiu do cache: ninguem mais vai reenviar
+                LOG.warn("Boas-vindas sem senha no cache e doador sem login (event=doador_boas_vindas_credenciais_perdidas, "
+                        + "user_id={})", userId);
+                SentryConfig.capturar("job", NOME, Map.of("job_instancia", instancia(userId)), null);
+                return;
+            }
             LOG.info("enviar_email_boas_vindas_doador_idempotente (event=doador_boas_vindas_sem_senha_cache, "
                     + "user_id={})", userId);
             return;
