@@ -179,6 +179,52 @@ class MercadoPagoTest {
     }
 
     @Test
+    void timeoutDepoisIdempotenciaEmAndamentoDepoisSucessoUsaMesmaChave() {
+        // timeout -> 409 ("process has not been completed yet") -> 201, mesma chave nas tres
+        respostas = List.of(new Resposta(201, PIX_CRIADO, 2000),
+                new Resposta(409, "{\"message\":\"in process\",\"cause\":[]}", 0), new Resposta(201, PIX_CRIADO, 0));
+
+        CobrancaPix c = mp().criarCobrancaPix(pedido());
+
+        assertThat(c.providerPaymentId()).isEqualTo("1325814423");
+        assertThat(recebidas).hasSize(3).allSatisfy(r -> assertThat(r.header("X-idempotency-key"))
+                .isEqualTo("clama-pedido-77777777-7777-4777-8777-000000000001"));
+        assertThat(esperas).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
+    }
+
+    @Test
+    void status423EhRetentado() {
+        respostas = List.of(new Resposta(423, "{}", 0), new Resposta(201, PIX_CRIADO, 0));
+        assertThat(mp().criarCobrancaPix(pedido()).providerPaymentId()).isEqualTo("1325814423");
+        assertThat(chamadas.get()).isEqualTo(2);
+    }
+
+    @Test
+    void corpoLentoTambemEstouraOTimeout() throws Exception {
+        // headers imediatos, corpo gotejando por mais que o timeout (300 ms)
+        server.removeContext("/");
+        server.createContext("/", ex -> {
+            chamadas.incrementAndGet();
+            ex.getResponseHeaders().add("Content-Type", "application/json");
+            ex.sendResponseHeaders(201, 1000);
+            try {
+                ex.getResponseBody().write("{".getBytes(StandardCharsets.UTF_8));
+                ex.getResponseBody().flush();
+                Thread.sleep(2000);
+            } catch (Exception cliente) {
+                // cliente desistiu
+            }
+            ex.close();
+        });
+        long t0 = System.nanoTime();
+        ErroDoProvedor e = (ErroDoProvedor) catchThrowable(() -> mp().criarCobrancaPix(pedido()));
+        assertThat(e).isNotNull();
+        assertThat(e.upstreamStatus()).isNull();
+        assertThat(chamadas.get()).isEqualTo(3);
+        assertThat(Duration.ofNanos(System.nanoTime() - t0)).isLessThan(Duration.ofSeconds(3));
+    }
+
+    @Test
     void cincoXXRetentaTresVezesComEsperas1e2EViraIndisponivel() {
         respostas = List.of(new Resposta(500, "{\"message\":\"Internal server error\",\"cause\":[]}", 0));
 

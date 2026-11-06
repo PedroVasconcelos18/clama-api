@@ -105,7 +105,8 @@ class CheckoutController {
     /** 4xx do Mercado Pago: dados/config recusados (422). Rede, timeout, 5xx ou corpo estranho: 503 (502 nao). */
     static PastoralException paraResposta(ErroDoProvedor e, UUID pedido) {
         Integer status = e.upstreamStatus();
-        boolean quatroXX = status != null && status >= 400 && status < 500;
+        // 409/423 depois dos retries: idempotencia ainda em andamento no MP, nao e dado recusado
+        boolean quatroXX = status != null && status >= 400 && status < 500 && status != 409 && status != 423;
         boolean credencial = quatroXX && ehDeCredencial(descricao(e.upstreamBody()));
         String corpo = e.upstreamBody() == null ? null
                 : e.upstreamBody().substring(0, Math.min(e.upstreamBody().length(), 500));

@@ -6,11 +6,15 @@ import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
+import java.net.http.HttpTimeoutException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import me.clama.api.comum.retry.Retentativa;
@@ -30,15 +34,14 @@ import tools.jackson.databind.node.ObjectNode;
  * 3 com 1/2/4 s em rede/timeout e 500/502/503/504; o resto vira {@link ErroDoProvedor} na hora.
  *
  * <p>Diferencas deliberadas do Django: chave de idempotencia fixa por pedido (o SDK sorteia uma por tentativa e um
- * retry depois de timeout pode criar o 2o Pix) e timeout de 30 s por chamada (o SDK espera 60 s com o lock do pedido
- * preso). O token so vai no header Authorization: nunca em log, mensagem ou corpo de erro.
+ * retry depois de timeout pode criar o 2o Pix) e timeout de 10 s por chamada, corpo incluido (o SDK espera 60 s com o lock do pedido
+ * preso). 409/423 (idempotencia em andamento depois de um timeout) tambem sao retentados. O token so vai no header Authorization: nunca em log, mensagem ou corpo de erro.
  */
 @Component
 public class MercadoPago {
     private static final Logger LOG = LoggerFactory.getLogger(MercadoPago.class);
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final Duration TIMEOUT = Duration.ofSeconds(30);
-    private static final Set<Integer> RETENTAVEIS = Set.of(500, 502, 503, 504);
+    private static final Set<Integer> RETENTAVEIS = Set.of(409, 423, 500, 502, 503, 504);
     private static final Set<String> APROVADO = Set.of("approved");
     private static final Set<String> RECUSADO = Set.of("rejected", "cancelled", "refunded", "charged_back");
 
@@ -57,8 +60,9 @@ public class MercadoPago {
     @Autowired
     public MercadoPago(@Value("${MERCADOPAGO_ACCESS_TOKEN:}") String token,
             @Value("${clama.mercadopago.url:https://api.mercadopago.com}") String url,
-            @Value("${BACKEND_PUBLIC_URL:}") String backendUrl) {
-        this(token, url, backendUrl, TIMEOUT, Retentativa::dormir);
+            @Value("${BACKEND_PUBLIC_URL:}") String backendUrl,
+            @Value("${clama.mercadopago.timeout:10s}") Duration timeout) {
+        this(token, url, backendUrl, timeout, Retentativa::dormir);
     }
 
     MercadoPago(String token, String url, String backendUrl, Duration timeout, Consumer<Duration> dormir) {
@@ -141,7 +145,17 @@ public class MercadoPago {
         long inicio = System.nanoTime();
         HttpResponse<String> r;
         try {
-            r = http.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            // o timeout do request so cobre os headers; o get() limita a resposta inteira (corpo lento)
+            var futuro = http.sendAsync(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            try {
+                r = futuro.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            } catch (TimeoutException e) {
+                futuro.cancel(true);
+                throw new HttpTimeoutException("resposta do Mercado Pago passou de " + timeout);
+            } catch (ExecutionException e) {
+                if (e.getCause() instanceof IOException io) throw io;
+                throw new IllegalStateException(e.getCause());
+            }
         } catch (IOException e) {
             log(operacao, null, tentativa, inicio, e.toString());
             throw new UncheckedIOException(e);

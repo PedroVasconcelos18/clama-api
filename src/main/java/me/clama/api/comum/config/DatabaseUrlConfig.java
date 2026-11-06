@@ -1,12 +1,12 @@
 package me.clama.api.comum.config;
 
+import com.zaxxer.hikari.HikariDataSource;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.jdbc.DataSourceBuilder;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -36,8 +36,17 @@ public class DatabaseUrlConfig {
 	@Bean
 	@Profile("!test")
 	@ConditionalOnProperty("DATABASE_URL")
-	DataSource dataSource(@Value("${DATABASE_URL}") String databaseUrl) {
+	@ConfigurationProperties("spring.datasource.hikari")
+	HikariDataSource dataSource(@Value("${DATABASE_URL}") String databaseUrl) {
 		JdbcParts p = paraJdbc(databaseUrl);
-		return DataSourceBuilder.create().url(p.url()).username(p.usuario()).password(p.senha()).build();
+		// o checkout segura uma conexao durante a chamada ao Mercado Pago: 20 (nao 10) e espera curta (10 s, nao 30).
+		// Os valores de spring.datasource.hikari.* sobrescrevem estes (bind depois do bean criado).
+		HikariDataSource ds = new HikariDataSource();
+		ds.setJdbcUrl(p.url());
+		ds.setUsername(p.usuario());
+		ds.setPassword(p.senha());
+		ds.setMaximumPoolSize(20);
+		ds.setConnectionTimeout(10_000);
+		return ds;
 	}
 }
