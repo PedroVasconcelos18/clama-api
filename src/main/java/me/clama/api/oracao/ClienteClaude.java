@@ -18,6 +18,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import me.clama.api.comum.observabilidade.SentryConfig;
 import me.clama.api.comum.retry.Retentativa;
 import me.clama.api.comum.texto.TextoPython;
 import me.clama.api.documento.DocumentoContexto;
@@ -79,6 +80,10 @@ public class ClienteClaude {
             DocumentoRepository documentos) {
         this(chave, url, env.acceptsProfiles(Profiles.of("test")), prompts, documentos, Duration.ofSeconds(30),
                 Retentativa::dormir);
+        if (!mockPermitido && this.cliente == null) {
+            LOG.error("ANTHROPIC_API_KEY ausente: toda geracao de oracao vai falhar (event=anthropic_key_missing)");
+            SentryConfig.capturar("origem", "anthropic_key_ausente", null);
+        }
     }
 
     ClienteClaude(String chave, String url, boolean mockPermitido, PromptAtivo prompts, DocumentoRepository documentos,

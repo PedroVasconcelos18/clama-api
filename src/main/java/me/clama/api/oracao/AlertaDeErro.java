@@ -44,7 +44,7 @@ public class AlertaDeErro {
             LOG.debug("Alert already sent for pedido (event=alert_throttled, pedido_id={})", pedidoId);
             return;
         }
-        fila.getObject().enfileirar(job, JobAlertaAdmin.instancia(pedidoId), pedidoId);
+        if (!fila.getObject().enfileirar(job, JobAlertaAdmin.instancia(pedidoId), pedidoId)) return;
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
