@@ -36,6 +36,11 @@ public class PastoralExceptionHandler {
         return ResponseEntity.badRequest().body(corpo);
     }
 
+    @ExceptionHandler(NaoEncontrado.class)
+    ResponseEntity<Map<String, String>> naoEncontrado(NaoEncontrado e) {
+        return ResponseEntity.status(404).body(Map.of("detail", e.getMessage()));
+    }
+
     @ExceptionHandler(CamposDrf.Invalidos.class)
     ResponseEntity<Map<String, List<String>>> campos(CamposDrf.Invalidos e) {
         return ResponseEntity.badRequest().body(e.erros());

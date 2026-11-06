@@ -88,6 +88,86 @@ public final class CamposDrf {
         return null;
     }
 
+    public boolean tem(String campo) {
+        return corpo.has(campo);
+    }
+
+    /** IntegerField(min_value, max_value): aceita int, float inteiro ("12.0") e string numerica; bool nao. */
+    public Integer inteiro(String campo, long min, long max) {
+        JsonNode v = corpo.get(campo);
+        if (v == null) {
+            erro(campo, OBRIGATORIO);
+            return null;
+        }
+        if (v.isNull()) {
+            erro(campo, NULO);
+            return null;
+        }
+        java.math.BigInteger n = null;
+        if (v.isIntegralNumber()) {
+            n = v.bigIntegerValue();
+        } else if (v.isNumber() && v.decimalValue().stripTrailingZeros().scale() <= 0) {
+            n = v.decimalValue().toBigIntegerExact();
+        } else if (v.isString() && v.asString().strip().matches("[+-]?\\d+(\\.0*)?")) {
+            n = new java.math.BigDecimal(v.asString().strip()).toBigInteger();
+        }
+        if (n == null) {
+            erro(campo, "Um número inteiro válido é exigido.");
+            return null;
+        }
+        if (n.compareTo(java.math.BigInteger.valueOf(min)) < 0) {
+            erro(campo, "Certifque-se de que este valor seja maior ou igual a " + min + ".");
+            return null;
+        }
+        if (n.compareTo(java.math.BigInteger.valueOf(max)) > 0) {
+            erro(campo, "Certifique-se de que este valor seja inferior ou igual a " + max + ".");
+            return null;
+        }
+        return n.intValue();
+    }
+
+    private static final java.util.Set<String> VERDADEIROS = java.util.Set.of("t", "T", "y", "Y", "yes", "Yes", "YES",
+            "true", "True", "TRUE", "on", "On", "ON", "1");
+    private static final java.util.Set<String> FALSOS = java.util.Set.of("f", "F", "n", "N", "no", "No", "NO", "false",
+            "False", "FALSE", "off", "Off", "OFF", "0");
+
+    /** BooleanField (required=False no chamador). */
+    public Boolean booleano(String campo) {
+        JsonNode v = corpo.get(campo);
+        if (v == null) {
+            return null;
+        }
+        if (v.isNull()) {
+            erro(campo, NULO);
+            return null;
+        }
+        String s = v.asString();
+        if (VERDADEIROS.contains(s)) {
+            return true;
+        }
+        if (FALSOS.contains(s)) {
+            return false;
+        }
+        erro(campo, "Deve ser um valor booleano válido.");
+        return null;
+    }
+
+    /** ChoiceField: devolve o valor se for uma das opcoes. */
+    public String escolha(String campo, List<String> opcoes) {
+        JsonNode v = corpo.get(campo);
+        if (v == null) {
+            return null;
+        }
+        if (v.isNull()) {
+            return erro(campo, NULO);
+        }
+        String s = v.asString();
+        if (v.isString() && opcoes.contains(s)) {
+            return s;
+        }
+        return erro(campo, "\"" + s + "\" não é uma escolha válida.");
+    }
+
     /** is_valid(raise_exception=True). */
     public void validar() {
         if (!erros.isEmpty()) {

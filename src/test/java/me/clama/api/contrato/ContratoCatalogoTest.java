@@ -21,34 +21,20 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 /** Cenarios gravados por clama-backend/contrato/test_gravar_catalogo.py. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import({BancoDeTeste.class, ContratoCatalogoTest.RotasProvisorias.class})
+@Import(BancoDeTeste.class)
 @ActiveProfiles("test")
 class ContratoCatalogoTest {
     static final Path CENARIOS = Path.of("src/test/resources/contrato/catalogo");
     /** Grupos ligados, por prefixo do arquivo. Cada task move o seu prefixo de PENDENTES para LIGADOS. */
-    static final List<String> LIGADOS = List.of("admin_");
+    static final List<String> LIGADOS = List.of("admin_", "planos_");
     /** Gravados mas ainda sem implementacao. Fica vazio na Task 5. */
-    static final List<String> PENDENTES = List.of("planos_", "instituicoes_", "prompts_", "documentos_");
+    static final List<String> PENDENTES = List.of("instituicoes_", "prompts_", "documentos_");
     static final List<String> TABELAS = List.of("users_user", "token_blacklist_outstandingtoken",
             "token_blacklist_blacklistedtoken", "plans_plan", "instituicoes_instituicao", "prompts_prompttemplate",
             "documents_documentocontexto");
-
-    /**
-     * Provisorio: sem handler a rota cai no 404 (URL desconhecida), entao os cenarios admin_ precisam que
-     * /api/admin/planos/ exista. A Task 2 apaga esta classe junto com a criacao do controller de verdade
-     * (os dois juntos dao "Ambiguous mapping" na subida).
-     */
-    @RestController
-    static class RotasProvisorias {
-        @GetMapping({"/api/admin/planos/", "/api/admin/planos/{id}/"})
-        void provisoria() {
-        }
-    }
 
     @Value("${local.server.port}")
     int porta;

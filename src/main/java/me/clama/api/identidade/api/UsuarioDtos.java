@@ -33,7 +33,7 @@ public final class UsuarioDtos {
     public record Login<T>(T user) {}
 
     /** DateTimeField do DRF: fuso local + isoformat() do Python (micro so se houver, "+00:00" vira "Z"). */
-    static String dataHora(OffsetDateTime t) {
+    public static String dataHora(OffsetDateTime t) {
         if (t == null) {
             return null;
         }
