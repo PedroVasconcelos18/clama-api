@@ -48,6 +48,15 @@ class ValidacaoDePedido {
 
     /** doacao: sem o campo plano (sempre inferido), com device_hash e turnstile_token. */
     Dados validar(JsonNode corpo, boolean doacao) {
+        return validar(corpo, doacao, false);
+    }
+
+    /** PedidoGratuitoCreateSerializer: sem plano, instituicao e valor_centavos (o controller forca o plano gratuito). */
+    Pedido validarGratuito(JsonNode corpo) {
+        return validar(corpo, false, true).pedido();
+    }
+
+    private Dados validar(JsonNode corpo, boolean doacao, boolean gratuito) {
         CamposDrf c = new CamposDrf(corpo);
         Pedido p = new Pedido();
         String nome = c.texto("nome", true, "Por favor, digite seu nome.", s -> {
@@ -65,11 +74,11 @@ class ValidacaoDePedido {
         Integer anos = idade != null && idade.isNull() ? null : c.inteiro("idade", false, 0, Short.MAX_VALUE);
         String sexo = c.escolha("sexo", false, List.of("", "feminino", "masculino", "nao_informado"));
         String oracao = c.textoEmBranco("pedido_oracao");
-        Plano plano = doacao ? null : plano(c);
-        Instituicao instituicao = relacionado(c, "instituicao", instituicoes::findByIdAndAtivoTrue,
+        Plano plano = doacao || gratuito ? null : plano(c);
+        Instituicao instituicao = gratuito ? null : relacionado(c, "instituicao", instituicoes::findByIdAndAtivoTrue,
                 "Não encontramos essa instituição. Escolha uma da lista, por favor.",
                 "Instituição inválida. Escolha uma da lista, por favor.");
-        Integer valor = c.inteiro("valor_centavos", true, 100, Integer.MAX_VALUE,
+        Integer valor = gratuito ? Integer.valueOf(0) : c.inteiro("valor_centavos", true, 100, Integer.MAX_VALUE,
                 "O valor mínimo é R$ 1,00 — qualquer oferta acima ajuda o Clama.");
         String canal = c.escolha("canal_entrega", false, List.of("email", "whatsapp"),
                 "Por favor, escolha entre E-mail ou WhatsApp.");
@@ -89,7 +98,7 @@ class ValidacaoDePedido {
         if (canalEntrega == CanalEntrega.WHATSAPP && (telefone == null || TextoPython.strip(telefone).isEmpty())) {
             throw invalido("telefone", "Para receber no WhatsApp, precisamos do seu telefone.");
         }
-        if (plano == null) {
+        if (plano == null && !gratuito) {
             plano = inferencia.inferirPorValor(valor).or(inferencia::fallbackValorLivre)
                     .orElseThrow(() -> invalido("plano", "Nenhum plano disponível no momento."));
         }

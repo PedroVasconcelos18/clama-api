@@ -41,7 +41,7 @@ public class SegurancaConfig {
      * permission_classes = [IsAuthenticated, IsCustomerPasswordCurrent] (clama/core/permissions.py): anonimo 401,
      * senha temporaria 403 pastoral. Roda no filtro, antes do throttle, como o check_permissions do DRF.
      */
-    static final String[] SENHA_EM_DIA = {"/api/pedidos/"};
+    static final String[] SENHA_EM_DIA = {"/api/pedidos/", "/api/pedidos/gratuito/"};
 
     /** CSRF_COOKIE_PATH=/api, CSRF_COOKIE_HTTPONLY=True, SameSite e idade padrao do Django (1 ano). */
     @Bean

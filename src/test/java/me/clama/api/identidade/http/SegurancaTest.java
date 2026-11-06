@@ -132,9 +132,8 @@ class SegurancaTest {
         assertThat(chamar("GET", "/api/pedidos/" + uuid + "/", "Cookie", "clama_access=lixo").statusCode())
                 .isEqualTo(401);
         // /gratuito/ (4B) nao e aberta pelo padrao: exige login
-        // (sem handler ate a 4B: 404 do dispatcher; com handler POST: 401 anonimo. Nunca 200/405 da rota de status.)
-        assertThat(chamar("GET", "/api/pedidos/gratuito/").statusCode()).isIn(401, 404);
-        assertThat(chamar("POST", "/api/pedidos/gratuito/").statusCode()).isIn(401, 404);
+        assertThat(chamar("GET", "/api/pedidos/gratuito/").statusCode()).isEqualTo(401);
+        assertThat(chamar("POST", "/api/pedidos/gratuito/").statusCode()).isEqualTo(401);
         assertThat(FiltroJwtCookie.ABERTAS.matches(new org.springframework.mock.web.MockHttpServletRequest("GET",
                 "/api/pedidos/gratuito/"))).isFalse();
         // checkout tem entrada propria (padrao CHECKOUT): ver rotaDeCheckoutSoAbreParaUuidDoDjango
