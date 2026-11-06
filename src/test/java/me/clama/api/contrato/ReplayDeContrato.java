@@ -111,6 +111,7 @@ public class ReplayDeContrato {
             HttpRequest.Builder b = HttpRequest.newBuilder(base.resolve(req.get("path").asString()))
                     .method(metodo, corpo == null ? HttpRequest.BodyPublishers.noBody()
                             : HttpRequest.BodyPublishers.ofByteArray(corpo));
+            b.header("Host", "testserver"); // SERVER_NAME do test client: URL absoluta gravada como http://testserver/
             if (tipo != null) {
                 b.header("Content-Type", tipo);
             }

@@ -3,7 +3,6 @@ package me.clama.api.prompt;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.regex.Pattern;
 import me.clama.api.comum.api.CamposDrf;
 import me.clama.api.comum.erro.NaoEncontrado;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -24,8 +23,6 @@ import tools.jackson.databind.JsonNode;
 @RestController
 class PromptsAdminController {
     private static final String ID = "{id}/";
-    private static final Pattern UUID_DJANGO =
-            Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
     private static final String MSG_NOME_DUPLICADO = "Template de Prompt com este Nome já existe.";
 
     private final PromptTemplateRepository prompts;
@@ -43,7 +40,7 @@ class PromptsAdminController {
 
     @GetMapping("/api/admin/prompts/" + ID)
     PromptDtos.Admin detalhe(@PathVariable("id") String rota) {
-        return PromptDtos.Admin.de(prompts.findById(uuid(rota)).orElseThrow(() -> new NaoEncontrado("PromptTemplate")));
+        return PromptDtos.Admin.de(prompts.findById(NaoEncontrado.uuidDaRota(rota)).orElseThrow(() -> new NaoEncontrado("PromptTemplate")));
     }
 
     /** versao, ativo e ids vindos do cliente sao ignorados (read_only); nasce inativo. */
@@ -85,7 +82,7 @@ class PromptsAdminController {
     /** save() do modelo: desativa os outros e ativa este, serializado. */
     @PostMapping("/api/admin/prompts/" + ID + "ativar/")
     PromptDtos.Ativado ativar(@PathVariable("id") String rota) {
-        UUID id = uuid(rota);
+        UUID id = NaoEncontrado.uuidDaRota(rota);
         return tx.execute(st -> {
             prompts.travarAtivacao();
             PromptTemplate p = prompts.findById(id).orElseThrow(() -> new NaoEncontrado("PromptTemplate"));
@@ -97,10 +94,4 @@ class PromptsAdminController {
         });
     }
 
-    private static UUID uuid(String rota) {
-        if (!UUID_DJANGO.matcher(rota).matches()) {
-            throw new NaoEncontrado();
-        }
-        return UUID.fromString(rota);
-    }
 }

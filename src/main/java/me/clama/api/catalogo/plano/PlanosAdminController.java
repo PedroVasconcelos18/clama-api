@@ -3,7 +3,6 @@ package me.clama.api.catalogo.plano;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.regex.Pattern;
 import me.clama.api.comum.api.CamposDrf;
 import me.clama.api.comum.erro.NaoEncontrado;
 import org.springframework.http.HttpStatus;
@@ -22,9 +21,6 @@ import tools.jackson.databind.JsonNode;
 @RestController
 class PlanosAdminController {
     private static final String ID = "{id}/";
-    /** converter uuid do Django: so minusculas. Outra coisa e URL desconhecida (404 "Não encontrado."). */
-    private static final Pattern UUID_DJANGO =
-            Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
     private static final String MSG_NOME_DUPLICADO = "Já existe um plano ativo com este nome.";
 
     private final PlanoRepository planos;
@@ -61,7 +57,7 @@ class PlanosAdminController {
 
     @GetMapping("/api/admin/planos/" + ID)
     PlanoDtos.Admin detalhe(@PathVariable("id") String rota) {
-        return PlanoDtos.Admin.de(planos.findById(uuid(rota)).orElseThrow(() -> new NaoEncontrado("Plan")));
+        return PlanoDtos.Admin.de(planos.findById(NaoEncontrado.uuidDaRota(rota)).orElseThrow(() -> new NaoEncontrado("Plan")));
     }
 
     @PostMapping("/api/admin/planos/")
@@ -78,17 +74,17 @@ class PlanosAdminController {
 
     @PutMapping("/api/admin/planos/" + ID)
     PlanoDtos.Admin atualizar(@PathVariable("id") String rota, @RequestBody(required = false) JsonNode corpo) {
-        return salvar(uuid(rota), corpo, false);
+        return salvar(NaoEncontrado.uuidDaRota(rota), corpo, false);
     }
 
     @PatchMapping("/api/admin/planos/" + ID)
     PlanoDtos.Admin atualizarParcial(@PathVariable("id") String rota, @RequestBody(required = false) JsonNode corpo) {
-        return salvar(uuid(rota), corpo, true);
+        return salvar(NaoEncontrado.uuidDaRota(rota), corpo, true);
     }
 
     @PostMapping("/api/admin/planos/" + ID + "desativar/")
     PlanoDtos.Desativado desativar(@PathVariable("id") String rota) {
-        UUID id = uuid(rota);
+        UUID id = NaoEncontrado.uuidDaRota(rota);
         tx.executeWithoutResult(st -> {
             Plano p = planos.findById(id).orElseThrow(() -> new NaoEncontrado("Plan"));
             p.setAtivo(false);
@@ -97,12 +93,6 @@ class PlanosAdminController {
         return new PlanoDtos.Desativado("ok", "Plano desativado");
     }
 
-    private static UUID uuid(String rota) {
-        if (!UUID_DJANGO.matcher(rota).matches()) {
-            throw new NaoEncontrado();
-        }
-        return UUID.fromString(rota);
-    }
 
     /** get_object() antes do serializer: 404 vence o 400. */
     private PlanoDtos.Admin salvar(UUID id, JsonNode corpo, boolean parcial) {

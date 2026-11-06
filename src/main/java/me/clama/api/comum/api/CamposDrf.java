@@ -88,6 +88,22 @@ public final class CamposDrf {
         return texto(campo, s -> List.of());
     }
 
+    /** CharField(allow_blank=True, required=False) do TextField(blank=True): ausente devolve null. */
+    public String textoEmBranco(String campo) {
+        JsonNode v = corpo.get(campo);
+        if (v == null) {
+            return null;
+        }
+        if (v.isNull()) {
+            return erro(campo, NULO);
+        }
+        if (!v.isString() && !v.isNumber()) {
+            return erro(campo, NAO_E_STRING);
+        }
+        String s = TextoPython.strip(v.asString());
+        return s.indexOf('\0') >= 0 ? erro(campo, CARACTERES_NULOS) : s;
+    }
+
     public String erro(String campo, String msg) {
         erros.computeIfAbsent(campo, k -> new ArrayList<>()).add(msg);
         return null;

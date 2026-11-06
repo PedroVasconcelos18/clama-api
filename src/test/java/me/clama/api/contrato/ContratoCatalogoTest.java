@@ -21,6 +21,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.util.FileSystemUtils;
 
 /** Cenarios gravados por clama-backend/contrato/test_gravar_catalogo.py. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -29,9 +30,9 @@ import org.springframework.test.context.ActiveProfiles;
 class ContratoCatalogoTest {
     static final Path CENARIOS = Path.of("src/test/resources/contrato/catalogo");
     /** Grupos ligados, por prefixo do arquivo. Cada task move o seu prefixo de PENDENTES para LIGADOS. */
-    static final List<String> LIGADOS = List.of("admin_", "planos_", "instituicoes_", "prompts_");
+    static final List<String> LIGADOS = List.of("admin_", "planos_", "instituicoes_", "prompts_", "documentos_");
     /** Gravados mas ainda sem implementacao. Fica vazio na Task 5. */
-    static final List<String> PENDENTES = List.of("documentos_");
+    static final List<String> PENDENTES = List.of();
     static final List<String> TABELAS = List.of("users_user", "token_blacklist_outstandingtoken",
             "token_blacklist_blacklistedtoken", "plans_plan", "instituicoes_instituicao", "prompts_prompttemplate",
             "documents_documentocontexto");
@@ -50,6 +51,9 @@ class ContratoCatalogoTest {
 
     @Autowired
     RateLimiter limiter;
+
+    @Value("${clama.media-root}")
+    Path media;
 
     static Stream<Named<Path>> cenarios() throws Exception {
         try (Stream<Path> s = Files.list(CENARIOS)) {
@@ -74,6 +78,7 @@ class ContratoCatalogoTest {
     @ParameterizedTest(name = "{0}")
     @MethodSource("cenarios")
     void cenario(Path json) throws Exception {
+        FileSystemUtils.deleteRecursively(media); // MEDIA_ROOT novo por cenario, como o TemporaryDirectory do gravador
         new ReplayDeContrato(jdbc, usuarios, tokens, limiter, TABELAS)
                 .executar(json, URI.create("http://localhost:" + porta));
     }

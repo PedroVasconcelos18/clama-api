@@ -8,6 +8,8 @@ spring:
       # Django nao limita o upload no parser; quem recusa e o serializer (logo 250 KB, documento 100 MB)
       max-file-size: 100MB
       max-request-size: 101MB
+      # parse no controller (nao no DispatcherServlet): o excesso vira o 400 do serializer de cada rota
+      resolve-lazily: true
   jpa:
     open-in-view: false
     hibernate:
@@ -21,6 +23,10 @@ spring:
     baseline-on-migrate: true
     baseline-version: "0"
 clama:
+  # MEDIA_ROOT do Django (FileSystemStorage): documents/<uuid>/<nome>
+  media-root: ./media
+  documentos:
+    tamanho-maximo: 100MB # DocumentoContexto.MAX_FILE_SIZE
   fila:
     polling: 2s
     heartbeat: 20s # x6 perdidos (default do db-scheduler) = execucao morta retomada em ~2 min

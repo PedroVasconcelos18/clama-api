@@ -136,9 +136,14 @@
 					<!-- nunca mandar evento real a partir do ambiente do desenvolvedor -->
 					<environmentVariables>
 						<SENTRY_DSN></SENTRY_DSN>
+						<!-- Files API em modo mock (nenhuma chamada a Anthropic de verdade) -->
+						<ANTHROPIC_API_KEY></ANTHROPIC_API_KEY>
 					</environmentVariables>
+					<!-- o replay do contrato manda Host: testserver, como o test client do Django -->
+					<argLine>-Djdk.httpclient.allowRestrictedHeaders=host</argLine>
 					<systemPropertyVariables>
 						<spring.profiles.active>test</spring.profiles.active>
+						<clama.media-root>${project.build.directory}/media-test</clama.media-root>
 					</systemPropertyVariables>
 					<includes>
 						<include>**/*Test.java</include>

@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import me.clama.api.comum.api.CamposDrf;
+import me.clama.api.comum.api.FormularioDjango;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -53,6 +54,11 @@ public class PastoralExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ResponseEntity<Map<String, String>> jsonInvalido(HttpMessageNotReadableException e) {
         return ResponseEntity.badRequest().body(Map.of("detail", JSON_INVALIDO));
+    }
+
+    @ExceptionHandler(FormularioDjango.TipoNaoSuportado.class)
+    ResponseEntity<Map<String, String>> tipoNaoSuportado(FormularioDjango.TipoNaoSuportado e) {
+        return ResponseEntity.status(415).body(Map.of("detail", e.getMessage()));
     }
 
     /** MethodNotAllowed do DRF. So rota conhecida chega aqui: URL desconhecida continua 404. */
