@@ -75,6 +75,13 @@
 			<artifactId>bcprov-jdk18on</artifactId>
 			<version>1.84</version>
 		</dependency>
+		<!-- SDK oficial so na chamada de geracao de oracao: o Spring AI 2.0.2 nao manda documento por file_id nem
+			 cache_control sem ttl (ver relatorio da 4B tarefa 3) -->
+		<dependency>
+			<groupId>com.anthropic</groupId>
+			<artifactId>anthropic-java</artifactId>
+			<version>3.6.0</version>
+		</dependency>
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>

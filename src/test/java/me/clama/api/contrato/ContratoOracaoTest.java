@@ -12,7 +12,9 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import me.clama.api.BancoDeTeste;
 import me.clama.api.comum.email.CaixaDeSaidaEmMemoria;
@@ -22,6 +24,11 @@ import me.clama.api.comum.fila.TipoDeJob;
 import me.clama.api.comum.ratelimit.RateLimiter;
 import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.identidade.token.ServicoDeTokens;
+import me.clama.api.oracao.ClienteClaude;
+import me.clama.api.oracao.CreditosEsgotados;
+import me.clama.api.pedido.Pedido;
+import me.clama.api.pedido.PedidoRepository;
+import org.hibernate.Hibernate;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
@@ -186,6 +193,38 @@ class ContratoOracaoTest {
         replay().executar(Files.writeString(dir.resolve("noop.json"), c.toString()), base());
     }
 
+    /**
+     * Ate a Task 4 ligar "job_gerar_": so a requisicao a Anthropic de cada job_gerar_* gravado. Semeia o cenario, chama
+     * o {@link ClienteClaude} no lugar do job e o harness compara o que chegou ao stub com "anthropic_requisicoes". O
+     * resto do cenario (e-mails, jobs, estado final) e da Task 4.
+     */
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("cenariosGerarComAnthropic")
+    void requisicaoDoGerarIgualAGravada(Path json, @TempDir Path dir) throws Exception {
+        ObjectNode c = (ObjectNode) JSON.readTree(json.toFile());
+        ((ObjectNode) c.get("job")).put("tipo", JobSintetico.CLAUDE);
+        c.remove(List.of("emails", "jobs_enfileirados", "senhas_temporarias_final", "estado_final"));
+        JobSintetico.RESULTADO.set(null);
+        replay().executar(Files.writeString(dir.resolve(json.getFileName()), c.toString()), base());
+
+        JsonNode resposta = c.get("anthropic").get(0);
+        if (resposta.get("status").asInt() == 200) {
+            assertThat(JobSintetico.RESULTADO.get())
+                    .isEqualTo(resposta.get("corpo").get("content").get(0).get("text").asString());
+        } else {
+            assertThat(JobSintetico.RESULTADO.get()).isInstanceOf(CreditosEsgotados.class);
+        }
+    }
+
+    static Stream<Named<Path>> cenariosGerarComAnthropic() throws Exception {
+        try (Stream<Path> s = Files.list(CENARIOS)) {
+            List<Path> lista = s.filter(p -> p.getFileName().toString().startsWith("job_gerar_"))
+                    .filter(p -> JSON.readTree(p.toFile()).has("anthropic_requisicoes")).sorted().toList();
+            assertThat(lista).hasSize(4); // ok_simples, ok_com_documentos, ok_sem_idade_sexo, creditos_esgotados
+            return lista.stream().map(p -> Named.of(p.getFileName().toString(), p));
+        }
+    }
+
     private URI base() {
         return URI.create("http://localhost:" + porta);
     }
@@ -260,6 +299,44 @@ class ContratoOracaoTest {
     @TestConfiguration(proxyBeanMethods = false)
     static class JobSintetico {
         static final String NOME = "contrato-sintetico";
+        static final String CLAUDE = "contrato-claude";
+        /** O texto gerado ou a excecao do ultimo contrato-claude. */
+        static final AtomicReference<Object> RESULTADO = new AtomicReference<>();
+
+        /** No lugar do gerar-oracao (Task 4): le o pedido de "arg" e chama a Anthropic pelo ClienteClaude. */
+        @Bean
+        TipoDeJob<String> jobClaude(PedidoRepository pedidos, ClienteClaude claude, TransactionTemplate tx) {
+            return new TipoDeJob<>() {
+                @Override
+                public String nome() {
+                    return CLAUDE;
+                }
+
+                @Override
+                public Class<String> payload() {
+                    return String.class;
+                }
+
+                @Override
+                public Duration esperaEntreTentativas() {
+                    return Duration.ofSeconds(1);
+                }
+
+                @Override
+                public void executar(String arg) {
+                    Pedido p = tx.execute(s -> {
+                        Pedido lido = pedidos.findById(UUID.fromString(arg)).orElseThrow();
+                        Hibernate.initialize(lido.getPlano());
+                        return lido;
+                    });
+                    try {
+                        RESULTADO.set(claude.gerar(p));
+                    } catch (RuntimeException e) {
+                        RESULTADO.set(e);
+                    }
+                }
+            };
+        }
 
         @Bean
         TipoDeJob<String> jobSintetico(Environment env, CaixaDeSaidaEmMemoria caixa, ObjectProvider<Fila> fila,
