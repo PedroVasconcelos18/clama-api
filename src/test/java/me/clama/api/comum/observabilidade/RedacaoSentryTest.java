@@ -162,6 +162,18 @@ class RedacaoSentryTest {
 		assertThat(ev.getTag("job_instancia")).matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
 	}
 
+	/** UUID que casa com o regex de telefone (achado por busca): sem allowlist, job_instancia viraria [PHONE_REDACTED]. */
+	@Test
+	void tagsDoProprioJavaNaoSaoRedigidas() {
+		String uuid = "394d4703-cd20-40b5-b775-867929515684";
+		var ev = new SentryEvent();
+		ev.setTag("job_instancia", uuid);
+		ev.setTag("outra", uuid);
+		RedacaoSentry.redigir(ev);
+		assertThat(ev.getTag("job_instancia")).isEqualTo(uuid);
+		assertThat(ev.getTag("outra")).contains("[PHONE_REDACTED]");
+	}
+
 	@Autowired CapturaDeFiltro filtro;
 
 	@Test

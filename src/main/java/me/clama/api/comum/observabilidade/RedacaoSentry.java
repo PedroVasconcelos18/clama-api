@@ -19,6 +19,9 @@ public final class RedacaoSentry {
 	private static final Pattern EMAIL = Pattern.compile("[a-zA-Z0-9_.+\\-]+@[a-zA-Z0-9\\-]+\\.[a-zA-Z0-9\\-.]+");
 	private static final Pattern PHONE = Pattern.compile("\\(?\\d{2}\\)?\\s*\\d{4,5}[-\\s]?\\d{4}", Pattern.UNICODE_CHARACTER_CLASS);
 
+	/** Tags que o proprio Java poe (SentryConfig.capturar): valores sao nomes de job/UUID, sem PII; um UUID casaria com PHONE. */
+	static final Set<String> TAGS_SEM_PII = Set.of("job", "job_instancia", "origem", "tarefa_agendada");
+
 	private RedacaoSentry() {}
 
 	/** O Python so olha request.data/headers, extra, contexts, tags, breadcrumbs e exception.value. */
@@ -53,7 +56,9 @@ public final class RedacaoSentry {
 			}
 		}
 		if (e.getTags() != null) {
-			e.setTags(strings(e.getTags()));
+			Map<String, String> tags = new LinkedHashMap<>();
+			e.getTags().forEach((k, v) -> tags.put(k, TAGS_SEM_PII.contains(k) ? v : (String) valor(k, v)));
+			e.setTags(tags);
 		}
 		if (e.getBreadcrumbs() != null) {
 			for (Breadcrumb b : e.getBreadcrumbs()) {
