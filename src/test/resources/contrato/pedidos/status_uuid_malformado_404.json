@@ -1,0 +1,134 @@
+{
+  "cenario": "status_uuid_malformado_404",
+  "usuarios": [],
+  "dados": {
+    "plans_plan": [
+      {
+        "id": "55555555-5555-4555-8555-000000000001",
+        "nome": "Pedido de Oração",
+        "valor_centavos": 2000,
+        "descricao": "Descrição de Pedido de Oração.",
+        "complexidade": "simples",
+        "ordem": 1,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000002",
+        "nome": "Oração + Versículo",
+        "valor_centavos": 5000,
+        "descricao": "Descrição de Oração + Versículo.",
+        "complexidade": "com_versiculo",
+        "ordem": 2,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000003",
+        "nome": "Oração + Profecia + Versículos",
+        "valor_centavos": 10000,
+        "descricao": "Descrição de Oração + Profecia + Versículos.",
+        "complexidade": "com_profecia_e_versiculos",
+        "ordem": 3,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000004",
+        "nome": "Plano Antigo",
+        "valor_centavos": 1500,
+        "descricao": "Descrição de Plano Antigo.",
+        "complexidade": "simples",
+        "ordem": 0,
+        "ativo": false,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000005",
+        "nome": "Gratuito",
+        "valor_centavos": 0,
+        "descricao": "Descrição de Gratuito.",
+        "complexidade": "simples_gratuita",
+        "ordem": 9,
+        "ativo": true,
+        "visivel": false
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000006",
+        "nome": "Livre",
+        "valor_centavos": 1,
+        "descricao": "Descrição de Livre.",
+        "complexidade": "simples",
+        "ordem": 10,
+        "ativo": true,
+        "visivel": false
+      }
+    ],
+    "instituicoes_instituicao": [
+      {
+        "id": "66666666-6666-4666-8666-000000000001",
+        "nome": "Lar Esperança",
+        "logo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+        "ativo": true,
+        "ordem": 1
+      },
+      {
+        "id": "66666666-6666-4666-8666-000000000002",
+        "nome": "Casa Fechada",
+        "logo": "",
+        "ativo": false,
+        "ordem": 2
+      }
+    ],
+    "orders_pedido": [
+      {
+        "created_at": "2026-11-01T13:00:00+00:00",
+        "updated_at": "2026-11-01T13:00:00+00:00",
+        "id": "77777777-7777-4777-8777-000000000001",
+        "nome": "gAAAAABq7cXiljA11tNfMmWQjc_zQ717UbjVrQ4eIlTPQzl--YGniONw1QBj3F5eFsV1DARyg-SAaiHhS_GbF4fbieuaoyvdRw==",
+        "email": "gAAAAABq7cXi1pwGMVZnvoNd3faNdmr-R7WRQlcHwo10irr_CldCT4PYSMA8rCTbc7FdYdIQUK67BYGqJiMWv5J0GL5s9D2IZE4M9gKR17K1l9Ok9aBv6Ro=",
+        "telefone": "gAAAAABq7cXizqmPfa3nqr3JWMq888uNLTY-maoOs_rpZErHovyzmyzlBlVoTk6ae01w_KGWi-Wzvv9Mh6dtGq0wLhQBTKiFaA==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq7cXiZNmneW11yD7Ud9OLjgRsL-yAONNIvs8A37Y16pVtkLsQcEA6sxOsiyIuu5hevxH2BCbV-7TnN0qtXulTyP4u8EurMnNKFe58RrHhO9qN956VIL01fDAdILnCbTAj2WLb",
+        "oracao_gerada": "gAAAAABq7cXiv1ZiOWHixKqH5gGRQBpXLANWp_Yx1dNRwXJrAKGLYK8TZEviEXe52ihHbNayWNLW5y9wuy9EeR98OQVhl_spig==",
+        "valor_centavos": 3000,
+        "canal_entrega": "email",
+        "status": "aguardando_pagamento",
+        "plano_id": "55555555-5555-4555-8555-000000000001",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq7cXiQ_1SklvloGHEJFFBuK7CK0LJUFq2l0DXqI347Qn_6vIrQskkxkJIGKvpj_6kJdQn9AFO8ptijWkuN3YZaaYQiQ==",
+        "user_id": null,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      }
+    ]
+  },
+  "passos": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/pedidos/nao-e-uuid/"
+      },
+      "response": {
+        "status": 404,
+        "body": "\n<!doctype html>\n<html lang=\"en\">\n<head>\n  <title>Not Found</title>\n</head>\n<body>\n  <h1>Not Found</h1><p>The requested resource was not found on this server.</p>\n</body>\n</html>\n",
+        "cookies": []
+      }
+    }
+  ]
+}

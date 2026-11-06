@@ -1,0 +1,140 @@
+{
+  "cenario": "checkout_sem_cpf_422",
+  "usuarios": [],
+  "dados": {
+    "plans_plan": [
+      {
+        "id": "55555555-5555-4555-8555-000000000001",
+        "nome": "Pedido de Oração",
+        "valor_centavos": 2000,
+        "descricao": "Descrição de Pedido de Oração.",
+        "complexidade": "simples",
+        "ordem": 1,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000002",
+        "nome": "Oração + Versículo",
+        "valor_centavos": 5000,
+        "descricao": "Descrição de Oração + Versículo.",
+        "complexidade": "com_versiculo",
+        "ordem": 2,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000003",
+        "nome": "Oração + Profecia + Versículos",
+        "valor_centavos": 10000,
+        "descricao": "Descrição de Oração + Profecia + Versículos.",
+        "complexidade": "com_profecia_e_versiculos",
+        "ordem": 3,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000004",
+        "nome": "Plano Antigo",
+        "valor_centavos": 1500,
+        "descricao": "Descrição de Plano Antigo.",
+        "complexidade": "simples",
+        "ordem": 0,
+        "ativo": false,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000005",
+        "nome": "Gratuito",
+        "valor_centavos": 0,
+        "descricao": "Descrição de Gratuito.",
+        "complexidade": "simples_gratuita",
+        "ordem": 9,
+        "ativo": true,
+        "visivel": false
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000006",
+        "nome": "Livre",
+        "valor_centavos": 1,
+        "descricao": "Descrição de Livre.",
+        "complexidade": "simples",
+        "ordem": 10,
+        "ativo": true,
+        "visivel": false
+      }
+    ],
+    "instituicoes_instituicao": [
+      {
+        "id": "66666666-6666-4666-8666-000000000001",
+        "nome": "Lar Esperança",
+        "logo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+        "ativo": true,
+        "ordem": 1
+      },
+      {
+        "id": "66666666-6666-4666-8666-000000000002",
+        "nome": "Casa Fechada",
+        "logo": "",
+        "ativo": false,
+        "ordem": 2
+      }
+    ],
+    "orders_pedido": [
+      {
+        "created_at": "2026-11-01T13:00:00+00:00",
+        "updated_at": "2026-11-01T13:00:00+00:00",
+        "id": "77777777-7777-4777-8777-000000000001",
+        "nome": "gAAAAABq7cXi5HsOMLznvfZ36E55-8Q82EcNLxrbXIMSrpSxmRXUdHZA7IO4kcDerGXqVgNXZjXVfd9K4c9QOfoo887-yAla2g==",
+        "email": "gAAAAABq7cXiIbbQ3edqglBZWNUjizmW_54ZtZNohs-_tCju2sE6O6nJlszEqu8_xW8MpikYavkRs3cnCMDYcMByMBFohUhbGVU7Lhc446q_6TmZrcIsOx4=",
+        "telefone": "gAAAAABq7cXi7V52Dvj_CCLFzlv8kujym7Be2SB6cjB5R7kdV9Rmy_nTnlmCvdepRJIITnJdl_ZbrVoK9mZm5YHIf7NfjHwqIA==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq7cXiXtkLSz8836pmpKtCxT4hRIZaCSqtWZyj_t70_Rc6qqrdAlfp68G2N6Id9ZnBUXtmqGJL-KE3yd4l1sKWQ3BLIzGRvIsoZ-Ey5T9gCK-qXB8LXDaZAQP8b8io_yzu5PFj",
+        "oracao_gerada": "gAAAAABq7cXiLLLPJUsb4RXnfk3FaL1w-J76CIAQr3X0r36H_jojsBfSgy05gD3KAOB-Rq_rlUt1udLfmKpfJPqw3NyXl2NMrQ==",
+        "valor_centavos": 3000,
+        "canal_entrega": "email",
+        "status": "aguardando_pagamento",
+        "plano_id": "55555555-5555-4555-8555-000000000001",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq7cXiBNRSputGW7XUvH7PLQnqbn4795JLpEyiQi9x2lFJKY35ZwFCYL9N9rfC3ZGMIBa_Th-5H0wQNJ5tc29wpTNnEw==",
+        "user_id": null,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      }
+    ]
+  },
+  "passos": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/pedidos/77777777-7777-4777-8777-000000000001/checkout/"
+      },
+      "response": {
+        "status": 422,
+        "body": {
+          "error": {
+            "code": "cpf_cnpj_obrigatorio",
+            "message": "CPF/CNPJ é obrigatório para gerar a cobrança",
+            "pastoral_message": "Precisamos do seu CPF para gerar a cobrança. Volte ao formulário e complete o cadastro."
+          }
+        },
+        "cookies": []
+      }
+    }
+  ]
+}

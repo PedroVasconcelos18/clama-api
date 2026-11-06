@@ -13,6 +13,7 @@ import java.sql.PreparedStatement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,6 +29,7 @@ import me.clama.api.identidade.Usuario;
 import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.identidade.senha.SenhaDjango;
 import me.clama.api.identidade.token.ServicoDeTokens;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -60,6 +62,8 @@ public class ReplayDeContrato {
     private final List<String> tabelas;
     private final SenhaDjango senhas = new SenhaDjango();
     private final HttpClient http = HttpClient.newHttpClient();
+    private StubDeIntegracoes stub;
+    private Environment ambiente;
 
     /** tabelas: as que o cenario toca, truncadas (CASCADE) antes de cada execucao, como o User.objects.all().delete(). */
     public ReplayDeContrato(JdbcTemplate jdbc, UsuarioRepository usuarios, ServicoDeTokens tokens, RateLimiter limiter,
@@ -71,9 +75,31 @@ public class ReplayDeContrato {
         this.tabelas = tabelas;
     }
 
+    /**
+     * Liga o stub de integracoes: o cenario serve as respostas "mercadopago" e, no fim, as requisicoes recebidas tem
+     * de bater com "mercadopago_requisicoes" (nenhuma, se o cenario nao declarar). "configuracao" (o override_settings
+     * do gravador) tem de bater com o ambiente do contexto Spring.
+     */
+    public ReplayDeContrato comStub(StubDeIntegracoes stub, Environment ambiente) {
+        this.stub = stub;
+        this.ambiente = ambiente;
+        return this;
+    }
+
     public void executar(Path cenarioJson, URI base) throws Exception {
         JsonNode cenario = JSON.readTree(cenarioJson.toFile());
         Set<String> fixos = uuidsFixos(cenario);
+        String arquivo = cenarioJson.getFileName().toString();
+        if (stub == null) {
+            assertThat(cenario.has("mercadopago") || cenario.has("configuracao"))
+                    .as("%s declara integracoes: use comStub", arquivo).isFalse();
+        } else {
+            for (Map.Entry<String, JsonNode> c : cenario.path("configuracao").properties()) {
+                assertThat(ambiente.getProperty(c.getKey())).as("%s: rode num contexto com %s=%s", arquivo, c.getKey(),
+                        c.getValue().asString()).isEqualTo(c.getValue().asString());
+            }
+            stub.preparar(cenario.path("mercadopago"));
+        }
         BancoDeTeste.exigirContainer(jdbc); // o TRUNCATE ... CASCADE apagaria pedidos, blog e tokens de um banco real
         jdbc.execute("TRUNCATE " + String.join(", ", tabelas) + " RESTART IDENTITY CASCADE");
         limiter.limpar(); // cache.clear() do gravador
@@ -136,7 +162,10 @@ public class ReplayDeContrato {
                     jar.put(nome, valor);
                 }
             });
-            JsonNode corpoResp = resp.body().isEmpty() ? NullNode.getInstance() : JSON.readTree(resp.body());
+            // HTML (ex.: o 404 do resolver de URL do Django) e comparado como texto, como o gravador grava
+            JsonNode corpoResp = resp.body().isEmpty() ? NullNode.getInstance()
+                    : resp.headers().firstValue("Content-Type").orElse("").contains("json") ? JSON.readTree(resp.body())
+                    : NOS.stringNode(resp.body());
             if (corpoResp.isObject() && corpoResp.has("csrf_token")) {
                 ctx.csrf = corpoResp.get("csrf_token").asString();
             }
@@ -152,6 +181,9 @@ public class ReplayDeContrato {
             assertThat(obtido).as("%s passo %d: %s %s", cenarioJson.getFileName(), i, metodo, req.get("path"))
                     .isEqualTo(passo.get("response"));
             i++;
+        }
+        if (stub != null) {
+            stub.conferir(cenario.path("mercadopago_requisicoes"), arquivo);
         }
     }
 
@@ -175,8 +207,9 @@ public class ReplayDeContrato {
 
     /**
      * Linha de "dados" (o Model.objects.create do gravador). Valores vao como texto de tipo nao especificado e o
-     * Postgres converte pela coluna (uuid, jsonb, timestamptz...). created_at/updated_at sao o now() da insercao,
-     * como o auto_now do TimestampedModel; clock_timestamp() mantem a ordem de insercao.
+     * Postgres converte pela coluna (uuid, jsonb, timestamptz, inet...). Sem created_at na linha, created_at/updated_at
+     * sao o now() da insercao, como o auto_now do TimestampedModel; clock_timestamp() mantem a ordem de insercao. Com
+     * created_at (linhas de pedido, gravadas como ficaram no banco, com os tokens Fernet), a linha vai tal qual.
      */
     private void inserir(String tabela, JsonNode linha) {
         List<String> colunas = new ArrayList<>();
@@ -186,8 +219,10 @@ public class ReplayDeContrato {
             JsonNode v = e.getValue();
             valores.add(v.isNull() ? null : v.isString() ? v.asString() : v.toString());
         }
-        String sql = "INSERT INTO " + tabela + " (" + String.join(", ", colunas) + ", created_at, updated_at) VALUES ("
-                + "?, ".repeat(colunas.size()) + "clock_timestamp(), clock_timestamp())";
+        boolean datas = !linha.has("created_at");
+        String sql = "INSERT INTO " + tabela + " (" + String.join(", ", colunas) + (datas ? ", created_at, updated_at" : "")
+                + ") VALUES (" + String.join(", ", Collections.nCopies(colunas.size(), "?"))
+                + (datas ? ", clock_timestamp(), clock_timestamp()" : "") + ")";
         jdbc.update(c -> {
             PreparedStatement ps = c.prepareStatement(sql);
             for (int k = 0; k < valores.size(); k++) {
