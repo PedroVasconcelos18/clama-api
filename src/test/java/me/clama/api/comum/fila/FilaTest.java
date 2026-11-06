@@ -30,11 +30,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
-@SpringBootTest(properties = "clama.fila.scheduler-ativo=true")
+@SpringBootTest
 @Import({BancoDeTeste.class, FilaTest.Config.class})
 @ActiveProfiles("test")
-// scheduler ligado: parar no fim, senao o contexto em cache executa os jobs (gerar/enviar/alerta) dos outros testes
-@org.springframework.test.annotation.DirtiesContext
+@SchedulerLigado
 class FilaTest {
 	record JobDeTeste(String valor) {}
 

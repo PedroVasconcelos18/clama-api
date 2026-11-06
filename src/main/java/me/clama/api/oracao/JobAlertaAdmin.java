@@ -3,9 +3,11 @@ package me.clama.api.oracao;
 import io.sentry.Sentry;
 import io.sentry.SentryLevel;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
 import me.clama.api.comum.email.Email;
 import me.clama.api.comum.email.EnviadorDeEmail;
+import me.clama.api.comum.email.ResultadoEnvio;
 import me.clama.api.comum.fila.TipoDeJob;
 import me.clama.api.pedido.Pedido;
 import me.clama.api.pedido.PedidoRepository;
@@ -83,8 +85,12 @@ public class JobAlertaAdmin implements TipoDeJob<UUID> {
         });
         if (email == null) return;
         try {
-            enviador.enviar(email);
-            LOG.info("alerta_admin_enviado (event=admin_alert_sent, pedido_id={})", id);
+            if (enviador.enviar(email) == ResultadoEnvio.JA_ENVIADO) {
+                LOG.warn("alerta_admin_ja_enviado: chave de idempotencia ja usada, a Resend nao reenviou "
+                        + "(event=admin_alert_already_sent, pedido_id={})", id);
+            } else {
+                LOG.info("alerta_admin_enviado (event=admin_alert_sent, pedido_id={})", id);
+            }
         } catch (RuntimeException e) {
             LOG.error("alerta_admin_erro_email (event=admin_alert_email_failed, pedido_id={})", id, e);
             Sentry.captureException(e);
@@ -106,9 +112,18 @@ public class JobAlertaAdmin implements TipoDeJob<UUID> {
                 + "Último Erro:\n" + ou(p.getLastError(), "Não registrado") + "\n\n"
                 + "---\n"
                 + "Acesse o admin para mais detalhes: " + frontendUrl + "/admin/pedidos/" + id + "\n";
-        // a chave muda a cada rodada de reagendamento: um erro novo do mesmo pedido alerta de novo
         return new Email(adminEmail, "[Clama] Pedido em ERRO - " + id.substring(0, 8), corpo, null)
-                .comChave("alerta/" + id + "/" + p.getRetryCount());
+                .comChave(chave(p));
+    }
+
+    /**
+     * {@code alerta/<id>/<updated_at em micros>}: estavel enquanto o pedido segue no mesmo erro (retentativa do job =
+     * mesma chave, a Resend nao duplica) e nova a cada save que o poe em erro de novo. O retry_count nao serve: o
+     * reenviar do admin o zera e toda falha persistente termina em 3, e a Resend engoliria o 2o alerta por 24 h.
+     */
+    static String chave(Pedido p) {
+        Instant t = p.getUpdatedAt().toInstant();
+        return "alerta/" + p.getId() + "/" + (t.getEpochSecond() * 1_000_000 + t.getNano() / 1_000);
     }
 
     private static String ou(String v, String padrao) {

@@ -24,7 +24,10 @@ import me.clama.api.comum.email.CaixaDeSaidaEmMemoria;
 import me.clama.api.comum.email.Email;
 import me.clama.api.comum.email.EnviadorDeEmail;
 import me.clama.api.comum.fila.Fila;
+import me.clama.api.comum.fila.SchedulerLigado;
 import me.clama.api.documento.DocumentoRepository;
+import me.clama.api.identidade.Usuario;
+import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.pedido.Pedido;
 import me.clama.api.pedido.PedidoRepository;
 import me.clama.api.pedido.StatusPedido;
@@ -40,7 +43,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -50,12 +52,12 @@ import org.springframework.transaction.support.TransactionTemplate;
  * O pipeline gerar -> enviar -> alerta com o db-scheduler de verdade (esperas curtas), a Claude num stub HTTP e o
  * caminho de falha final PRETENDIDO (o do Django e codigo morto: contexto-global da 4B). Nada disso foi gravado.
  */
-@SpringBootTest(properties = {"clama.fila.scheduler-ativo=true", "ANTHROPIC_API_KEY=sk-ant-teste",
+@SpringBootTest(properties = {"ANTHROPIC_API_KEY=sk-ant-teste",
         "ADMIN_ALERT_EMAIL=alertas@clama.me", "FRONTEND_URL=https://clama.me",
         "clama.oracao.gerar-espera=100ms", "clama.oracao.enviar-espera=100ms", "clama.oracao.reagendamento=200ms"})
 @Import({BancoDeTeste.class, PipelineOracaoTest.Config.class})
 @ActiveProfiles("test")
-@DirtiesContext // para o scheduler no fim: um contexto em cache roubaria os jobs dos outros testes
+@SchedulerLigado
 class PipelineOracaoTest {
     static final String ORACAO = "Senhor, acolhe a Maria.\n\nAmém.";
     static final AtomicInteger CHAMADAS = new AtomicInteger();
@@ -148,6 +150,8 @@ class PipelineOracaoTest {
     @Autowired PedidoRepository pedidos;
     @Autowired PlanoRepository planos;
     @Autowired CaixaDeSaidaEmMemoria caixa;
+    @Autowired SenhasTemporarias senhas;
+    @Autowired UsuarioRepository usuarios;
     @Autowired TransactionTemplate tx;
     @Autowired JdbcTemplate jdbc;
 
@@ -155,7 +159,7 @@ class PipelineOracaoTest {
     void limpar() {
         BancoDeTeste.exigirContainer(jdbc);
         jdbc.execute("TRUNCATE scheduled_tasks, orders_pedido, plans_plan, prompts_prompttemplate,"
-                + " documents_documentocontexto CASCADE");
+                + " documents_documentocontexto, users_user CASCADE");
         jdbc.update("INSERT INTO prompts_prompttemplate (id, created_at, updated_at, nome, versao, system_prompt,"
                 + " instrucoes_por_complexidade, ativo) VALUES (?, now(), now(), 'P', 1, 'Você é o Clama.',"
                 + " '{\"simples\": \"Escreva uma oração curta.\"}'::jsonb, true)", UUID.randomUUID());
@@ -165,6 +169,7 @@ class PipelineOracaoTest {
         ENVIO_FALHA_PARA.clear();
         TENTATIVAS_DE_ENVIO_COM_FALHA.set(0);
         caixa.limpar();
+        senhas.limpar();
         alerta.limpar();
         alerta.relogio = Clock.systemUTC();
     }
@@ -200,6 +205,10 @@ class PipelineOracaoTest {
         return caixa.enviados().stream().filter(e -> e.para().equals(para)).count();
     }
 
+    private int linhasDo(String tipo) {
+        return jdbc.queryForObject("select count(*) from scheduled_tasks where task_name = ?", Integer.class, tipo);
+    }
+
     private int linhasNaFila() {
         return jdbc.queryForObject("select count(*) from scheduled_tasks", Integer.class);
     }
@@ -228,13 +237,8 @@ class PipelineOracaoTest {
         assertThat(ler(id).getOracaoGerada()).isEqualTo(ORACAO);
     }
 
-    /**
-     * Review Focus 3: o e-mail sai e o UPDATE status=enviada falha (trigger). A retentativa reenvia com a mesma chave;
-     * a Resend (aqui a caixa do perfil test) responde "ja enviado" e o cliente recebe um e-mail so.
-     */
-    @Test
-    void reenvioAposFalhaDeMarcacaoNaoDuplicaEmail() {
-        UUID id = pedido(StatusPedido.ORACAO_GERADA, ORACAO, 0);
+    /** Trigger: o 1o UPDATE que poe o pedido em enviada falha (depois do e-mail ja ter saido). */
+    private void criarFalhaNaPrimeiraMarcacao() {
         jdbc.execute("CREATE SEQUENCE teste_falha_marcacao");
         jdbc.execute("""
                 CREATE FUNCTION teste_falha_marcacao() RETURNS trigger AS $$ BEGIN
@@ -245,15 +249,29 @@ class PipelineOracaoTest {
                 END $$ LANGUAGE plpgsql""");
         jdbc.execute("CREATE TRIGGER teste_falha_marcacao BEFORE UPDATE ON orders_pedido FOR EACH ROW"
                 + " EXECUTE FUNCTION teste_falha_marcacao()");
+    }
+
+    private void removerFalhaNaMarcacao() {
+        jdbc.execute("DROP TRIGGER teste_falha_marcacao ON orders_pedido");
+        jdbc.execute("DROP FUNCTION teste_falha_marcacao()");
+        jdbc.execute("DROP SEQUENCE teste_falha_marcacao");
+    }
+
+    /**
+     * Review Focus 3: o e-mail sai e o UPDATE status=enviada falha (trigger). A retentativa reenvia com a mesma chave;
+     * a Resend (aqui a caixa do perfil test) responde "ja enviado" e o cliente recebe um e-mail so.
+     */
+    @Test
+    void reenvioAposFalhaDeMarcacaoNaoDuplicaEmail() {
+        UUID id = pedido(StatusPedido.ORACAO_GERADA, ORACAO, 0);
+        criarFalhaNaPrimeiraMarcacao();
         try {
             tx.executeWithoutResult(s -> fila.enfileirar(enviar, JobEnviarOracao.instancia(id), id));
             await().atMost(Duration.ofSeconds(10)).until(() -> ler(id).getStatus() == StatusPedido.ENVIADA);
             assertThat(jdbc.queryForObject("select last_value from teste_falha_marcacao", Long.class))
                     .as("a 1a marcacao falhou de fato").isGreaterThanOrEqualTo(2);
         } finally {
-            jdbc.execute("DROP TRIGGER teste_falha_marcacao ON orders_pedido");
-            jdbc.execute("DROP FUNCTION teste_falha_marcacao()");
-            jdbc.execute("DROP SEQUENCE teste_falha_marcacao");
+            removerFalhaNaMarcacao();
         }
         assertThat(caixa.enviados()).hasSize(1);
         assertThat(caixa.enviados().get(0).chaveDeIdempotencia()).isEqualTo("oracao/" + id);
@@ -266,7 +284,8 @@ class PipelineOracaoTest {
         UUID id = pedido(StatusPedido.PAGO, "", 0);
         enfileirarGerar(id);
         await().atMost(Duration.ofSeconds(10)).until(() -> emailsPara("alertas@clama.me") == 1);
-        Thread.sleep(500); // nenhuma retentativa (a espera do gerar e 100 ms)
+        // o gerar terminou sem falha: com retentativa a linha continuaria na fila (e as chamadas seriam mais de 1)
+        await().atMost(Duration.ofSeconds(5)).until(() -> linhasDo(JobGerarOracao.NOME) == 0);
 
         Pedido p = ler(id);
         assertThat(p.getStatus()).isEqualTo(StatusPedido.ERRO);
@@ -277,7 +296,7 @@ class PipelineOracaoTest {
         assertThat(alertaEnviado.assunto()).isEqualTo("[Clama] Pedido em ERRO - " + id.toString().substring(0, 8));
         assertThat(alertaEnviado.texto()).contains("Último Erro:\ncredit_balance\n")
                 .contains("https://clama.me/admin/pedidos/" + id);
-        assertThat(alertaEnviado.chaveDeIdempotencia()).isEqualTo("alerta/" + id + "/0");
+        assertThat(alertaEnviado.chaveDeIdempotencia()).isEqualTo(JobAlertaAdmin.chave(ler(id)));
         assertThat(caixa.enviados()).hasSize(1);
     }
 
@@ -339,7 +358,8 @@ class PipelineOracaoTest {
 
     /**
      * Um alerta por pedido por hora (o cache alert_sent do signal), marcado so depois do commit: um rollback nao
-     * suprime o proximo. Passada 1 h, alerta de novo.
+     * suprime o proximo. Passada 1 h, um novo episodio de erro com o MESMO retry_count (o reenviar do admin zera o
+     * contador; toda falha persistente termina em 3) alerta de novo: a chave da Resend nao pode repetir.
      */
     @Test
     void alertaDeduplicadoPorUmaHora() throws Exception {
@@ -352,18 +372,69 @@ class PipelineOracaoTest {
         tx.executeWithoutResult(s -> alerta.registrar(id));
         await().atMost(Duration.ofSeconds(5)).until(() -> caixa.enviados().size() == 1);
 
-        // dentro da hora: nada, mesmo com retry_count novo (a chave da Resend seria outra)
-        jdbc.update("UPDATE orders_pedido SET retry_count = 1 WHERE id = ?", id);
-        tx.executeWithoutResult(s -> alerta.registrar(id));
+        // dentro da hora, um novo save em erro nao alerta
+        tx.executeWithoutResult(s -> {
+            novoEpisodioDeErro(id);
+            alerta.registrar(id);
+        });
+        // nessa ordem: a linha so sai da fila depois que o e-mail ja foi para a caixa
         assertThat(linhasNaFila()).isZero();
-        Thread.sleep(500);
         assertThat(caixa.enviados()).hasSize(1);
 
         alerta.relogio = Clock.offset(Clock.systemUTC(), Duration.ofMinutes(61));
-        tx.executeWithoutResult(s -> alerta.registrar(id));
+        tx.executeWithoutResult(s -> {
+            novoEpisodioDeErro(id);
+            alerta.registrar(id);
+        });
         await().atMost(Duration.ofSeconds(5)).until(() -> caixa.enviados().size() == 2);
-        assertThat(caixa.enviados().get(1).chaveDeIdempotencia()).isEqualTo("alerta/" + id + "/1");
+        assertThat(ler(id).getRetryCount()).isZero();
+        assertThat(caixa.enviados()).extracting(Email::chaveDeIdempotencia).doesNotHaveDuplicates()
+                .last().isEqualTo(JobAlertaAdmin.chave(ler(id)));
         assertThat(caixa.enviados()).allSatisfy(e -> assertThat(e.para()).isEqualTo("alertas@clama.me"));
+    }
+
+    /** Saiu de erro (ex.: reenviar do admin) e voltou com o mesmo retry_count: so o updated_at muda. */
+    private void novoEpisodioDeErro(UUID id) {
+        Pedido p = pedidos.findById(id).orElseThrow();
+        p.setStatus(StatusPedido.GERANDO_ORACAO);
+        pedidos.saveAndFlush(p);
+        p.setStatus(StatusPedido.ERRO);
+        pedidos.saveAndFlush(p);
+    }
+
+    /**
+     * Freemium: o e-mail com credenciais sai, a marcacao falha. A senha continua no cache (so sai depois de marcar),
+     * a retentativa remonta o MESMO e-mail (a Resend responde ja enviado, sem 409 de payload diferente) e no fim a
+     * senha e apagada. O cliente recebe um e-mail, com a senha.
+     */
+    @Test
+    void freemiumComFalhaDeMarcacaoMantemSenhaAteMarcar() {
+        Long userId = tx.execute(s -> {
+            Usuario u = new Usuario();
+            u.setEmail("Ana@Exemplo.com");
+            u.setPassword("!");
+            u.setNomeCompleto("Ana Souza");
+            return usuarios.save(u).getId();
+        });
+        UUID id = pedido(StatusPedido.ORACAO_GERADA, ORACAO, 0);
+        jdbc.update("UPDATE orders_pedido SET eh_gratuito = true, user_id = ? WHERE id = ?", userId, id);
+        String chave = "freemium:temp_password:" + userId;
+        senhas.guardar(chave, "Tmp-Freemium-7q");
+        criarFalhaNaPrimeiraMarcacao();
+        try {
+            tx.executeWithoutResult(s -> fila.enfileirar(enviar, JobEnviarOracao.instancia(id), id));
+            await().atMost(Duration.ofSeconds(10)).until(() -> ler(id).getStatus() == StatusPedido.ENVIADA);
+            assertThat(jdbc.queryForObject("select last_value from teste_falha_marcacao", Long.class))
+                    .as("a 1a marcacao falhou de fato").isGreaterThanOrEqualTo(2);
+        } finally {
+            removerFalhaNaMarcacao();
+        }
+        assertThat(caixa.enviados()).hasSize(1);
+        Email e = caixa.enviados().get(0);
+        assertThat(e.chaveDeIdempotencia()).isEqualTo("oracao-freemium/" + id);
+        assertThat(e.texto()).contains("E-mail: Ana@Exemplo.com\nSenha temporária: Tmp-Freemium-7q\n");
+        assertThat(ler(id).getOracaoEmailSentAt()).isNotNull();
+        assertThat(senhas.ler(chave)).isEmpty();
     }
 
     /** Payload so com o ID, e a instancia e "<tipo>/<id>". */

@@ -18,6 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import me.clama.api.BancoDeTeste;
+import me.clama.api.comum.fila.SchedulerLigado;
 import me.clama.api.comum.fila.TipoDeJob;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -30,11 +31,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.support.TransactionTemplate;
 
-@SpringBootTest(properties = {"sentry.dsn=https://chave@localhost/1", "clama.fila.scheduler-ativo=true"})
+@SpringBootTest(properties = "sentry.dsn=https://chave@localhost/1")
 @Import({BancoDeTeste.class, RedacaoSentryTest.Config.class})
 @ActiveProfiles("test")
-// scheduler ligado: parar no fim, senao o contexto em cache executa os jobs (gerar/enviar/alerta) dos outros testes
-@org.springframework.test.annotation.DirtiesContext
+@SchedulerLigado
 class RedacaoSentryTest {
 	record Falha() {}
 
