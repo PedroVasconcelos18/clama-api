@@ -25,14 +25,14 @@ import tools.jackson.databind.JsonNode;
 
 /**
  * Corpos fora dos cenarios gravados (tipos errados, limites, UUID em outras formas, e-mails no limite do EmailValidator)
- * com as respostas do DRF real: src/test/resources/drf/validacao_pedidos.json, gerado no clama-backend (ver o
- * task-3-report da etapa 4A). 201 confere so o status.
+ * com as respostas do DRF real: src/test/resources/contrato/drf/validacao_pedidos.json, gravado por
+ * clama-backend/contrato/test_gerar_validacao_pedidos.py (GRAVAR_CONTRATO=1). 201 confere so o status.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(BancoDeTeste.class)
 @ActiveProfiles("test")
 class ValidacaoDrfTest {
-    static final Path FIXTURE = Path.of("src/test/resources/drf/validacao_pedidos.json");
+    static final Path FIXTURE = Path.of("src/test/resources/contrato/drf/validacao_pedidos.json");
 
     @Value("${local.server.port}")
     int porta;

@@ -3,6 +3,7 @@ package me.clama.api.comum.api;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
 import me.clama.api.comum.texto.TextoPython;
@@ -69,6 +70,15 @@ public final class CamposDrf {
      */
     public String texto(String campo, boolean obrigatorio, String msgBranco,
             Function<String, List<String>> validadores) {
+        return texto(campo, obrigatorio, msgBranco, validadores, s -> List.of());
+    }
+
+    /**
+     * Ordem dos validadores do CharField do DRF: max/min_length (validadores), caracteres nulos, surrogates e por
+     * ultimo os do tipo do campo (doTipo, ex. o EmailValidator do EmailField).
+     */
+    public String texto(String campo, boolean obrigatorio, String msgBranco,
+            Function<String, List<String>> validadores, Function<String, List<String>> doTipo) {
         JsonNode v = corpo.get(campo);
         if (v == null) {
             return obrigatorio ? erro(campo, OBRIGATORIO) : null;
@@ -87,6 +97,10 @@ public final class CamposDrf {
         if (s.indexOf('\0') >= 0) {
             msgs.add(CARACTERES_NULOS);
         }
+        // ProhibitSurrogateCharactersValidator: so o primeiro surrogate solto (par valido vira um code point)
+        s.codePoints().filter(c -> c >= 0xD800 && c <= 0xDFFF).findFirst().ifPresent(c -> msgs.add("Caracteres "
+                + "substitutos não são permitidos: U+" + Integer.toHexString(c).toUpperCase(Locale.ROOT) + "."));
+        msgs.addAll(doTipo.apply(s));
         if (!msgs.isEmpty()) {
             erros.put(campo, msgs);
             return null;

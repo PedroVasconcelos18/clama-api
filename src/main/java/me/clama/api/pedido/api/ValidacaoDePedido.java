@@ -57,14 +57,8 @@ class ValidacaoDePedido {
             }
             return m;
         });
-        // ponytail: com "\0" o DRF poe "Caracteres nulos" antes do erro de e-mail; aqui sai depois
-        String email = c.texto("email", true, "Por favor, digite seu e-mail.", s -> {
-            List<String> m = new ArrayList<>(CamposDrf.maxLength(254).apply(s));
-            if (!ValidadorDeEmail.valido(s)) {
-                m.add("Confira seu e-mail — parece que faltou algo.");
-            }
-            return m;
-        });
+        String email = c.texto("email", true, "Por favor, digite seu e-mail.", CamposDrf.maxLength(254),
+                s -> ValidadorDeEmail.valido(s) ? List.of() : List.of("Confira seu e-mail — parece que faltou algo."));
         String telefone = c.texto("telefone", false, null, CamposDrf.maxLength(20));
         String cpf = documento(c, c.texto("cpf_cnpj", true, null, CamposDrf.maxLength(18)));
         JsonNode idade = c.get("idade");

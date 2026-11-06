@@ -1,11 +1,56 @@
 {
- "gerado_por": "probe DRF real (clama-backend .venv, config.settings.test, Turnstile mock); ver task-3-report.md",
+ "gerado_por": "clama-backend contrato/test_gerar_validacao_pedidos.py (GRAVAR_CONTRATO=1)",
  "planos": {
   "ativo": "55555555-5555-4555-8555-000000000001",
   "inativo": "55555555-5555-4555-8555-000000000004"
  },
  "instituicao": "66666666-6666-4666-8666-000000000001",
  "casos": [
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a\u0000@x.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Caracteres nulos não são permitidos.",
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@x.c\u0000",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Certifique-se de que este campo não tenha mais de 254 caracteres.",
+     "Caracteres nulos não são permitidos.",
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
   {
    "rota": "pedidos",
    "status": 400,
@@ -2286,6 +2331,55 @@
     ],
     "plano": [
      "Esse plano não está disponível no momento."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a\u0000@x.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Caracteres nulos não são permitidos.",
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@x.c\u0000",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Certifique-se de que este campo não tenha mais de 254 caracteres.",
+     "Caracteres nulos não são permitidos.",
+     "Confira seu e-mail — parece que faltou algo."
     ]
    }
   },
@@ -4826,6 +4920,188 @@
    "resposta": {
     "telefone": [
      "Para receber no WhatsApp, precisamos do seu telefone."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo_cru": "{\"nome\": \"\\ud800\", \"email\": \"maria@exemplo.com\", \"telefone\": \"(11) 99999-8888\", \"cpf_cnpj\": \"529.982.247-25\", \"idade\": 35, \"sexo\": \"feminino\", \"pedido_oracao\": \"x\", \"valor_centavos\": 3000, \"canal_entrega\": \"email\", \"consent_aceito\": true}",
+   "resposta": {
+    "nome": [
+     "Conta um pouco de você no nome — pelo menos 2 letras.",
+     "Caracteres substitutos não são permitidos: U+D800."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo_cru": "{\"nome\": \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\u0000\\udfff\", \"email\": \"maria@exemplo.com\", \"telefone\": \"(11) 99999-8888\", \"cpf_cnpj\": \"529.982.247-25\", \"idade\": 35, \"sexo\": \"feminino\", \"pedido_oracao\": \"x\", \"valor_centavos\": 3000, \"canal_entrega\": \"email\", \"consent_aceito\": true}",
+   "resposta": {
+    "nome": [
+     "Certifique-se de que este campo não tenha mais de 120 caracteres.",
+     "Caracteres nulos não são permitidos.",
+     "Caracteres substitutos não são permitidos: U+DFFF."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo_cru": "{\"nome\": \"Ma\\ud83d\\ude00ria\", \"email\": \"maria@exemplo.com\", \"telefone\": \"(11) 99999-8888\", \"cpf_cnpj\": \"529.982.247-25\", \"idade\": 35, \"sexo\": \"feminino\", \"pedido_oracao\": \"x\", \"valor_centavos\": 3000, \"canal_entrega\": \"email\", \"consent_aceito\": true}"
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo_cru": "{\"nome\": \"Maria Silva\", \"email\": \"a\\ud800@x.com\", \"telefone\": \"(11) 99999-8888\", \"cpf_cnpj\": \"529.982.247-25\", \"idade\": 35, \"sexo\": \"feminino\", \"pedido_oracao\": \"x\", \"valor_centavos\": 3000, \"canal_entrega\": \"email\", \"consent_aceito\": true}",
+   "resposta": {
+    "email": [
+     "Caracteres substitutos não são permitidos: U+D800.",
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo_cru": "{\"nome\": \"Maria Silva\", \"email\": \"a\\u0000\\ud800@x.com\", \"telefone\": \"(11) 99999-8888\", \"cpf_cnpj\": \"529.982.247-25\", \"idade\": 35, \"sexo\": \"feminino\", \"pedido_oracao\": \"x\", \"valor_centavos\": 3000, \"canal_entrega\": \"email\", \"consent_aceito\": true}",
+   "resposta": {
+    "email": [
+     "Caracteres nulos não são permitidos.",
+     "Caracteres substitutos não são permitidos: U+D800.",
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo_cru": "{\"nome\": \"Maria Silva\", \"email\": \"maria@exemplo.com\", \"telefone\": \"\\udc00\", \"cpf_cnpj\": \"529.982.247-25\", \"idade\": 35, \"sexo\": \"feminino\", \"pedido_oracao\": \"x\", \"valor_centavos\": 3000, \"canal_entrega\": \"email\", \"consent_aceito\": true}",
+   "resposta": {
+    "telefone": [
+     "Caracteres substitutos não são permitidos: U+DC00."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo_cru": "{\"nome\": \"Maria Silva\", \"email\": \"maria@exemplo.com\", \"telefone\": \"(11) 99999-8888\", \"cpf_cnpj\": \"529.982.247-25\", \"idade\": 35, \"sexo\": \"feminino\", \"pedido_oracao\": \"x\\ud800y\\udbff\", \"valor_centavos\": 3000, \"canal_entrega\": \"email\", \"consent_aceito\": true}",
+   "resposta": {
+    "pedido_oracao": [
+     "Caracteres substitutos não são permitidos: U+D800."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo_cru": "{\"nome\": \"Maria Silva\", \"email\": \"maria@exemplo.com\", \"telefone\": \"(11) 99999-8888\", \"cpf_cnpj\": \"\\ud800\", \"idade\": 35, \"sexo\": \"feminino\", \"pedido_oracao\": \"x\", \"valor_centavos\": 3000, \"canal_entrega\": \"email\", \"consent_aceito\": true}",
+   "resposta": {
+    "cpf_cnpj": [
+     "Caracteres substitutos não são permitidos: U+D800."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo_cru": "{\"nome\": \"\\ud800\", \"email\": \"maria@exemplo.com\", \"telefone\": \"(11) 99999-8888\", \"cpf_cnpj\": \"529.982.247-25\", \"idade\": 35, \"sexo\": \"feminino\", \"pedido_oracao\": \"x\", \"valor_centavos\": 3000, \"canal_entrega\": \"email\", \"consent_aceito\": true, \"turnstile_token\": \"tok\", \"device_hash\": \"fp\"}",
+   "resposta": {
+    "nome": [
+     "Conta um pouco de você no nome — pelo menos 2 letras.",
+     "Caracteres substitutos não são permitidos: U+D800."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo_cru": "{\"nome\": \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\u0000\\udfff\", \"email\": \"maria@exemplo.com\", \"telefone\": \"(11) 99999-8888\", \"cpf_cnpj\": \"529.982.247-25\", \"idade\": 35, \"sexo\": \"feminino\", \"pedido_oracao\": \"x\", \"valor_centavos\": 3000, \"canal_entrega\": \"email\", \"consent_aceito\": true, \"turnstile_token\": \"tok\", \"device_hash\": \"fp\"}",
+   "resposta": {
+    "nome": [
+     "Certifique-se de que este campo não tenha mais de 120 caracteres.",
+     "Caracteres nulos não são permitidos.",
+     "Caracteres substitutos não são permitidos: U+DFFF."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo_cru": "{\"nome\": \"Ma\\ud83d\\ude00ria\", \"email\": \"maria@exemplo.com\", \"telefone\": \"(11) 99999-8888\", \"cpf_cnpj\": \"529.982.247-25\", \"idade\": 35, \"sexo\": \"feminino\", \"pedido_oracao\": \"x\", \"valor_centavos\": 3000, \"canal_entrega\": \"email\", \"consent_aceito\": true, \"turnstile_token\": \"tok\", \"device_hash\": \"fp\"}"
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo_cru": "{\"nome\": \"Maria Silva\", \"email\": \"a\\ud800@x.com\", \"telefone\": \"(11) 99999-8888\", \"cpf_cnpj\": \"529.982.247-25\", \"idade\": 35, \"sexo\": \"feminino\", \"pedido_oracao\": \"x\", \"valor_centavos\": 3000, \"canal_entrega\": \"email\", \"consent_aceito\": true, \"turnstile_token\": \"tok\", \"device_hash\": \"fp\"}",
+   "resposta": {
+    "email": [
+     "Caracteres substitutos não são permitidos: U+D800.",
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo_cru": "{\"nome\": \"Maria Silva\", \"email\": \"a\\u0000\\ud800@x.com\", \"telefone\": \"(11) 99999-8888\", \"cpf_cnpj\": \"529.982.247-25\", \"idade\": 35, \"sexo\": \"feminino\", \"pedido_oracao\": \"x\", \"valor_centavos\": 3000, \"canal_entrega\": \"email\", \"consent_aceito\": true, \"turnstile_token\": \"tok\", \"device_hash\": \"fp\"}",
+   "resposta": {
+    "email": [
+     "Caracteres nulos não são permitidos.",
+     "Caracteres substitutos não são permitidos: U+D800.",
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo_cru": "{\"nome\": \"Maria Silva\", \"email\": \"maria@exemplo.com\", \"telefone\": \"\\udc00\", \"cpf_cnpj\": \"529.982.247-25\", \"idade\": 35, \"sexo\": \"feminino\", \"pedido_oracao\": \"x\", \"valor_centavos\": 3000, \"canal_entrega\": \"email\", \"consent_aceito\": true, \"turnstile_token\": \"tok\", \"device_hash\": \"fp\"}",
+   "resposta": {
+    "telefone": [
+     "Caracteres substitutos não são permitidos: U+DC00."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo_cru": "{\"nome\": \"Maria Silva\", \"email\": \"maria@exemplo.com\", \"telefone\": \"(11) 99999-8888\", \"cpf_cnpj\": \"529.982.247-25\", \"idade\": 35, \"sexo\": \"feminino\", \"pedido_oracao\": \"x\\ud800y\\udbff\", \"valor_centavos\": 3000, \"canal_entrega\": \"email\", \"consent_aceito\": true, \"turnstile_token\": \"tok\", \"device_hash\": \"fp\"}",
+   "resposta": {
+    "pedido_oracao": [
+     "Caracteres substitutos não são permitidos: U+D800."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo_cru": "{\"nome\": \"Maria Silva\", \"email\": \"maria@exemplo.com\", \"telefone\": \"(11) 99999-8888\", \"cpf_cnpj\": \"\\ud800\", \"idade\": 35, \"sexo\": \"feminino\", \"pedido_oracao\": \"x\", \"valor_centavos\": 3000, \"canal_entrega\": \"email\", \"consent_aceito\": true, \"turnstile_token\": \"tok\", \"device_hash\": \"fp\"}",
+   "resposta": {
+    "cpf_cnpj": [
+     "Caracteres substitutos não são permitidos: U+D800."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo_cru": "{\"nome\": \"Maria Silva\", \"email\": \"maria@exemplo.com\", \"telefone\": \"(11) 99999-8888\", \"cpf_cnpj\": \"529.982.247-25\", \"idade\": 35, \"sexo\": \"feminino\", \"pedido_oracao\": \"x\", \"valor_centavos\": 3000, \"canal_entrega\": \"email\", \"consent_aceito\": true, \"turnstile_token\": \"\\udfff\", \"device_hash\": \"fp\"}",
+   "resposta": {
+    "turnstile_token": [
+     "Caracteres substitutos não são permitidos: U+DFFF."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo_cru": "{\"nome\": \"Maria Silva\", \"email\": \"maria@exemplo.com\", \"telefone\": \"(11) 99999-8888\", \"cpf_cnpj\": \"529.982.247-25\", \"idade\": 35, \"sexo\": \"feminino\", \"pedido_oracao\": \"x\", \"valor_centavos\": 3000, \"canal_entrega\": \"email\", \"consent_aceito\": true, \"turnstile_token\": \"tok\", \"device_hash\": \"\\ud800\"}",
+   "resposta": {
+    "device_hash": [
+     "Caracteres substitutos não são permitidos: U+D800."
     ]
    }
   },

@@ -6,6 +6,7 @@ import java.util.Set;
 import me.clama.api.comum.api.CamposDrf;
 import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.comum.ratelimit.LimiteDeTaxa;
+import me.clama.api.comum.texto.TextoPython;
 import me.clama.api.identidade.Usuario;
 import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.identidade.api.AuthAdminController.Sessao;
@@ -148,7 +149,7 @@ class AuthCustomerController {
         if (v != null && v.isNull()) {
             campos.erro("nome_format_blog", CamposDrf.NULO);
         } else if (v != null && !(v.isString() && FORMATOS_DE_NOME.contains(v.asString()))) {
-            campos.erro("nome_format_blog", "\"" + strPython(v) + "\" não é uma escolha válida.");
+            campos.erro("nome_format_blog", "\"" + TextoPython.str(v) + "\" não é uma escolha válida.");
         } else if (v != null) {
             formato = v.asString();
         }
@@ -161,13 +162,5 @@ class AuthCustomerController {
             }
             return CustomerUser.de(u);
         });
-    }
-
-    /** str() do Python pra escalares; lista/objeto saem em JSON (o Python usaria o repr). */
-    private static String strPython(JsonNode v) {
-        if (v.isBoolean()) {
-            return v.asBoolean() ? "True" : "False";
-        }
-        return v.isString() ? v.asString() : v.toString();
     }
 }
