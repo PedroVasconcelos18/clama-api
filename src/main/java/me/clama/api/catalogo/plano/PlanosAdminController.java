@@ -42,17 +42,14 @@ class PlanosAdminController {
     /** Ordem dos campos = ordem do serializer (a dos erros). */
     private static Entrada ler(JsonNode corpo, boolean parcial) {
         CamposDrf c = new CamposDrf(corpo);
-        boolean nome = !parcial || c.tem("nome");
-        boolean valor = !parcial || c.tem("valor_centavos");
-        boolean descricao = !parcial || c.tem("descricao");
+        boolean obrigatorio = !parcial;
         Entrada e = new Entrada(
-                nome ? c.texto("nome", s -> s.codePointCount(0, s.length()) > 80
-                        ? List.of("Ensure this field has no more than 80 characters.") : List.of()) : null,
-                valor ? c.inteiro("valor_centavos", 1, Integer.MAX_VALUE) : null,
-                descricao ? c.texto("descricao") : null,
-                c.escolha("complexidade", Plano.COMPLEXIDADES),
-                c.tem("ordem") ? c.inteiro("ordem", 0, Short.MAX_VALUE) : null,
-                c.tem("ativo") ? c.booleano("ativo") : null);
+                c.texto("nome", obrigatorio, CamposDrf.maxLength(80)),
+                c.inteiro("valor_centavos", obrigatorio, 1, Integer.MAX_VALUE),
+                c.texto("descricao", obrigatorio, x -> List.of()),
+                c.escolha("complexidade", false, Plano.COMPLEXIDADES),
+                c.inteiro("ordem", false, 0, Short.MAX_VALUE),
+                c.booleano("ativo", false));
         c.validar();
         return e;
     }

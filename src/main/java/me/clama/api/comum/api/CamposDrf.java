@@ -54,9 +54,14 @@ public final class CamposDrf {
 
     /** CharField(trim_whitespace=True, allow_blank=False). validadores rodam no valor ja aparado. */
     public String texto(String campo, Function<String, List<String>> validadores) {
+        return texto(campo, true, validadores);
+    }
+
+    /** obrigatorio=false (PATCH, ou campo com default): ausente devolve null sem erro. */
+    public String texto(String campo, boolean obrigatorio, Function<String, List<String>> validadores) {
         JsonNode v = corpo.get(campo);
         if (v == null) {
-            return erro(campo, OBRIGATORIO);
+            return obrigatorio ? erro(campo, OBRIGATORIO) : null;
         }
         if (v.isNull()) {
             return erro(campo, NULO);
@@ -88,15 +93,13 @@ public final class CamposDrf {
         return null;
     }
 
-    public boolean tem(String campo) {
-        return corpo.has(campo);
-    }
-
     /** IntegerField(min_value, max_value): aceita int, float inteiro ("12.0") e string numerica; bool nao. */
-    public Integer inteiro(String campo, long min, long max) {
+    public Integer inteiro(String campo, boolean obrigatorio, long min, long max) {
         JsonNode v = corpo.get(campo);
         if (v == null) {
-            erro(campo, OBRIGATORIO);
+            if (obrigatorio) {
+                erro(campo, OBRIGATORIO);
+            }
             return null;
         }
         if (v.isNull()) {
@@ -131,17 +134,29 @@ public final class CamposDrf {
     private static final java.util.Set<String> FALSOS = java.util.Set.of("f", "F", "n", "N", "no", "No", "NO", "false",
             "False", "FALSE", "off", "Off", "OFF", "0");
 
-    /** BooleanField (required=False no chamador). */
-    public Boolean booleano(String campo) {
+    /** BooleanField: TRUE_VALUES/FALSE_VALUES do DRF, inclusive numeros 1.0 e 0.0 (1.0 == 1 no Python). */
+    public Boolean booleano(String campo, boolean obrigatorio) {
         JsonNode v = corpo.get(campo);
         if (v == null) {
+            if (obrigatorio) {
+                erro(campo, OBRIGATORIO);
+            }
             return null;
         }
         if (v.isNull()) {
             erro(campo, NULO);
             return null;
         }
-        String s = v.asString();
+        if (v.isNumber()) {
+            java.math.BigDecimal d = v.decimalValue();
+            if (d.compareTo(java.math.BigDecimal.ONE) == 0) {
+                return true;
+            }
+            if (d.signum() == 0) {
+                return false;
+            }
+        }
+        String s = v.isContainer() ? "" : v.asString();
         if (VERDADEIROS.contains(s)) {
             return true;
         }
@@ -153,19 +168,26 @@ public final class CamposDrf {
     }
 
     /** ChoiceField: devolve o valor se for uma das opcoes. */
-    public String escolha(String campo, List<String> opcoes) {
+    public String escolha(String campo, boolean obrigatorio, List<String> opcoes) {
         JsonNode v = corpo.get(campo);
         if (v == null) {
-            return null;
+            return obrigatorio ? erro(campo, OBRIGATORIO) : null;
         }
         if (v.isNull()) {
             return erro(campo, NULO);
         }
-        String s = v.asString();
+        String s = v.isBoolean() ? (v.asBoolean() ? "True" : "False")
+                : v.isContainer() ? v.toString() : v.asString(); // str() do Python
         if (v.isString() && opcoes.contains(s)) {
             return s;
         }
         return erro(campo, "\"" + s + "\" não é uma escolha válida.");
+    }
+
+    /** MaxLengthValidator do CharField (conta code points, como o len() do Python). */
+    public static Function<String, List<String>> maxLength(int n) {
+        return s -> s.codePointCount(0, s.length()) > n
+                ? List.of("Certifique-se de que este campo não tenha mais de " + n + " caracteres.") : List.of();
     }
 
     /** is_valid(raise_exception=True). */
