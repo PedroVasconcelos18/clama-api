@@ -42,5 +42,7 @@ class PlanoGratuitoAusenteTest {
                 e -> assertThat(e.status()).isEqualTo(503));
         assertThat(sentry.eventos).hasSize(1);
         assertThat(sentry.eventos.get(0).getLevel()).isEqualTo(SentryLevel.ERROR);
+        assertThat(sentry.eventos.get(0).getMessage().getFormatted())
+                .isEqualTo("Plan freemium ausente do banco (SIMPLES_GRATUITA, visivel=False, ativo=True)");
     }
 }

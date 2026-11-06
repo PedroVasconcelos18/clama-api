@@ -93,6 +93,8 @@ class PedidosThrottleTest {
         HttpResponse<String> r = api.post("/api/pedidos/gratuito/", "{}", s);
         assertThat(r.statusCode()).isEqualTo(429);
         assertThat(r.body()).containsPattern("Retry after (60|5\\d) seconds\\.");
+        // o escopo pedidos_create e o mesmo: o POST seguinte em /api/pedidos/ tambem cai em 429
+        assertThat(api.post("/api/pedidos/", "{}", s).statusCode()).isEqualTo(429);
     }
 
     @Test

@@ -70,7 +70,7 @@ class PedidoGratuitoController {
     Plano planoGratuito() {
         return planos.findFirstByComplexidadeAndVisivelFalseAndAtivoTrueOrderByOrdem("simples_gratuita")
                 .orElseThrow(() -> {
-                    Sentry.captureMessage("Plano freemium (simples_gratuita) ausente", SentryLevel.ERROR);
+                    Sentry.captureMessage("Plan freemium ausente do banco (SIMPLES_GRATUITA, visivel=False, ativo=True)", SentryLevel.ERROR);
                     return new PastoralException(503, "freemium_indisponivel", "Plano freemium não configurado",
                             "Estamos com problemas momentâneos. Tente em alguns minutos.");
                 });
