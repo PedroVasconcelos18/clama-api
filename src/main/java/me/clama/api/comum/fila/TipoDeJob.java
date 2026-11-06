@@ -43,6 +43,10 @@ public interface TipoDeJob<P> {
 	/**
 	 * Chamado uma vez quando o job desiste (retentativas esgotadas), antes do observador. {@code erro} pode ser nulo.
 	 * Uma excecao aqui e logada e engolida: nao impede o observador nem faz o job rodar de novo.
+	 *
+	 * <p>Aqui a linha da instancia ja foi removida: e o lugar de reagendar a MESMA instancia
+	 * ({@code Fila.enfileirar(tipo, instancia, ...)}), numa transacao propria (TransactionTemplate). Dentro de
+	 * {@code executar} a linha ainda existe e o enfileirar retorna false.
 	 */
 	default void esgotou(P payload, Throwable erro) {}
 }

@@ -45,6 +45,8 @@ O Django ignora essas tabelas, entao voltar para ele e seguro. Mas jobs pendente
 - **Payload so leva IDs.** Nada de PII, senha ou texto de oracao: o payload fica em texto puro em `scheduled_tasks.task_data`. O job busca o resto no banco.
 - Backoff: `esperaEntreTentativas()` e a 1a espera, `fatorDeBackoff()` multiplica a cada falha. O `countdown = 30 * 2**retries` do Celery e `30 s` com fator `2.0` (30, 60, 120 s). `executar(payload, retentativa)` recebe o `self.request.retries` (0 na 1a execucao). `esgotou(payload, erro)` roda uma vez quando o job desiste, antes do Sentry; `erro` pode ser nulo.
 
+- **Instancia deterministica** (`Fila.enfileirar(tipo, instancia, payload)`): instancia ja existente = no-op, retorna `false`, e isso inclui o job *em execucao* (a linha so some quando ele termina). Para reagendar a mesma instancia depois de esgotar as retentativas, faca isso de dentro de `esgotou` (a linha ja foi removida), numa transacao propria (`TransactionTemplate`); nunca de dentro de `executar`. Enfileiramentos concorrentes da mesma instancia sao serializados por advisory lock (o db-scheduler faz SELECT + INSERT, sem ON CONFLICT).
+
 ## Regras para jobs que enviam e-mail (Etapa 4+)
 
 A fila e at-least-once: um job pode rodar de novo depois de ja ter enviado (processo morto entre o envio e o fim do job, redeploy, retentativa).

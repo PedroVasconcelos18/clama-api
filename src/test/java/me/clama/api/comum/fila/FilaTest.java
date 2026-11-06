@@ -45,6 +45,8 @@ class FilaTest {
 		final AtomicInteger chamadas = new AtomicInteger();
 		volatile int falhas;
 		volatile boolean esgotouEstoura;
+		volatile java.util.function.Consumer<JobDeTeste> aoExecutar = p -> {};
+		volatile java.util.function.Consumer<JobDeTeste> aoEsgotar = p -> {};
 
 		public String nome() { return "job-de-teste"; }
 		public Class<JobDeTeste> payload() { return JobDeTeste.class; }
@@ -52,6 +54,7 @@ class FilaTest {
 
 		public void executar(JobDeTeste p, int retentativa) {
 			instantes.add(System.nanoTime());
+			aoExecutar.accept(p);
 			retentativas.add(retentativa);
 			int n = chamadas.incrementAndGet();
 			recebidos.add(p.valor());
@@ -63,6 +66,7 @@ class FilaTest {
 		public void esgotou(JobDeTeste p, Throwable erro) {
 			esgotou.add(p);
 			esgotou.add(erro);
+			aoEsgotar.accept(p);
 			if (esgotouEstoura) throw new IllegalStateException("esgotou quebrou");
 		}
 	}
@@ -99,6 +103,8 @@ class FilaTest {
 		backoff.instantes.clear();
 		backoff.falhas = 0;
 		job.esgotouEstoura = false;
+		job.aoExecutar = p -> {};
+		job.aoEsgotar = p -> {};
 		job.retentativas.clear();
 		job.instantes.clear();
 		job.esgotou.clear();
@@ -147,6 +153,83 @@ class FilaTest {
 		})).isInstanceOf(IllegalArgumentException.class);
 		tx.executeWithoutResult(s -> assertThat(fila.enfileirar(job, "gerar/1", new JobDeTeste("b"))).isTrue());
 		await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertThat(job.recebidos).containsExactly("b"));
+	}
+
+	@Test
+	void enfileirarConcorrenteMesmaInstancia() throws Exception {
+		var primeiroEnfileirou = new java.util.concurrent.CountDownLatch(1);
+		var segundoComecou = new java.util.concurrent.CountDownLatch(1);
+		Instant longe = Instant.now().plusSeconds(60);
+		var pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+		try {
+			var f1 = pool.submit(() -> tx.execute(s -> {
+				boolean r = fila.enfileirar(job, "gerar/c", new JobDeTeste("a"), longe);
+				fila.enfileirar(job, "outro/1", new JobDeTeste("o1"), longe);
+				primeiroEnfileirou.countDown();
+				aguardar(segundoComecou);
+				dormir(500); // segura a transacao aberta: o segundo tem que esperar o commit
+				return r;
+			}));
+			var f2 = pool.submit(() -> {
+				aguardar(primeiroEnfileirou);
+				return tx.execute(s -> {
+					segundoComecou.countDown();
+					boolean r = fila.enfileirar(job, "gerar/c", new JobDeTeste("b"), longe);
+					fila.enfileirar(job, "outro/2", new JobDeTeste("o2"), longe);
+					return r;
+				});
+			});
+			assertThat(List.of(f1.get(15, java.util.concurrent.TimeUnit.SECONDS), f2.get(15, java.util.concurrent.TimeUnit.SECONDS)))
+					.containsExactly(true, false);
+		} finally {
+			pool.shutdownNow();
+		}
+		assertThat(linhas()).isEqualTo(3); // gerar/c, outro/1, outro/2: as duas transacoes commitaram
+	}
+
+	@Test
+	void enfileirarMesmaInstanciaDuranteExecucaoRetornaFalse() throws Exception {
+		var rodando = new java.util.concurrent.CountDownLatch(1);
+		var libera = new java.util.concurrent.CountDownLatch(1);
+		job.aoExecutar = p -> {
+			rodando.countDown();
+			aguardar(libera);
+		};
+		tx.executeWithoutResult(s -> fila.enfileirar(job, "exec/1", new JobDeTeste("a")));
+		assertThat(rodando.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+		// a linha existe ate o OneTimeTask terminar: reenfileirar durante a execucao e no-op
+		Boolean r = tx.execute(s -> fila.enfileirar(job, "exec/1", new JobDeTeste("b")));
+		assertThat(r).isFalse();
+		libera.countDown();
+		await().atMost(Duration.ofSeconds(5)).until(() -> linhas() == 0);
+		assertThat(job.recebidos).containsExactly("a");
+	}
+
+	@Test
+	void reagendarMesmaInstanciaDeDentroDoEsgotouFunciona() {
+		job.falhas = 4; // 1 + 3 retentativas falham; a 5a execucao (reagendada) passa
+		var reagendou = new java.util.concurrent.atomic.AtomicReference<Boolean>();
+		job.aoEsgotar = p -> reagendou.set(tx.execute(s -> fila.enfileirar(job, "re/1", new JobDeTeste("de-novo"), Instant.now().plusMillis(200))));
+		tx.executeWithoutResult(s -> fila.enfileirar(job, "re/1", new JobDeTeste("a")));
+		await().atMost(Duration.ofSeconds(15)).until(() -> job.chamadas.get() == 5 && linhas() == 0);
+		assertThat(reagendou.get()).isTrue();
+		assertThat(job.recebidos).containsExactly("a", "a", "a", "a", "de-novo");
+	}
+
+	private static void aguardar(java.util.concurrent.CountDownLatch l) {
+		try {
+			if (!l.await(10, java.util.concurrent.TimeUnit.SECONDS)) throw new IllegalStateException("latch");
+		} catch (InterruptedException e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
+	private static void dormir(long ms) {
+		try {
+			Thread.sleep(ms);
+		} catch (InterruptedException e) {
+			throw new IllegalStateException(e);
+		}
 	}
 
 	@Test
