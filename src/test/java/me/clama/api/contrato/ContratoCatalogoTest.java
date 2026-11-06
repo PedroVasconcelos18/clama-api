@@ -29,9 +29,9 @@ import org.springframework.test.context.ActiveProfiles;
 class ContratoCatalogoTest {
     static final Path CENARIOS = Path.of("src/test/resources/contrato/catalogo");
     /** Grupos ligados, por prefixo do arquivo. Cada task move o seu prefixo de PENDENTES para LIGADOS. */
-    static final List<String> LIGADOS = List.of("admin_", "planos_", "instituicoes_");
+    static final List<String> LIGADOS = List.of("admin_", "planos_", "instituicoes_", "prompts_");
     /** Gravados mas ainda sem implementacao. Fica vazio na Task 5. */
-    static final List<String> PENDENTES = List.of("prompts_", "documentos_");
+    static final List<String> PENDENTES = List.of("documentos_");
     static final List<String> TABELAS = List.of("users_user", "token_blacklist_outstandingtoken",
             "token_blacklist_blacklistedtoken", "plans_plan", "instituicoes_instituicao", "prompts_prompttemplate",
             "documents_documentocontexto");
