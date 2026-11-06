@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
 import me.clama.api.BancoDeTeste;
+import me.clama.api.comum.cripto.CampoCriptografado;
 import me.clama.api.comum.ratelimit.RateLimiter;
 import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.identidade.token.ServicoDeTokens;
@@ -30,8 +31,10 @@ import org.springframework.test.context.DynamicPropertySource;
 
 /**
  * Cenarios gravados por clama-backend/contrato/test_gravar_pedidos.py. Os de checkout falam com o Mercado Pago pelo
- * {@link StubDeIntegracoes}. Os que trazem "configuracao" (checkout_valor_abaixo_minimo_422 e
- * checkout_sem_notification_url_http) so passam num contexto com aquelas propriedades; o replay recusa os outros.
+ * {@link StubDeIntegracoes}; todos comparam o estado final de orders_pedido. Cada cenario traz a "configuracao" com
+ * que foi gravado e o replay recusa contexto diferente: checkout_valor_abaixo_minimo_422
+ * (MERCADOPAGO_MIN_VALOR_CENTAVOS=5000) e checkout_sem_notification_url_http (BACKEND_PUBLIC_URL=http://api.clama.test)
+ * precisam cada um do seu contexto.
  */
 // propriedades inline vencem as variaveis do SO (nunca o token real do Mercado Pago nem a chave da Anthropic); as
 // URLs do stub, de porta aleatoria, vem do @DynamicPropertySource, que vence ate as inline
@@ -118,6 +121,56 @@ class ContratoPedidosTest {
         replay().executar(igual, base);
         assertThatThrownBy(() -> replay().executar(diferente, base)).isInstanceOf(AssertionError.class)
                 .hasMessageContaining("requisicoes ao Mercado Pago").hasMessageContaining("30.01");
+    }
+
+    /**
+     * Cenario sintetico sem passos: o pedido semeado (nome e CPF cifrados) e o estado final. Valor igual ao semeado
+     * passa, decifrando as colunas; 3001 falha, como falharia um app que gravasse o valor errado.
+     */
+    @Test
+    void estadoFinalRecusaValorPersistidoDiferente(@TempDir Path dir) throws Exception {
+        URI base = URI.create("http://localhost:" + porta);
+        replay().executar(comEstadoFinal(dir, "igual", 3000), base);
+        assertThatThrownBy(() -> replay().executar(comEstadoFinal(dir, "diferente", 3001), base))
+                .isInstanceOf(AssertionError.class).hasMessageContaining("estado final de orders_pedido")
+                .hasMessageContaining("3001");
+    }
+
+    private static Path comEstadoFinal(Path dir, String nome, int valorEsperado) throws Exception {
+        CampoCriptografado cifra = new CampoCriptografado();
+        String json = """
+                {
+                  "cenario": "%1$s",
+                  "usuarios": [],
+                  "dados": {
+                    "plans_plan": [{"id": "55555555-5555-4555-8555-000000000001", "nome": "Pedido de Oração",
+                      "valor_centavos": 2000, "descricao": "", "complexidade": "simples", "ordem": 1, "ativo": true,
+                      "visivel": true}],
+                    "orders_pedido": [{"created_at": "2026-11-01T13:00:00+00:00",
+                      "updated_at": "2026-11-01T13:00:00+00:00", "id": "77777777-7777-4777-8777-000000000001",
+                      "nome": "%2$s", "email": "%3$s", "telefone": "", "idade": null, "sexo": "", "pedido_oracao": "",
+                      "oracao_gerada": "", "valor_centavos": 3000, "canal_entrega": "email",
+                      "status": "aguardando_pagamento", "plano_id": "55555555-5555-4555-8555-000000000001",
+                      "consent_aceito": true, "consent_aceito_at": null, "consent_ip": "203.0.113.9",
+                      "consent_versao": "1", "last_error": "", "retry_count": 0, "whatsapp_delivered_at": null,
+                      "whatsapp_message_id": "", "whatsapp_read_at": null, "cpf_cnpj": "%4$s", "user_id": null,
+                      "eh_gratuito": false, "device_hash": "", "oracao_email_sent_at": null,
+                      "provider_payment_id": null, "provider_checkout_url": null, "pix_qr_code": null,
+                      "pix_qr_code_base64": null, "instituicao_id": null}]
+                  },
+                  "passos": [],
+                  "estado_final": {"orders_pedido": {
+                    "colunas": ["id", "nome", "cpf_cnpj", "valor_centavos", "user_email", "consent_ip", "created_at"],
+                    "cifradas_decifradas": ["nome", "cpf_cnpj"],
+                    "linhas": [{"id": "77777777-7777-4777-8777-000000000001", "nome": "Maria Silva",
+                      "cpf_cnpj": "52998224725", "valor_centavos": %5$d, "user_email": null,
+                      "consent_ip": "203.0.113.9", "created_at": "<ts>"}]
+                  }}
+                }
+                """.formatted(nome, cifra.convertToDatabaseColumn("Maria Silva"),
+                cifra.convertToDatabaseColumn("maria@exemplo.com"), cifra.convertToDatabaseColumn("52998224725"),
+                valorEsperado);
+        return Files.writeString(dir.resolve(nome + ".json"), json);
     }
 
     private ReplayDeContrato replay() {

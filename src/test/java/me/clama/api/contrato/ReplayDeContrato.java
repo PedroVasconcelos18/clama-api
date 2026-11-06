@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -24,6 +25,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import me.clama.api.BancoDeTeste;
+import me.clama.api.comum.cripto.CampoCriptografado;
 import me.clama.api.comum.ratelimit.RateLimiter;
 import me.clama.api.identidade.Usuario;
 import me.clama.api.identidade.UsuarioRepository;
@@ -31,6 +33,7 @@ import me.clama.api.identidade.senha.SenhaDjango;
 import me.clama.api.identidade.token.ServicoDeTokens;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ArrayNode;
@@ -52,6 +55,8 @@ public class ReplayDeContrato {
     private static final Pattern TS = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}:\\d{2}", COMO_PYTHON);
     private static final Pattern REFRESH = Pattern.compile("\\{refresh:(.+)\\}", COMO_PYTHON);
     private static final Pattern UUID = Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+    private static final String SQL_ESTADO = "SELECT p.*, u.email AS user_email FROM orders_pedido p"
+            + " LEFT JOIN users_user u ON u.id = p.user_id ORDER BY p.created_at, p.id";
     private static final String FRONTEIRA = "ContratoClamaFronteira";
     private static final Pattern SET_COOKIE = Pattern.compile("\\{set_cookie:(\\d+):(.+)\\}", COMO_PYTHON);
 
@@ -185,6 +190,42 @@ public class ReplayDeContrato {
         if (stub != null) {
             stub.conferir(cenario.path("mercadopago_requisicoes"), arquivo);
         }
+        if (cenario.has("estado_final")) {
+            conferirEstadoFinal(cenario.get("estado_final").get("orders_pedido"), fixos, arquivo);
+        }
+    }
+
+    /**
+     * _estado_final do gravador: todas as linhas de orders_pedido depois do ultimo passo, nas colunas que o JSON lista,
+     * com as cifradas decifradas (CampoCriptografado) e normalizadas como as respostas. Numero compara por valor.
+     */
+    private void conferirEstadoFinal(JsonNode tabela, Set<String> fixos, String arquivo) {
+        List<String> colunas = new ArrayList<>();
+        tabela.get("colunas").forEach(c -> colunas.add(c.asString()));
+        Set<String> cifradas = new HashSet<>();
+        tabela.get("cifradas_decifradas").forEach(c -> cifradas.add(c.asString()));
+        CampoCriptografado campo = new CampoCriptografado();
+        ArrayNode linhas = NOS.arrayNode();
+        jdbc.query(SQL_ESTADO, (RowCallbackHandler) rs -> {
+            ObjectNode l = linhas.addObject();
+            for (String c : colunas) {
+                Object v = rs.getObject(c);
+                if (v == null) {
+                    l.putNull(c);
+                } else if (cifradas.contains(c)) {
+                    l.put(c, campo.convertToEntityAttribute(rs.getString(c)));
+                } else if (v instanceof Boolean b) {
+                    l.put(c, b);
+                } else if (v instanceof Number n) {
+                    l.put(c, n.longValue());
+                } else {
+                    l.put(c, rs.getString(c)); // timestamptz, uuid, inet como texto do Postgres
+                }
+            }
+        });
+        assertThat(StubDeIntegracoes.numerosPorValor(normalizar(linhas, null, fixos)))
+                .as("%s: estado final de orders_pedido", arquivo)
+                .isEqualTo(StubDeIntegracoes.numerosPorValor(tabela.get("linhas")));
     }
 
     private static final class Contexto {

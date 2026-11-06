@@ -1,5 +1,11 @@
 {
   "cenario": "status_enviada_mostra_oracao",
+  "configuracao": {
+    "MERCADOPAGO_ACCESS_TOKEN": "test",
+    "BACKEND_PUBLIC_URL": "https://api.clama.test",
+    "MERCADOPAGO_MIN_VALOR_CENTAVOS": 1,
+    "TURNSTILE_SECRET_KEY": ""
+  },
   "usuarios": [],
   "dados": {
     "plans_plan": [
@@ -85,13 +91,13 @@
         "created_at": "2026-11-01T13:00:00+00:00",
         "updated_at": "2026-11-01T13:00:00+00:00",
         "id": "77777777-7777-4777-8777-000000000001",
-        "nome": "gAAAAABq7cXhRhjkA-1G7lnz90GgEBxry2Cc26xuxi7c8diptkTaRE4bCRZoH4RKApRBNlorNE6SjFCUKB2Ct4PAMWhMNluMxw==",
-        "email": "gAAAAABq7cXhPp8rn7oO4lyTexjbt2CkkJYVHyjrayzlyujQUAU_gvLt8QyTPGZIzyuyDpbN2ECL6PPLMUO48IeQWTCeWnfx9kHTtxQfEmq6icnz8C_Ijro=",
-        "telefone": "gAAAAABq7cXhQ18Ov32TCXPtgN-dRX1GF_E7fN6isK8mwekeIYQNahnVNItC5ITHVFTD4VjG5X9sqcVmugOaI2wap5Mx9nmIag==",
+        "nome": "gAAAAABq7cdjDim2u8TJ5U1dxWui4THvVGkOjtJ_kPZ-fyIxuCBE8FmnEG3Y0DZybE35L5D8K1AedYDIg55FqQxyaLPzR6A0UQ==",
+        "email": "gAAAAABq7cdjr8G3On3Si2eQUY5O7Ylh-JZvCxwRz3UAVN5kWyYfHVNHlr07_GwdX2DRIzSOyIvw3n311tkCfYXivb3RPj7UEaFYsNRCAf5ikJfLr6tWtHs=",
+        "telefone": "gAAAAABq7cdjWnuqekBcnHUfFAO7v9jTa9tDwTalzJJ4HereBHczTvK2UDS6y8dbU-r_Zp8Y5y7wIEebNLsSJCDCfTTf1fj26g==",
         "idade": 35,
         "sexo": "feminino",
-        "pedido_oracao": "gAAAAABq7cXhLGQtxluYia46QftNXCo8Aa9IGGCmq6USUUgC39B1MQgXUBPtPSV6rODIxwTHgr0gJgtAlLfL45tC2IGhV6-xBeVsrtCLZ68BPT4RNd4mfFNtUvoRQeNchY1ljqniwxnL",
-        "oracao_gerada": "gAAAAABq7cXh3vHh3yXpXb3sy29mvUQA5FIqRgPa28oZhCZ6OO0wG0SCXS1Q5UQYXiavHCdmHFw4OyvNoMmWLGeiR-L_0UNjiTY2kn3StkgTYqEPQLI3ywIgOqSZ5M5H2K6Z7gWZozSuAXOB8VPwNrmxMcnUJFBDYg==",
+        "pedido_oracao": "gAAAAABq7cdjaxaPQurE3d_HszgB6dhuu0K4CZJ1NxeFxN3wc2YsmxTR0GAekbUqaGoqPbCTSp94oD4AbmtxII5ySZZtEoFelVGSIKq3HAeYBX0AMOqnOViNJ_noNdjLumE-DPD_pfyW",
+        "oracao_gerada": "gAAAAABq7cdjdlR9xkZwxVxyNTKE2fJyyazjaQlthQbIfSW9r3rIFeIlDJqZYeI65pQe-QAN4bP96SEOcjhPPmjsrk3fJJ434J7z3c2fwm4wLCOyjPgO0RlgDostDyBlj09vdA-G2nhcDIaCCExY-l_siv4VRAvLLw==",
         "valor_centavos": 5000,
         "canal_entrega": "whatsapp",
         "status": "enviada",
@@ -105,7 +111,7 @@
         "whatsapp_delivered_at": null,
         "whatsapp_message_id": "",
         "whatsapp_read_at": null,
-        "cpf_cnpj": "gAAAAABq7cXhOi6Et4U5k6uHv9K99SBK70wUTXELMxQYC_ZEDUQeuHLPdMVUhDfs2jt_QKS7OUsycTDluxpyIeyVfqnXCo9-5w==",
+        "cpf_cnpj": "gAAAAABq7cdj6nackC7vYg2qVHujIBWewArSzf0k6qPlTxaxPalaLWpZ6lMC_mqiSTo7GBlwK8xOclisJCH0DRPshDPpqL0Bcw==",
         "user_id": null,
         "eh_gratuito": false,
         "device_hash": "",
@@ -142,5 +148,87 @@
         "cookies": []
       }
     }
-  ]
+  ],
+  "estado_final": {
+    "orders_pedido": {
+      "colunas": [
+        "id",
+        "nome",
+        "email",
+        "telefone",
+        "cpf_cnpj",
+        "idade",
+        "sexo",
+        "pedido_oracao",
+        "oracao_gerada",
+        "plano_id",
+        "valor_centavos",
+        "instituicao_id",
+        "user_email",
+        "eh_gratuito",
+        "canal_entrega",
+        "status",
+        "provider_payment_id",
+        "provider_checkout_url",
+        "pix_qr_code",
+        "pix_qr_code_base64",
+        "retry_count",
+        "last_error",
+        "consent_aceito",
+        "consent_versao",
+        "consent_aceito_at",
+        "consent_ip",
+        "device_hash",
+        "whatsapp_message_id",
+        "whatsapp_delivered_at",
+        "whatsapp_read_at",
+        "oracao_email_sent_at",
+        "created_at"
+      ],
+      "cifradas_decifradas": [
+        "nome",
+        "email",
+        "telefone",
+        "cpf_cnpj",
+        "pedido_oracao",
+        "oracao_gerada"
+      ],
+      "linhas": [
+        {
+          "id": "77777777-7777-4777-8777-000000000001",
+          "nome": "Maria Silva",
+          "email": "maria@exemplo.com",
+          "telefone": "(11) 99999-8888",
+          "cpf_cnpj": "52998224725",
+          "idade": 35,
+          "sexo": "feminino",
+          "pedido_oracao": "Peço oração pela minha família.",
+          "oracao_gerada": "Senhor, acolhe a família da Maria e dá-lhe paz.\n\nAmém.",
+          "plano_id": "55555555-5555-4555-8555-000000000002",
+          "valor_centavos": 5000,
+          "instituicao_id": null,
+          "user_email": null,
+          "eh_gratuito": false,
+          "canal_entrega": "whatsapp",
+          "status": "enviada",
+          "provider_payment_id": null,
+          "provider_checkout_url": null,
+          "pix_qr_code": null,
+          "pix_qr_code_base64": null,
+          "retry_count": 0,
+          "last_error": "",
+          "consent_aceito": true,
+          "consent_versao": "1",
+          "consent_aceito_at": "<ts>",
+          "consent_ip": "203.0.113.7",
+          "device_hash": "",
+          "whatsapp_message_id": "",
+          "whatsapp_delivered_at": null,
+          "whatsapp_read_at": null,
+          "oracao_email_sent_at": null,
+          "created_at": "<ts>"
+        }
+      ]
+    }
+  }
 }

@@ -1,5 +1,11 @@
 {
   "cenario": "checkout_valor_abaixo_minimo_422",
+  "configuracao": {
+    "MERCADOPAGO_ACCESS_TOKEN": "test",
+    "BACKEND_PUBLIC_URL": "https://api.clama.test",
+    "MERCADOPAGO_MIN_VALOR_CENTAVOS": 5000,
+    "TURNSTILE_SECRET_KEY": ""
+  },
   "usuarios": [],
   "dados": {
     "plans_plan": [
@@ -85,13 +91,13 @@
         "created_at": "2026-11-01T13:00:00+00:00",
         "updated_at": "2026-11-01T13:00:00+00:00",
         "id": "77777777-7777-4777-8777-000000000001",
-        "nome": "gAAAAABq7cXiaO2BFuzQK9ZNcMLIVBXZDDKSJeo_v3K85gU32OpWjWA3P7WoHtCsSaqv7qr29BnT-1mbfSOWTKbhcxcZXeSooA==",
-        "email": "gAAAAABq7cXiQNxw4VLeb8Xc7iKvA-2gjiSQTc37Zx9MmSQJKiv7SN7bElyMDOYKeemCIOTFu1kBQEbF-zVgcwVplDAOC4C0a2FxSR63g_ULkw7bbvutNBs=",
-        "telefone": "gAAAAABq7cXiucYlwXtRR-O1FCFYZamJgT9BwM7tYXNlzxIyS1rJkhTkwheHN-SynYHzyehEudSvBKKGLyhUvlOxg8FrwZ9Q9Q==",
+        "nome": "gAAAAABq7cdkt0JW83mBxtYKoP6VG5QMktU2o9mblXYSTtapdqTgAHyLkE0hPFBFq45EhPtiQxHpQLMjdSXmeoNINEbLGOkYHg==",
+        "email": "gAAAAABq7cdkxM4DDNkuNx_K6I6isd_hOjfFTc1N7nZdZs1udWt2tERA9oaQV0mBeP3oFB0hPCw8NW3VuHJoLR1bFPCDDjPs3d84rv9iM0egNqIr4JtEyTE=",
+        "telefone": "gAAAAABq7cdkCVzDmm36J57fiVXMtGlyJ4y0QNTN_K8jqDhaoQKLWtFrUy9qNnhZW0uCv4dUucZV8-7yY_68fzlB9HWIzgk7tw==",
         "idade": 35,
         "sexo": "feminino",
-        "pedido_oracao": "gAAAAABq7cXiiqWUuivSj-kWWy_pcIGO0yAD8eP-zqL2wKn173FoLZw49tCJo490Wpi62L5y-PNF9IBuWpaDV9S-BVitA_z9SwgwTJSaX0GzcbRLGi2CMUEGxGtNpc5jXtwOkYfPT-Vw",
-        "oracao_gerada": "gAAAAABq7cXikyoOl2GpmnIsLtPyul1Ewa3UEzD2P1su_N-LxvcOUPjlfLAJrPa-rS6kXKSXyg7zqqQV0DRZlJy5DaJK5r-aUg==",
+        "pedido_oracao": "gAAAAABq7cdkpIbzQCCZurzw94T8MatYAQ1HQA857FdPxko-9i-0qmdNzU8SDvVPqo10hjKUFkrL6mqjinVIlxo1Nlh0I4tPbtQjf-vR4RfQL9nrKUYqJdM-LKhgARPZkPAi0pEtM5bP",
+        "oracao_gerada": "gAAAAABq7cdk5vdrPuldCKPsDBcgCYFl8VnkCvKgYU1rS10ZWD8Zf3qrrQpVwysTZ5VVaq4Xy8vtss1f7swkTGtgK82RRe6FiQ==",
         "valor_centavos": 2000,
         "canal_entrega": "email",
         "status": "aguardando_pagamento",
@@ -105,7 +111,7 @@
         "whatsapp_delivered_at": null,
         "whatsapp_message_id": "",
         "whatsapp_read_at": null,
-        "cpf_cnpj": "gAAAAABq7cXiLY-tZ4jibVdlPgvTEqklqRdfbGMyWADJvSSWN70kRFFlDUyUKziCy5hRk73siKHH1IlN85YhdqwHk2zTyBN-pA==",
+        "cpf_cnpj": "gAAAAABq7cdkk9POkELnIpLy9yQd7M7paFx-AdcPM6BG5dZQQwWFNtMCA1gKJcZcQOLbTii2GFSVbhkHHFSsI2dbrFQc9YpVPg==",
         "user_id": null,
         "eh_gratuito": false,
         "device_hash": "",
@@ -137,8 +143,86 @@
       }
     }
   ],
-  "configuracao": {
-    "MERCADOPAGO_MIN_VALOR_CENTAVOS": 5000,
-    "BACKEND_PUBLIC_URL": "http://api.clama.test"
+  "estado_final": {
+    "orders_pedido": {
+      "colunas": [
+        "id",
+        "nome",
+        "email",
+        "telefone",
+        "cpf_cnpj",
+        "idade",
+        "sexo",
+        "pedido_oracao",
+        "oracao_gerada",
+        "plano_id",
+        "valor_centavos",
+        "instituicao_id",
+        "user_email",
+        "eh_gratuito",
+        "canal_entrega",
+        "status",
+        "provider_payment_id",
+        "provider_checkout_url",
+        "pix_qr_code",
+        "pix_qr_code_base64",
+        "retry_count",
+        "last_error",
+        "consent_aceito",
+        "consent_versao",
+        "consent_aceito_at",
+        "consent_ip",
+        "device_hash",
+        "whatsapp_message_id",
+        "whatsapp_delivered_at",
+        "whatsapp_read_at",
+        "oracao_email_sent_at",
+        "created_at"
+      ],
+      "cifradas_decifradas": [
+        "nome",
+        "email",
+        "telefone",
+        "cpf_cnpj",
+        "pedido_oracao",
+        "oracao_gerada"
+      ],
+      "linhas": [
+        {
+          "id": "77777777-7777-4777-8777-000000000001",
+          "nome": "Maria Silva",
+          "email": "maria@exemplo.com",
+          "telefone": "(11) 99999-8888",
+          "cpf_cnpj": "52998224725",
+          "idade": 35,
+          "sexo": "feminino",
+          "pedido_oracao": "Peço oração pela minha família.",
+          "oracao_gerada": "",
+          "plano_id": "55555555-5555-4555-8555-000000000001",
+          "valor_centavos": 2000,
+          "instituicao_id": null,
+          "user_email": null,
+          "eh_gratuito": false,
+          "canal_entrega": "email",
+          "status": "aguardando_pagamento",
+          "provider_payment_id": null,
+          "provider_checkout_url": null,
+          "pix_qr_code": null,
+          "pix_qr_code_base64": null,
+          "retry_count": 0,
+          "last_error": "",
+          "consent_aceito": true,
+          "consent_versao": "1",
+          "consent_aceito_at": "<ts>",
+          "consent_ip": "203.0.113.7",
+          "device_hash": "",
+          "whatsapp_message_id": "",
+          "whatsapp_delivered_at": null,
+          "whatsapp_read_at": null,
+          "oracao_email_sent_at": null,
+          "created_at": "<ts>"
+        }
+      ]
+    }
   }
 }
