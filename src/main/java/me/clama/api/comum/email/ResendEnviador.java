@@ -21,7 +21,7 @@ import tools.jackson.databind.ObjectMapper;
 /** POST /emails da Resend com o mesmo payload do Anymail e 3 tentativas (1s, 2s) como o with_retry. */
 public class ResendEnviador implements EnviadorDeEmail {
     private static final Logger LOG = LoggerFactory.getLogger(ResendEnviador.class);
-    static final String REPLY_TO = "contato@clama.me";
+    public static final String REPLY_TO = "contato@clama.me";
 
     private final String chave;
     private final String url;

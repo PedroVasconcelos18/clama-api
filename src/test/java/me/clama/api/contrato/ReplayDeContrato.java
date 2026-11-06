@@ -31,6 +31,7 @@ import me.clama.api.BancoDeTeste;
 import me.clama.api.comum.cripto.CampoCriptografado;
 import me.clama.api.comum.email.CaixaDeSaidaEmMemoria;
 import me.clama.api.comum.email.Email;
+import me.clama.api.comum.email.ResendEnviador;
 import me.clama.api.comum.fila.TipoDeJob;
 import me.clama.api.comum.ratelimit.RateLimiter;
 import me.clama.api.identidade.Usuario;
@@ -305,8 +306,14 @@ public class ReplayDeContrato {
         throw new IllegalArgumentException("payload de job sem conversao a partir do arg: " + tipo);
     }
 
-    /** _emails do gravador: o outbox do locmem. reply_to e remetente sao configuracao do envio, fora do Email. */
+    /**
+     * _emails do gravador: o outbox do locmem. No Java, a CaixaDeSaidaEmMemoria do perfil test (sem stub HTTP da
+     * Resend: a chave de idempotencia nao entra no contrato). reply_to nao e campo do Email: o gravado tem de ser o
+     * fixo do ResendEnviador.
+     */
     private void conferirEmails(JsonNode esperados, Set<String> fixos, String arquivo) {
+        esperados.forEach(e -> assertThat(e.get("reply_to")).as("%s: reply_to gravado", arquivo)
+                .isEqualTo(NOS.arrayNode().add(ResendEnviador.REPLY_TO)));
         ArrayNode obtidos = NOS.arrayNode();
         for (Email e : caixa.enviados()) {
             ObjectNode o = obtidos.addObject();
@@ -321,16 +328,22 @@ public class ReplayDeContrato {
     }
 
     /**
-     * on_commit/.delay do gravador = linhas de scheduled_tasks (o scheduler fica desligado no perfil test). arg = a
-     * instancia sem o prefixo "<tipo>/". Ordenado por (tipo, arg) antes de normalizar, como o gravador.
+     * on_commit/.delay do gravador = linhas de scheduled_tasks (o scheduler fica desligado no perfil test). O payload
+     * (task_data) so pode levar o ID: o arg e esse ID (JSON string/numero, ou objeto de um campo so), e a instancia
+     * tem de ser exatamente "<tipo>/<arg>". Ordenado por (tipo, arg) antes de normalizar, como o gravador.
      */
     private void conferirJobs(JsonNode esperados, Set<String> fixos, String arquivo) {
-        List<String[]> linhas = new ArrayList<>(jdbc.query("SELECT task_name, task_instance FROM scheduled_tasks",
-                (rs, n) -> {
+        List<String[]> linhas = new ArrayList<>(jdbc.query(
+                "SELECT task_name, task_instance, task_data FROM scheduled_tasks", (rs, n) -> {
                     String tipo = rs.getString(1);
-                    String instancia = rs.getString(2);
-                    return new String[] {tipo, instancia.startsWith(tipo + "/") ? instancia.substring(tipo.length() + 1)
-                            : instancia};
+                    JsonNode dado = JSON.readTree(rs.getBytes(3));
+                    JsonNode id = dado.isObject() && dado.size() == 1 ? dado.properties().iterator().next().getValue()
+                            : dado;
+                    assertThat(id.isString() || id.isIntegralNumber())
+                            .as("%s: payload de %s so com o ID: %s", arquivo, tipo, dado).isTrue();
+                    String arg = id.asString();
+                    assertThat(rs.getString(2)).as("%s: instancia do job %s", arquivo, tipo).isEqualTo(tipo + "/" + arg);
+                    return new String[] {tipo, arg};
                 }));
         linhas.sort(Comparator.<String[], String>comparing(l -> l[0]).thenComparing(l -> l[1]));
         ArrayNode obtidos = NOS.arrayNode();
@@ -492,10 +505,11 @@ public class ReplayDeContrato {
         return c;
     }
 
-    /** uuids_fixos(dados, passos) do gravador: os UUIDs das linhas de dados e dos requests. */
+    /** uuids_fixos do gravador: os UUIDs das linhas de dados, dos requests e das respostas simuladas. */
     static Set<String> uuidsFixos(JsonNode cenario) {
         StringBuilder texto = new StringBuilder(cenario.path("dados").toString());
         cenario.path("passos").forEach(p -> texto.append(p.path("request")));
+        INTEGRACOES.forEach(i -> texto.append(cenario.path(i))); // as respostas simuladas tambem sao do cenario
         return UUID_TEXTO.matcher(texto).results().map(r -> r.group()).collect(Collectors.toSet());
     }
 

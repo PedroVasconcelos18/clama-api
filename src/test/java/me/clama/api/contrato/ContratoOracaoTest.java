@@ -74,7 +74,7 @@ class ContratoOracaoTest {
             "scheduled_tasks");
     static final StubDeIntegracoes MERCADO_PAGO = new StubDeIntegracoes();
     static final StubDeIntegracoes ANTHROPIC = new StubDeIntegracoes("requisicoes a Anthropic",
-            Map.of("versao", "anthropic-version", "beta", "anthropic-beta"));
+            Map.of("chave", "x-api-key", "versao", "anthropic-version", "beta", "anthropic-beta"));
     private static final ObjectMapper JSON = new ObjectMapper();
 
     @DynamicPropertySource
@@ -149,12 +149,24 @@ class ContratoOracaoTest {
         assertThatThrownBy(() -> replay().executar(sintetico(dir, "beta", c -> ((ObjectNode) c
                 .get("anthropic_requisicoes").get(0)).put("beta", "files-api-2025-04-14")), base()))
                 .isInstanceOf(AssertionError.class).hasMessageContaining("requisicoes a Anthropic");
+        assertThatThrownBy(() -> replay().executar(sintetico(dir, "chave", c -> ((ObjectNode) c
+                .get("anthropic_requisicoes").get(0)).put("chave", "sk-ant-outra")), base()))
+                .isInstanceOf(AssertionError.class).hasMessageContaining("requisicoes a Anthropic");
         assertThatThrownBy(() -> replay().executar(sintetico(dir, "email", c -> ((ObjectNode) c.get("emails").get(0))
                 .put("texto", "Outro texto")), base())).isInstanceOf(AssertionError.class)
                 .hasMessageContaining("e-mails enviados");
+        assertThatThrownBy(() -> replay().executar(sintetico(dir, "replyto", c -> ((ObjectNode) c.get("emails").get(0))
+                .putArray("reply_to").add("outro@clama.me")), base())).isInstanceOf(AssertionError.class)
+                .hasMessageContaining("reply_to gravado");
         assertThatThrownBy(() -> replay().executar(sintetico(dir, "job", c -> ((ObjectNode) c
                 .get("jobs_enfileirados").get(0)).put("arg", "ola-outro")), base())).isInstanceOf(AssertionError.class)
                 .hasMessageContaining("jobs enfileirados");
+        assertThatThrownBy(() -> replay().executar(sintetico(dir, "sem-prefixo", c -> {
+            ((ObjectNode) c.get("job")).put("arg", "sem-prefixo");
+            ((ObjectNode) c.get("anthropic_requisicoes").get(0).get("corpo").get("messages").get(0))
+                    .put("content", "sem-prefixo");
+            ((ObjectNode) c.get("jobs_enfileirados").get(0)).put("arg", "sem-prefixo-eco");
+        }), base())).isInstanceOf(AssertionError.class).hasMessageContaining("instancia do job");
         assertThatThrownBy(() -> replay().executar(sintetico(dir, "estado", c -> ((ObjectNode) c.get("estado_final")
                 .get("payments_webhookevento").get("linhas").get(0).get("payload")).put("type", "merchant_order")),
                 base())).isInstanceOf(AssertionError.class)
@@ -221,7 +233,8 @@ class ContratoOracaoTest {
                   "job": {"tipo": "%2$s", "arg": "ola"},
                   "anthropic": [{"metodo": "POST", "caminho": "/v1/messages", "status": 200,
                     "corpo": {"content": [{"type": "text", "text": "Amém"}]}}],
-                  "anthropic_requisicoes": [{"metodo": "POST", "caminho": "/v1/messages", "versao": "2023-06-01",
+                  "anthropic_requisicoes": [{"metodo": "POST", "caminho": "/v1/messages", "chave": "sk-ant-contrato",
+                    "versao": "2023-06-01",
                     "beta": null, "corpo": {"model": "claude-sonnet-4-6", "max_tokens": 1500,
                       "messages": [{"role": "user", "content": "ola"}]}}],
                   "emails": [{"para": "ana@exemplo.com", "assunto": "Sintetico", "texto": "Amém", "html": null,
@@ -242,7 +255,7 @@ class ContratoOracaoTest {
 
     /**
      * Job so de teste, no papel do app: pede a Anthropic (stub) o texto de "arg", manda o texto por e-mail e enfileira
-     * "<arg>-eco" numa transacao propria. "noop" nao faz nada.
+     * "<arg>-eco" (instancia "<tipo>/<arg>-eco") numa transacao propria. "noop" nao faz nada.
      */
     @TestConfiguration(proxyBeanMethods = false)
     static class JobSintetico {
@@ -276,14 +289,16 @@ class ContratoOracaoTest {
                             "messages", List.of(Map.of("role", "user", "content", arg))));
                     HttpResponse<String> resp = HttpClient.newHttpClient().send(HttpRequest
                             .newBuilder(URI.create(env.getProperty("clama.anthropic.url") + "/v1/messages"))
+                            .header("x-api-key", env.getProperty("ANTHROPIC_API_KEY"))
                             .header("anthropic-version", "2023-06-01").header("Content-Type", "application/json")
                             .POST(HttpRequest.BodyPublishers.ofString(corpo)).build(),
                             HttpResponse.BodyHandlers.ofString());
                     JsonNode json = JSON.readTree(resp.body());
                     caixa.enviar(new Email("ana@exemplo.com", "Sintetico", json.get("content").get(0).get("text")
                             .asString(), null));
-                    tx.executeWithoutResult(s -> fila.getObject().enfileirar(this, NOME + "/" + arg + "-eco",
-                            arg + "-eco"));
+                    // "sem-prefixo": instancia fora do formato <tipo>/<id>, que o harness tem de recusar
+                    String instancia = (arg.equals("sem-prefixo") ? "" : NOME + "/") + arg + "-eco";
+                    tx.executeWithoutResult(s -> fila.getObject().enfileirar(this, instancia, arg + "-eco"));
                 }
             };
         }
