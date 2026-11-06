@@ -137,12 +137,41 @@ class SegurancaTest {
         assertThat(chamar("POST", "/api/pedidos/gratuito/").statusCode()).isIn(401, 404);
         assertThat(FiltroJwtCookie.ABERTAS.matches(new org.springframework.mock.web.MockHttpServletRequest("GET",
                 "/api/pedidos/gratuito/"))).isFalse();
-        // checkout e entrada propria (Task 5): o padrao de status nao a abre
-        assertThat(FiltroJwtCookie.ABERTAS.matches(new org.springframework.mock.web.MockHttpServletRequest("GET",
-                "/api/pedidos/" + uuid + "/checkout/"))).isFalse();
+        // checkout tem entrada propria (padrao CHECKOUT): ver rotaDeCheckoutSoAbreParaUuidDoDjango
         // uuid maiusculo nao casa com o conversor do Django
         assertThat(FiltroJwtCookie.ABERTAS.matches(new org.springframework.mock.web.MockHttpServletRequest("GET",
                 "/api/pedidos/" + uuid.toUpperCase(java.util.Locale.ROOT).replace("9", "A") + "/"))).isFalse();
+    }
+
+    @Test
+    void rotaDeCheckoutSoAbreParaUuidDoDjango() throws Exception {
+        String uuid = "99999999-9999-4999-8999-999999999999";
+        String checkout = "/api/pedidos/" + uuid + "/checkout/";
+        // anonimo chega no handler sem CSRF: 404 pastoral do pedido inexistente
+        HttpResponse<String> r = chamar("POST", checkout);
+        assertThat(r.statusCode()).isEqualTo(404);
+        assertThat(corpo(r)).isEqualTo(Map.of("error", Map.of("code", "not_found", "message", "Pedido não encontrado",
+                "pastoral_message", "Não encontramos esse pedido. Verifique se o link está correto.")));
+        // cookie invalido: 401; cookie valido sem CSRF: 403; com CSRF: chega no handler
+        assertThat(chamar("POST", checkout, "Cookie", "clama_access=lixo").statusCode()).isEqualTo(401);
+        String a = access();
+        HttpResponse<String> semCsrf = chamar("POST", checkout, "Cookie", "clama_access=" + a);
+        assertThat(semCsrf.statusCode()).isEqualTo(403);
+        assertThat(corpo(semCsrf)).isEqualTo(CSRF_INVALIDO);
+        String[] c = csrf();
+        assertThat(chamar("POST", checkout, "Cookie", "clama_access=" + a + "; " + c[1], "X-CSRFToken", c[0])
+                .statusCode()).isEqualTo(404);
+        // o padrao do checkout nao abre mais nada
+        for (String outra : List.of("/api/pedidos/" + uuid.replace("9", "A") + "/checkout/",
+                "/api/pedidos/gratuito/checkout/", "/api/pedidos/" + uuid + "/checkout",
+                "/api/pedidos/" + uuid + "/checkout/x/", "/api/pedidos/" + uuid + "/checkout/../",
+                "/api/pedidos/" + uuid + "/outra/", "/api/x/pedidos/" + uuid + "/checkout/",
+                "/api/pedidos/" + uuid + "/checkout//")) {
+            assertThat(FiltroJwtCookie.ABERTAS.matches(new org.springframework.mock.web.MockHttpServletRequest("POST",
+                    outra))).as(outra).isFalse();
+        }
+        assertThat(FiltroJwtCookie.ABERTAS.matches(new org.springframework.mock.web.MockHttpServletRequest("POST",
+                checkout))).isTrue();
     }
 
     @Test

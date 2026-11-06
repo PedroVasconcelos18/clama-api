@@ -15,6 +15,7 @@ import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.identidade.token.ServicoDeTokens;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Named;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -23,18 +24,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.core.env.Environment;
+import org.springframework.context.ApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 
 /**
  * Cenarios gravados por clama-backend/contrato/test_gravar_pedidos.py. Os de checkout falam com o Mercado Pago pelo
  * {@link StubDeIntegracoes}; todos comparam o estado final de orders_pedido. Cada cenario traz a "configuracao" com
  * que foi gravado e o replay recusa contexto diferente: checkout_valor_abaixo_minimo_422
  * (MERCADOPAGO_MIN_VALOR_CENTAVOS=5000) e checkout_sem_notification_url_http (BACKEND_PUBLIC_URL=http://api.clama.test)
- * precisam cada um do seu contexto.
+ * rodam cada um no seu contexto, nas classes aninhadas.
  */
 // propriedades inline vencem as variaveis do SO (nunca o token real do Mercado Pago nem a chave da Anthropic); as
 // URLs do stub, de porta aleatoria, vem do @DynamicPropertySource, que vence ate as inline
@@ -46,9 +48,12 @@ import org.springframework.test.context.DynamicPropertySource;
 class ContratoPedidosTest {
     static final Path CENARIOS = Path.of("src/test/resources/contrato/pedidos");
     /** Grupos ligados, por prefixo do arquivo. Cada task move o seu prefixo de PENDENTES para LIGADOS. */
-    static final List<String> LIGADOS = List.of("pedidos_criar_", "doacoes_", "status_");
-    /** Gravados mas ainda sem implementacao. Fica vazio na Task 5. */
-    static final List<String> PENDENTES = List.of("checkout_");
+    static final List<String> LIGADOS = List.of("pedidos_criar_", "doacoes_", "status_", "checkout_");
+    /** Gravados mas ainda sem implementacao. */
+    static final List<String> PENDENTES = List.of();
+    /** Gravados com outra configuracao: rodam nas classes aninhadas, cada um no seu contexto. */
+    static final String MINIMO_5000 = "checkout_valor_abaixo_minimo_422.json";
+    static final String BACKEND_HTTP = "checkout_sem_notification_url_http.json";
     static final List<String> TABELAS = List.of("users_user", "token_blacklist_outstandingtoken",
             "token_blacklist_blacklistedtoken", "plans_plan", "instituicoes_instituicao", "orders_pedido");
     static final StubDeIntegracoes STUB = new StubDeIntegracoes();
@@ -68,24 +73,14 @@ class ContratoPedidosTest {
     int porta;
 
     @Autowired
-    JdbcTemplate jdbc;
-
-    @Autowired
-    UsuarioRepository usuarios;
-
-    @Autowired
-    ServicoDeTokens tokens;
-
-    @Autowired
-    RateLimiter limiter;
-
-    @Autowired
-    Environment ambiente;
+    ApplicationContext ctx;
 
     static Stream<Named<Path>> cenarios() throws Exception {
         try (Stream<Path> s = Files.list(CENARIOS)) {
             List<Path> lista = s.filter(p -> p.toString().endsWith(".json")).sorted().toList();
-            return lista.stream().filter(p -> grupo(p, LIGADOS)).map(p -> Named.of(p.getFileName().toString(), p));
+            return lista.stream().filter(p -> grupo(p, LIGADOS))
+                    .filter(p -> !List.of(MINIMO_5000, BACKEND_HTTP).contains(p.getFileName().toString()))
+                    .map(p -> Named.of(p.getFileName().toString(), p));
         }
     }
 
@@ -174,7 +169,43 @@ class ContratoPedidosTest {
     }
 
     private ReplayDeContrato replay() {
-        return new ReplayDeContrato(jdbc, usuarios, tokens, limiter, TABELAS).comStub(STUB, ambiente);
+        return replay(ctx);
+    }
+
+    static ReplayDeContrato replay(ApplicationContext c) {
+        return new ReplayDeContrato(c.getBean(JdbcTemplate.class), c.getBean(UsuarioRepository.class),
+                c.getBean(ServicoDeTokens.class), c.getBean(RateLimiter.class), TABELAS)
+                .comStub(STUB, c.getEnvironment());
+    }
+
+    /** O contexto de cada classe aninhada herda tudo do externo e sobrescreve uma propriedade. */
+    static void executarSozinho(ApplicationContext c, String arquivo) throws Exception {
+        String porta = c.getEnvironment().getProperty("local.server.port");
+        replay(c).executar(CENARIOS.resolve(arquivo), URI.create("http://localhost:" + porta));
+    }
+
+    @Nested
+    @TestPropertySource(properties = "MERCADOPAGO_MIN_VALOR_CENTAVOS=5000")
+    class ComMinimoDe5000 {
+        @Autowired
+        ApplicationContext c;
+
+        @Test
+        void valorAbaixoDoMinimo() throws Exception {
+            executarSozinho(c, MINIMO_5000);
+        }
+    }
+
+    @Nested
+    @TestPropertySource(properties = "BACKEND_PUBLIC_URL=http://api.clama.test")
+    class ComBackendHttp {
+        @Autowired
+        ApplicationContext c;
+
+        @Test
+        void semNotificationUrl() throws Exception {
+            executarSozinho(c, BACKEND_HTTP);
+        }
     }
 
     private static Path sintetico(Path dir, String nome, String valor) throws Exception {

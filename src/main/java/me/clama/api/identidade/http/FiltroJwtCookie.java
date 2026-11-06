@@ -43,8 +43,11 @@ public class FiltroJwtCookie extends OncePerRequestFilter {
     /** GET /api/pedidos/{uuid}/ (conversor uuid do Django: so minusculas). Nao casa /gratuito/ nem /{uuid}/checkout/. */
     private static final Pattern STATUS_PEDIDO =
             Pattern.compile("/api/pedidos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/");
+    /** POST /api/pedidos/{uuid}/checkout/: entrada propria, o padrao de status nao a cobre. */
+    private static final Pattern CHECKOUT =
+            Pattern.compile("/api/pedidos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/checkout/");
     static final RequestMatcher ABERTAS = req -> ROTAS_ABERTAS.contains(req.getRequestURI())
-            || STATUS_PEDIDO.matcher(req.getRequestURI()).matches();
+            || STATUS_PEDIDO.matcher(req.getRequestURI()).matches() || CHECKOUT.matcher(req.getRequestURI()).matches();
     /** IsClamaAdmin. */
     static final String ADMIN = "ADMIN";
     private static final Set<String> METODOS_SEGUROS = Set.of("GET", "HEAD", "OPTIONS", "TRACE");
