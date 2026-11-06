@@ -3,6 +3,11 @@ spring:
     name: clama-api
   jackson:
     time-zone: America/Sao_Paulo
+  servlet:
+    multipart:
+      # Django nao limita o upload no parser; quem recusa e o serializer (logo 250 KB, documento 100 MB)
+      max-file-size: 100MB
+      max-request-size: 101MB
   jpa:
     open-in-view: false
     hibernate:
