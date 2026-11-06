@@ -124,6 +124,28 @@ class SegurancaTest {
     }
 
     @Test
+    void rotaDeStatusDePedidoSoAbreParaUuidDoDjango() throws Exception {
+        String uuid = "99999999-9999-4999-8999-999999999999";
+        // uuid minusculo: aberta (anonimo chega no handler, 404 pastoral de pedido inexistente)
+        assertThat(chamar("GET", "/api/pedidos/" + uuid + "/").statusCode()).isEqualTo(404);
+        // cookie invalido na rota aberta: 401 (ABERTAS)
+        assertThat(chamar("GET", "/api/pedidos/" + uuid + "/", "Cookie", "clama_access=lixo").statusCode())
+                .isEqualTo(401);
+        // /gratuito/ (4B) nao e aberta pelo padrao: exige login
+        // (sem handler ate a 4B: 404 do dispatcher; com handler POST: 401 anonimo. Nunca 200/405 da rota de status.)
+        assertThat(chamar("GET", "/api/pedidos/gratuito/").statusCode()).isIn(401, 404);
+        assertThat(chamar("POST", "/api/pedidos/gratuito/").statusCode()).isIn(401, 404);
+        assertThat(FiltroJwtCookie.ABERTAS.matches(new org.springframework.mock.web.MockHttpServletRequest("GET",
+                "/api/pedidos/gratuito/"))).isFalse();
+        // checkout e entrada propria (Task 5): o padrao de status nao a abre
+        assertThat(FiltroJwtCookie.ABERTAS.matches(new org.springframework.mock.web.MockHttpServletRequest("GET",
+                "/api/pedidos/" + uuid + "/checkout/"))).isFalse();
+        // uuid maiusculo nao casa com o conversor do Django
+        assertThat(FiltroJwtCookie.ABERTAS.matches(new org.springframework.mock.web.MockHttpServletRequest("GET",
+                "/api/pedidos/" + uuid.toUpperCase(java.util.Locale.ROOT).replace("9", "A") + "/"))).isFalse();
+    }
+
+    @Test
     void urlDesconhecidaDa404ComoODjango() throws Exception {
         String admin = "clama_access=" + tokens.emitirPar(usuario(true)).access();
         for (String path : List.of("/api/admin/nao-existe/", "/api/customer/nao-existe/", "/api/nao-existe/")) {

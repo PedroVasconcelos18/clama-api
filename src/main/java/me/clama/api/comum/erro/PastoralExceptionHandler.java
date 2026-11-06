@@ -42,6 +42,15 @@ public class PastoralExceptionHandler {
         return ResponseEntity.status(404).body(Map.of("detail", e.getMessage()));
     }
 
+    /** URL sem rota (ex. uuid mal formado em /api/pedidos/{id}/): a pagina 404 do Django, que e HTML. */
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    ResponseEntity<String> semRota() {
+        return ResponseEntity.status(404).contentType(org.springframework.http.MediaType.TEXT_HTML)
+                .body("\n<!doctype html>\n<html lang=\"en\">\n<head>\n  <title>Not Found</title>\n</head>\n<body>\n"
+                        + "  <h1>Not Found</h1><p>The requested resource was not found on this server.</p>\n"
+                        + "</body>\n</html>\n");
+    }
+
     @ExceptionHandler(CamposDrf.Invalidos.class)
     ResponseEntity<Map<String, List<String>>> campos(CamposDrf.Invalidos e) {
         return ResponseEntity.badRequest().body(e.erros());

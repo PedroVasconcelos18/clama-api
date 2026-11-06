@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Pattern;
 import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.comum.erro.PastoralExceptionHandler;
 import me.clama.api.identidade.Usuario;
@@ -39,7 +40,11 @@ public class FiltroJwtCookie extends OncePerRequestFilter {
      * como no Django, e logado nao conta no limite anonimo).
      */
     private static final Set<String> ROTAS_ABERTAS = Set.of("/api/planos/", "/api/instituicoes/", "/api/doacoes/");
-    static final RequestMatcher ABERTAS = req -> ROTAS_ABERTAS.contains(req.getRequestURI());
+    /** GET /api/pedidos/{uuid}/ (conversor uuid do Django: so minusculas). Nao casa /gratuito/ nem /{uuid}/checkout/. */
+    private static final Pattern STATUS_PEDIDO =
+            Pattern.compile("/api/pedidos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/");
+    static final RequestMatcher ABERTAS = req -> ROTAS_ABERTAS.contains(req.getRequestURI())
+            || STATUS_PEDIDO.matcher(req.getRequestURI()).matches();
     /** IsClamaAdmin. */
     static final String ADMIN = "ADMIN";
     private static final Set<String> METODOS_SEGUROS = Set.of("GET", "HEAD", "OPTIONS", "TRACE");
