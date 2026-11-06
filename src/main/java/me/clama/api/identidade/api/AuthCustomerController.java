@@ -131,10 +131,10 @@ class AuthCustomerController {
             u.setForceChangePassword(false);
             tokens.revogarTodos(u.getId());
         });
-        var corpo = new java.util.LinkedHashMap<String, String>();
-        corpo.put("detail", "Senha atualizada com sucesso.");
-        corpo.put("pastoral_message", "Senha atualizada — você já pode seguir em paz.");
-        return corpo;
+        var resposta = new java.util.LinkedHashMap<String, String>();
+        resposta.put("detail", "Senha atualizada com sucesso.");
+        resposta.put("pastoral_message", "Senha atualizada — você já pode seguir em paz.");
+        return resposta;
     }
 
     @GetMapping("/api/customer/me/")
