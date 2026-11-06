@@ -110,7 +110,7 @@ public final class CamposDrf {
     }
 
     /** IntegerField(min_value, max_value): aceita int, float inteiro ("12.0") e string numerica; bool nao. */
-    public Integer inteiro(String campo, boolean obrigatorio, long min, long max) {
+    public Integer inteiro(String campo, boolean obrigatorio, int min, int max) {
         JsonNode v = corpo.get(campo);
         if (v == null) {
             if (obrigatorio) {
