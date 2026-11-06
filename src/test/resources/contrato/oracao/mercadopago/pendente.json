@@ -1,0 +1,10 @@
+{
+  "id": 1325814423,
+  "status": "pending",
+  "status_detail": "pending",
+  "external_reference": "77777777-7777-4777-8777-000000000001",
+  "transaction_amount": 30.0,
+  "currency_id": "BRL",
+  "payment_method_id": "pix",
+  "date_approved": null
+}

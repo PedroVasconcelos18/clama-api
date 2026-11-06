@@ -1,0 +1,350 @@
+{
+  "cenario": "job_gerar_creditos_esgotados",
+  "configuracao": {
+    "MERCADOPAGO_ACCESS_TOKEN": "test",
+    "MERCADOPAGO_WEBHOOK_SECRET": "segredo-webhook-contrato",
+    "ANTHROPIC_API_KEY": "sk-ant-contrato",
+    "FRONTEND_URL": "https://clama.me",
+    "FRONTEND_BASE_URL": "https://clama.me",
+    "ADMIN_ALERT_EMAIL": "alertas@clama.me",
+    "TURNSTILE_SECRET_KEY": ""
+  },
+  "usuarios": [],
+  "dados": {
+    "plans_plan": [
+      {
+        "id": "55555555-5555-4555-8555-000000000001",
+        "nome": "Pedido de Oração",
+        "valor_centavos": 2000,
+        "descricao": "Descrição de Pedido de Oração.",
+        "complexidade": "simples",
+        "ordem": 1,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000002",
+        "nome": "Oração + Versículo",
+        "valor_centavos": 5000,
+        "descricao": "Descrição de Oração + Versículo.",
+        "complexidade": "com_versiculo",
+        "ordem": 2,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000003",
+        "nome": "Oração + Profecia + Versículos",
+        "valor_centavos": 10000,
+        "descricao": "Descrição de Oração + Profecia + Versículos.",
+        "complexidade": "com_profecia_e_versiculos",
+        "ordem": 3,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000004",
+        "nome": "Plano Antigo",
+        "valor_centavos": 1500,
+        "descricao": "Descrição de Plano Antigo.",
+        "complexidade": "simples",
+        "ordem": 0,
+        "ativo": false,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000005",
+        "nome": "Gratuito",
+        "valor_centavos": 0,
+        "descricao": "Descrição de Gratuito.",
+        "complexidade": "simples_gratuita",
+        "ordem": 9,
+        "ativo": true,
+        "visivel": false
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000006",
+        "nome": "Livre",
+        "valor_centavos": 1,
+        "descricao": "Descrição de Livre.",
+        "complexidade": "simples",
+        "ordem": 10,
+        "ativo": true,
+        "visivel": false
+      }
+    ],
+    "instituicoes_instituicao": [
+      {
+        "id": "66666666-6666-4666-8666-000000000001",
+        "nome": "Lar Esperança",
+        "logo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+        "ativo": true,
+        "ordem": 1
+      },
+      {
+        "id": "66666666-6666-4666-8666-000000000002",
+        "nome": "Casa Fechada",
+        "logo": "",
+        "ativo": false,
+        "ordem": 2
+      }
+    ],
+    "prompts_prompttemplate": [
+      {
+        "id": "88888888-8888-4888-8888-000000000002",
+        "nome": "pastoral-antigo",
+        "versao": 1,
+        "system_prompt": "Você é o Clama (antigo).",
+        "instrucoes_por_complexidade": {},
+        "ativo": false
+      },
+      {
+        "id": "88888888-8888-4888-8888-000000000001",
+        "nome": "pastoral",
+        "versao": 3,
+        "system_prompt": "Você é o Clama, um intercessor cristão.",
+        "instrucoes_por_complexidade": {
+          "simples": "Escreva uma oração curta e acolhedora.",
+          "com_versiculo": "Escreva uma oração e inclua um versículo bíblico.",
+          "com_profecia_e_versiculos": "Escreva uma oração com uma palavra profética e dois versículos.",
+          "simples_gratuita": "Escreva uma oração breve."
+        },
+        "ativo": true
+      }
+    ],
+    "orders_pedido": [
+      {
+        "created_at": "2026-11-01T13:00:00+00:00",
+        "updated_at": "2026-11-01T13:00:00+00:00",
+        "id": "77777777-7777-4777-8777-000000000001",
+        "nome": "gAAAAABq7hjUhLKeWJoWDw2LYSnpXiGP9v2jzKXNDc7UARXeGXMLiuvQbArtGPwM7fKHdOeks1ooihs3yZdYPi0vwom-TysMFQ==",
+        "email": "gAAAAABq7hjUMc6w67Wb2hgyAJSOd5QU5i3uwLC5K-BhkjRVF5EHlt9cGEAF7PbXC8eP660svZjpU2BBpvvPVPrIP88AFH6Hi5vjwCx8W9UEh5o-ZwdgG6E=",
+        "telefone": "gAAAAABq7hjUK9hA4BmObQfEsjciG0WmVAxBKYFK3j7bQH5xMX8UZGqoa-RnDLR6YvVkYe70vQbFmH3drpT_l-mN6qupwx5gQw==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq7hjU6CqW6eagRbI7MZHBa85zw4Q-JPlOF0Pmz2gF83SLeZL6URjKwwEtrHkWj3hy--Nva7tV_ftjecRp8pHgcVplXb6SBnr5o3CqNSoKxl4dngUUGbOwy63xkVJDqw1hiyD8",
+        "oracao_gerada": "gAAAAABq7hjU-0tHpTyO_jJ927DApnlYb6Frf4DDfCnGrLMwBtHl3lZJKvsYJFs-vHyibYMoPMSZB0kI2g5eBzUurrcYcWFtqg==",
+        "valor_centavos": 3000,
+        "canal_entrega": "email",
+        "status": "pago",
+        "plano_id": "55555555-5555-4555-8555-000000000001",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq7hjUmFqwLd8vob6ljeJ78fyOqEjNOubHiDHMPrF3brpkIYoFQKoiT6x3lyxfu3jjQ4em9pgrr8KTgoOzGMg_5x0o_w==",
+        "user_id": null,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      }
+    ]
+  },
+  "job": {
+    "tipo": "gerar-oracao",
+    "arg": "77777777-7777-4777-8777-000000000001"
+  },
+  "anthropic": [
+    {
+      "metodo": "POST",
+      "caminho": "/v1/messages",
+      "status": 400,
+      "corpo": {
+        "type": "error",
+        "error": {
+          "type": "invalid_request_error",
+          "message": "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits."
+        }
+      },
+      "arquivo": "creditos_esgotados"
+    }
+  ],
+  "anthropic_requisicoes": [
+    {
+      "metodo": "POST",
+      "caminho": "/v1/messages",
+      "versao": "2023-06-01",
+      "beta": null,
+      "corpo": {
+        "max_tokens": 1500,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Escreva uma oração curta e acolhedora.\n\nNome: Maria Silva\nSexo: feminino\nIdade: 35\n\nPedido: Peço oração pela minha família."
+          }
+        ],
+        "model": "claude-sonnet-4-6",
+        "system": [
+          {
+            "type": "text",
+            "text": "Você é o Clama, um intercessor cristão.",
+            "cache_control": {
+              "type": "ephemeral"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "emails": [],
+  "jobs_enfileirados": [
+    {
+      "tipo": "alerta-admin",
+      "arg": "77777777-7777-4777-8777-000000000001"
+    }
+  ],
+  "senhas_temporarias_final": [],
+  "estado_final": {
+    "orders_pedido": {
+      "colunas": [
+        "id",
+        "nome",
+        "email",
+        "telefone",
+        "cpf_cnpj",
+        "idade",
+        "sexo",
+        "pedido_oracao",
+        "oracao_gerada",
+        "plano_id",
+        "valor_centavos",
+        "instituicao_id",
+        "user_email",
+        "eh_gratuito",
+        "canal_entrega",
+        "status",
+        "provider_payment_id",
+        "provider_checkout_url",
+        "pix_qr_code",
+        "pix_qr_code_base64",
+        "retry_count",
+        "last_error",
+        "consent_aceito",
+        "consent_versao",
+        "consent_aceito_at",
+        "consent_ip",
+        "device_hash",
+        "whatsapp_message_id",
+        "whatsapp_delivered_at",
+        "whatsapp_read_at",
+        "oracao_email_sent_at",
+        "created_at"
+      ],
+      "cifradas_decifradas": [
+        "nome",
+        "email",
+        "telefone",
+        "cpf_cnpj",
+        "pedido_oracao",
+        "oracao_gerada"
+      ],
+      "linhas": [
+        {
+          "id": "77777777-7777-4777-8777-000000000001",
+          "nome": "Maria Silva",
+          "email": "maria@exemplo.com",
+          "telefone": "(11) 99999-8888",
+          "cpf_cnpj": "52998224725",
+          "idade": 35,
+          "sexo": "feminino",
+          "pedido_oracao": "Peço oração pela minha família.",
+          "oracao_gerada": "",
+          "plano_id": "55555555-5555-4555-8555-000000000001",
+          "valor_centavos": 3000,
+          "instituicao_id": null,
+          "user_email": null,
+          "eh_gratuito": false,
+          "canal_entrega": "email",
+          "status": "erro",
+          "provider_payment_id": null,
+          "provider_checkout_url": null,
+          "pix_qr_code": null,
+          "pix_qr_code_base64": null,
+          "retry_count": 0,
+          "last_error": "credit_balance",
+          "consent_aceito": true,
+          "consent_versao": "1",
+          "consent_aceito_at": "<ts>",
+          "consent_ip": "203.0.113.7",
+          "device_hash": "",
+          "whatsapp_message_id": "",
+          "whatsapp_delivered_at": null,
+          "whatsapp_read_at": null,
+          "oracao_email_sent_at": null,
+          "created_at": "<ts>"
+        }
+      ]
+    },
+    "users_user": {
+      "colunas": [
+        "id",
+        "password_algoritmo",
+        "last_login",
+        "is_superuser",
+        "is_staff",
+        "is_active",
+        "date_joined",
+        "email",
+        "nome_completo",
+        "name",
+        "is_clama_admin",
+        "cpf_cnpj",
+        "telefone",
+        "force_change_password",
+        "nome_format_blog",
+        "email_hash",
+        "cpf_hash",
+        "telefone_hash",
+        "freemium_used_at",
+        "idade",
+        "sexo"
+      ],
+      "cifradas_decifradas": [
+        "cpf_cnpj",
+        "telefone"
+      ],
+      "linhas": []
+    },
+    "instituicoes_repasse": {
+      "colunas": [
+        "id",
+        "pedido_id",
+        "instituicao_id",
+        "valor_base_centavos",
+        "percentual",
+        "valor_centavos",
+        "status",
+        "transferido_em",
+        "comprovante",
+        "created_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": []
+    },
+    "payments_webhookevento": {
+      "colunas": [
+        "id",
+        "provider",
+        "external_event_id",
+        "event_type",
+        "payload",
+        "status",
+        "pedido_id",
+        "error_message",
+        "created_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": []
+    }
+  }
+}

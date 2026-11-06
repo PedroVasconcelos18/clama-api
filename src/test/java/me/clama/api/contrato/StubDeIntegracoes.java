@@ -21,20 +21,30 @@ import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * O Mercado Pago (e qualquer outra integracao HTTP que o app chame, como o Turnstile) num HttpServer local: serve as
- * respostas "mercadopago" do cenario, na ordem, e grava toda requisicao recebida para comparar com
- * "mercadopago_requisicoes", o que o Django mandou ao SDK. Requisicao alem das declaradas recebe 500 e aparece na
- * comparacao.
+ * Uma integracao HTTP num HttpServer local, um por integracao (cada uma com a sua fila): serve as respostas do cenario
+ * ("mercadopago", "anthropic"), na ordem, e grava toda requisicao recebida para comparar com "<integracao>_requisicoes",
+ * o que o Django mandou ao SDK. Requisicao alem das declaradas recebe 500 e aparece na comparacao. O do Mercado Pago
+ * tambem atende o Turnstile dos pedidos.
  */
 public class StubDeIntegracoes {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final JsonNodeFactory NOS = JsonNodeFactory.instance;
 
+    private final String rotulo;
+    /** chave no JSON gravado -> header da requisicao (null se ausente) */
+    private final Map<String, String> cabecalhos;
     private final HttpServer servidor;
     private final Deque<JsonNode> respostas = new ArrayDeque<>();
     private final List<JsonNode> recebidas = new ArrayList<>();
 
+    /** O do Mercado Pago: grava o Authorization. */
     public StubDeIntegracoes() {
+        this("requisicoes ao Mercado Pago", Map.of("autorizacao", "Authorization"));
+    }
+
+    public StubDeIntegracoes(String rotulo, Map<String, String> cabecalhos) {
+        this.rotulo = rotulo;
+        this.cabecalhos = cabecalhos;
         try {
             servidor = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
         } catch (IOException e) {
@@ -53,19 +63,19 @@ public class StubDeIntegracoes {
     }
 
     /** Respostas do cenario, em ordem; zera as requisicoes gravadas. */
-    public synchronized void preparar(JsonNode mercadopago) {
+    public synchronized void preparar(JsonNode respostasDoCenario) {
         respostas.clear();
         recebidas.clear();
-        mercadopago.forEach(respostas::add);
+        respostasDoCenario.forEach(respostas::add);
     }
 
     /**
-     * O que o app mandou tem de ser o que o Django mandou: metodo, caminho, Authorization e corpo. A chave de
+     * O que o app mandou tem de ser o que o Django mandou: metodo, caminho, os cabecalhos gravados e corpo. A chave de
      * idempotencia fica de fora (o SDK do Django gera uma aleatoria). Numero compara por valor (30.0 == 30.00).
      */
     public synchronized void conferir(JsonNode esperadas, String cenario) {
         assertThat(numerosPorValor(NOS.arrayNode().addAll(recebidas)))
-                .as("%s: requisicoes ao Mercado Pago", cenario)
+                .as("%s: %s", cenario, rotulo)
                 .isEqualTo(numerosPorValor(esperadas.isMissingNode() ? NOS.arrayNode() : esperadas));
     }
 
@@ -75,7 +85,7 @@ public class StubDeIntegracoes {
         req.put("metodo", troca.getRequestMethod());
         String query = troca.getRequestURI().getRawQuery();
         req.put("caminho", troca.getRequestURI().getRawPath() + (query == null ? "" : "?" + query));
-        req.put("autorizacao", troca.getRequestHeaders().getFirst("Authorization"));
+        cabecalhos.forEach((chave, header) -> req.put(chave, troca.getRequestHeaders().getFirst(header)));
         if (corpo.length > 0) {
             String texto = new String(corpo, StandardCharsets.UTF_8);
             JsonNode json;

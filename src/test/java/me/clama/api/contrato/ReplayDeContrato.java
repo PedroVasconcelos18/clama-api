@@ -13,7 +13,9 @@ import java.sql.PreparedStatement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -21,16 +23,21 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import me.clama.api.BancoDeTeste;
 import me.clama.api.comum.cripto.CampoCriptografado;
+import me.clama.api.comum.email.CaixaDeSaidaEmMemoria;
+import me.clama.api.comum.email.Email;
+import me.clama.api.comum.fila.TipoDeJob;
 import me.clama.api.comum.ratelimit.RateLimiter;
 import me.clama.api.identidade.Usuario;
 import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.identidade.senha.SenhaDjango;
 import me.clama.api.identidade.token.ServicoDeTokens;
+import org.postgresql.util.PGobject;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
@@ -54,9 +61,18 @@ public class ReplayDeContrato {
     private static final Pattern JWT = Pattern.compile("^eyJ[\\w-]*\\.[\\w-]+\\.[\\w-]*$", COMO_PYTHON);
     private static final Pattern TS = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}:\\d{2}", COMO_PYTHON);
     private static final Pattern REFRESH = Pattern.compile("\\{refresh:(.+)\\}", COMO_PYTHON);
-    private static final Pattern UUID = Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
-    private static final String SQL_ESTADO = "SELECT p.*, u.email AS user_email FROM orders_pedido p"
-            + " LEFT JOIN users_user u ON u.id = p.user_id ORDER BY p.created_at, p.id";
+    private static final Pattern UUID_TEXTO = Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+    /** As SQL do estado final, iguais as do gravador (TABELAS em test_gravar_pagamento_oracao.py). */
+    private static final Map<String, String> SQL_ESTADO = Map.of(
+            "orders_pedido", "SELECT p.*, u.email AS user_email FROM orders_pedido p"
+                    + " LEFT JOIN users_user u ON u.id = p.user_id ORDER BY p.created_at, p.id",
+            "users_user", "SELECT u.*, split_part(u.password, '$', 1) AS password_algoritmo FROM users_user u ORDER BY u.id",
+            "instituicoes_repasse", "SELECT * FROM instituicoes_repasse ORDER BY created_at, id",
+            "payments_webhookevento", "SELECT * FROM payments_webhookevento ORDER BY created_at, id");
+    /** Integracoes HTTP simuladas: o cenario traz "<nome>" (respostas) e "<nome>_requisicoes" (o que o Django mandou). */
+    private static final List<String> INTEGRACOES = List.of("mercadopago", "anthropic");
+    private static final List<String> CHAVES_DE_ORACAO = List.of("job", "emails", "jobs_enfileirados",
+            "senhas_temporarias", "senhas_temporarias_final");
     private static final String FRONTEIRA = "ContratoClamaFronteira";
     private static final Pattern SET_COOKIE = Pattern.compile("\\{set_cookie:(\\d+):(.+)\\}", COMO_PYTHON);
 
@@ -67,8 +83,25 @@ public class ReplayDeContrato {
     private final List<String> tabelas;
     private final SenhaDjango senhas = new SenhaDjango();
     private final HttpClient http = HttpClient.newHttpClient();
-    private StubDeIntegracoes stub;
+    private Map<String, StubDeIntegracoes> stubs = Map.of();
     private Environment ambiente;
+    private CaixaDeSaidaEmMemoria caixa;
+    private Collection<? extends TipoDeJob<?>> jobs;
+    private GanchosDeOracao ganchos;
+
+    /**
+     * O que o harness precisa do app e ainda nao tem API publica: o cache de senhas temporarias e o dedup em memoria do
+     * alerta (o cache.clear() do gravador).
+     */
+    public interface GanchosDeOracao {
+        /** Antes de cada cenario: zera senhas temporarias e o dedup do alerta-admin. */
+        void limpar();
+
+        /** "senhas_temporarias" do cenario, em texto claro. */
+        void guardarSenha(String chave, String senha);
+
+        boolean senhaExiste(String chave);
+    }
 
     /** tabelas: as que o cenario toca, truncadas (CASCADE) antes de cada execucao, como o User.objects.all().delete(). */
     public ReplayDeContrato(JdbcTemplate jdbc, UsuarioRepository usuarios, ServicoDeTokens tokens, RateLimiter limiter,
@@ -80,14 +113,31 @@ public class ReplayDeContrato {
         this.tabelas = tabelas;
     }
 
-    /**
-     * Liga o stub de integracoes: o cenario serve as respostas "mercadopago" e, no fim, as requisicoes recebidas tem
-     * de bater com "mercadopago_requisicoes" (nenhuma, se o cenario nao declarar). "configuracao" (o override_settings
-     * do gravador) tem de bater com o ambiente do contexto Spring.
-     */
+    /** comStubs so com o Mercado Pago. */
     public ReplayDeContrato comStub(StubDeIntegracoes stub, Environment ambiente) {
-        this.stub = stub;
+        return comStubs(Map.of("mercadopago", stub), ambiente);
+    }
+
+    /**
+     * Liga os stubs, um por integracao ("mercadopago", "anthropic"): cada um serve as respostas "<nome>" do cenario e,
+     * no fim, as requisicoes recebidas tem de bater com "<nome>_requisicoes" (nenhuma, se o cenario nao declarar).
+     * "configuracao" (o override_settings do gravador) tem de bater com o ambiente do contexto Spring.
+     */
+    public ReplayDeContrato comStubs(Map<String, StubDeIntegracoes> stubs, Environment ambiente) {
+        this.stubs = stubs;
         this.ambiente = ambiente;
+        return this;
+    }
+
+    /**
+     * Cenarios da 4B: e-mails (a caixa de saida do perfil test), jobs enfileirados (scheduled_tasks), senhas
+     * temporarias e cenarios de job, que rodam o {@link TipoDeJob} de mesmo nome direto, na thread do teste.
+     */
+    public ReplayDeContrato comOracao(CaixaDeSaidaEmMemoria caixa, Collection<? extends TipoDeJob<?>> jobs,
+            GanchosDeOracao ganchos) {
+        this.caixa = caixa;
+        this.jobs = jobs;
+        this.ganchos = ganchos;
         return this;
     }
 
@@ -95,19 +145,26 @@ public class ReplayDeContrato {
         JsonNode cenario = JSON.readTree(cenarioJson.toFile());
         Set<String> fixos = uuidsFixos(cenario);
         String arquivo = cenarioJson.getFileName().toString();
-        if (stub == null) {
-            assertThat(cenario.has("mercadopago") || cenario.has("configuracao"))
-                    .as("%s declara integracoes: use comStub", arquivo).isFalse();
-        } else {
-            for (Map.Entry<String, JsonNode> c : cenario.path("configuracao").properties()) {
-                assertThat(ambiente.getProperty(c.getKey())).as("%s: rode num contexto com %s=%s", arquivo, c.getKey(),
-                        c.getValue().asString()).isEqualTo(c.getValue().asString());
-            }
-            stub.preparar(cenario.path("mercadopago"));
+        for (String integracao : INTEGRACOES) {
+            assertThat(cenario.has(integracao) && !stubs.containsKey(integracao))
+                    .as("%s declara %s: use comStubs", arquivo, integracao).isFalse();
         }
+        assertThat(cenario.has("configuracao") && stubs.isEmpty()).as("%s declara configuracao: use comStubs", arquivo)
+                .isFalse();
+        assertThat(caixa == null && CHAVES_DE_ORACAO.stream().anyMatch(cenario::has))
+                .as("%s e cenario da 4B: use comOracao", arquivo).isFalse();
+        for (Map.Entry<String, JsonNode> c : cenario.path("configuracao").properties()) {
+            assertThat(ambiente.getProperty(c.getKey())).as("%s: rode num contexto com %s=%s", arquivo, c.getKey(),
+                    c.getValue().asString()).isEqualTo(c.getValue().asString());
+        }
+        stubs.forEach((nome, stub) -> stub.preparar(cenario.path(nome)));
         BancoDeTeste.exigirContainer(jdbc); // o TRUNCATE ... CASCADE apagaria pedidos, blog e tokens de um banco real
         jdbc.execute("TRUNCATE " + String.join(", ", tabelas) + " RESTART IDENTITY CASCADE");
         limiter.limpar(); // cache.clear() do gravador
+        if (caixa != null) {
+            caixa.limpar();
+            ganchos.limpar();
+        }
         for (JsonNode u : cenario.path("usuarios")) {
             criarUsuario(u);
         }
@@ -116,11 +173,17 @@ public class ReplayDeContrato {
                 inserir(tabela.getKey(), linha);
             }
         }
+        for (Map.Entry<String, JsonNode> s : cenario.path("senhas_temporarias").properties()) {
+            ganchos.guardarSenha(s.getKey(), s.getValue().asString());
+        }
+        if (cenario.has("job")) {
+            executarJob(cenario.get("job").get("tipo").asString(), cenario.get("job").get("arg").asString(), arquivo);
+        }
 
         Map<String, String> jar = new LinkedHashMap<>();
         Contexto ctx = new Contexto();
         int i = 0;
-        for (JsonNode passo : cenario.get("passos")) {
+        for (JsonNode passo : cenario.path("passos")) {
             JsonNode req = passo.get("request");
             // cookies_extras valem so pra este passo; o jar volta ao que era depois
             Map<String, String> antes = new HashMap<>();
@@ -187,26 +250,109 @@ public class ReplayDeContrato {
                     .isEqualTo(passo.get("response"));
             i++;
         }
-        if (stub != null) {
-            stub.conferir(cenario.path("mercadopago_requisicoes"), arquivo);
+        stubs.forEach((nome, stub) -> stub.conferir(cenario.path(nome + "_requisicoes"), arquivo));
+        if (cenario.has("emails")) {
+            conferirEmails(cenario.get("emails"), fixos, arquivo);
         }
-        if (cenario.has("estado_final")) {
-            conferirEstadoFinal(cenario.get("estado_final").get("orders_pedido"), fixos, arquivo);
+        if (cenario.has("jobs_enfileirados")) {
+            conferirJobs(cenario.get("jobs_enfileirados"), fixos, arquivo);
+        }
+        if (cenario.has("senhas_temporarias_final")) {
+            ArrayNode obtidas = NOS.arrayNode();
+            for (Long id : jdbc.queryForList("SELECT id FROM users_user ORDER BY id", Long.class)) {
+                for (String chave : List.of("doador:temp_password:" + id, "freemium:temp_password:" + id)) {
+                    if (ganchos.senhaExiste(chave)) {
+                        obtidas.add(chave);
+                    }
+                }
+            }
+            assertThat((JsonNode) obtidas).as("%s: senhas temporarias no fim", arquivo)
+                    .isEqualTo(cenario.get("senhas_temporarias_final"));
+        }
+        for (Map.Entry<String, JsonNode> tabela : cenario.path("estado_final").properties()) {
+            conferirEstadoFinal(tabela.getKey(), tabela.getValue(), fixos, arquivo);
         }
     }
 
     /**
-     * _estado_final do gravador: todas as linhas de orders_pedido depois do ultimo passo, nas colunas que o JSON lista,
-     * com as cifradas decifradas (CampoCriptografado) e normalizadas como as respostas. Numero compara por valor.
+     * Cenario de job: o task.run(arg) do gravador. Roda o TipoDeJob de mesmo nome como a 1a execucao (retentativa 0),
+     * sem transacao. O payload sai do arg: String, UUID, Long ou um record de um componente desses.
      */
-    private void conferirEstadoFinal(JsonNode tabela, Set<String> fixos, String arquivo) {
+    private void executarJob(String tipo, String arg, String arquivo) throws Exception {
+        TipoDeJob<?> job = jobs.stream().filter(j -> j.nome().equals(tipo)).findFirst()
+                .orElseThrow(() -> new AssertionError(arquivo + ": job " + tipo + " nao registrado"));
+        executar(job, arg);
+    }
+
+    private static <P> void executar(TipoDeJob<P> job, String arg) throws Exception {
+        job.executar(job.payload().cast(payload(job.payload(), arg)), 0);
+    }
+
+    static Object payload(Class<?> tipo, String arg) throws ReflectiveOperationException {
+        if (tipo == String.class) {
+            return arg;
+        }
+        if (tipo == UUID.class) {
+            return UUID.fromString(arg);
+        }
+        if (tipo == Long.class || tipo == long.class) {
+            return Long.valueOf(arg);
+        }
+        if (tipo.isRecord() && tipo.getRecordComponents().length == 1) {
+            Class<?> componente = tipo.getRecordComponents()[0].getType();
+            return tipo.getDeclaredConstructor(componente).newInstance(payload(componente, arg));
+        }
+        throw new IllegalArgumentException("payload de job sem conversao a partir do arg: " + tipo);
+    }
+
+    /** _emails do gravador: o outbox do locmem. reply_to e remetente sao configuracao do envio, fora do Email. */
+    private void conferirEmails(JsonNode esperados, Set<String> fixos, String arquivo) {
+        ArrayNode obtidos = NOS.arrayNode();
+        for (Email e : caixa.enviados()) {
+            ObjectNode o = obtidos.addObject();
+            o.put("para", e.para());
+            o.put("assunto", e.assunto());
+            o.put("texto", e.texto());
+            o.put("html", e.html());
+        }
+        ArrayNode semReplyTo = NOS.arrayNode();
+        esperados.forEach(e -> semReplyTo.add(((ObjectNode) e.deepCopy()).without(List.of("reply_to"))));
+        assertThat(normalizar(obtidos, null, fixos)).as("%s: e-mails enviados", arquivo).isEqualTo(semReplyTo);
+    }
+
+    /**
+     * on_commit/.delay do gravador = linhas de scheduled_tasks (o scheduler fica desligado no perfil test). arg = a
+     * instancia sem o prefixo "<tipo>/". Ordenado por (tipo, arg) antes de normalizar, como o gravador.
+     */
+    private void conferirJobs(JsonNode esperados, Set<String> fixos, String arquivo) {
+        List<String[]> linhas = new ArrayList<>(jdbc.query("SELECT task_name, task_instance FROM scheduled_tasks",
+                (rs, n) -> {
+                    String tipo = rs.getString(1);
+                    String instancia = rs.getString(2);
+                    return new String[] {tipo, instancia.startsWith(tipo + "/") ? instancia.substring(tipo.length() + 1)
+                            : instancia};
+                }));
+        linhas.sort(Comparator.<String[], String>comparing(l -> l[0]).thenComparing(l -> l[1]));
+        ArrayNode obtidos = NOS.arrayNode();
+        linhas.forEach(l -> obtidos.addObject().put("tipo", l[0]).put("arg", l[1]));
+        assertThat(normalizar(obtidos, null, fixos)).as("%s: jobs enfileirados", arquivo).isEqualTo(esperados);
+    }
+
+    /**
+     * _estado_final do gravador: todas as linhas da tabela depois do ultimo passo, nas colunas que o JSON lista, com
+     * as cifradas decifradas (CampoCriptografado), json como arvore, normalizadas como as respostas. Numero compara
+     * por valor.
+     */
+    private void conferirEstadoFinal(String nome, JsonNode tabela, Set<String> fixos, String arquivo) {
+        String sql = SQL_ESTADO.get(nome);
+        assertThat(sql).as("%s: estado final de tabela desconhecida %s", arquivo, nome).isNotNull();
         List<String> colunas = new ArrayList<>();
         tabela.get("colunas").forEach(c -> colunas.add(c.asString()));
         Set<String> cifradas = new HashSet<>();
         tabela.get("cifradas_decifradas").forEach(c -> cifradas.add(c.asString()));
         CampoCriptografado campo = new CampoCriptografado();
         ArrayNode linhas = NOS.arrayNode();
-        jdbc.query(SQL_ESTADO, (RowCallbackHandler) rs -> {
+        jdbc.query(sql, (RowCallbackHandler) rs -> {
             ObjectNode l = linhas.addObject();
             for (String c : colunas) {
                 Object v = rs.getObject(c);
@@ -218,13 +364,15 @@ public class ReplayDeContrato {
                     l.put(c, b);
                 } else if (v instanceof Number n) {
                     l.put(c, n.longValue());
+                } else if (v instanceof PGobject json && json.getType().startsWith("json")) {
+                    l.set(c, JSON.readTree(json.getValue()));
                 } else {
                     l.put(c, rs.getString(c)); // timestamptz, uuid, inet como texto do Postgres
                 }
             }
         });
         assertThat(StubDeIntegracoes.numerosPorValor(normalizar(linhas, null, fixos)))
-                .as("%s: estado final de orders_pedido", arquivo)
+                .as("%s: estado final de %s", arquivo, nome)
                 .isEqualTo(StubDeIntegracoes.numerosPorValor(tabela.get("linhas")));
     }
 
@@ -348,7 +496,7 @@ public class ReplayDeContrato {
     static Set<String> uuidsFixos(JsonNode cenario) {
         StringBuilder texto = new StringBuilder(cenario.path("dados").toString());
         cenario.path("passos").forEach(p -> texto.append(p.path("request")));
-        return UUID.matcher(texto).results().map(r -> r.group()).collect(Collectors.toSet());
+        return UUID_TEXTO.matcher(texto).results().map(r -> r.group()).collect(Collectors.toSet());
     }
 
     static JsonNode normalizar(JsonNode valor, String chave) {
@@ -385,7 +533,7 @@ public class ReplayDeContrato {
             if (TS.matcher(valor.asString()).lookingAt()) {
                 return NOS.stringNode("<ts>");
             }
-            return NOS.stringNode(UUID.matcher(valor.asString())
+            return NOS.stringNode(UUID_TEXTO.matcher(valor.asString())
                     .replaceAll(m -> fixos.contains(m.group()) ? m.group() : "<uuid>"));
         }
         return valor;
