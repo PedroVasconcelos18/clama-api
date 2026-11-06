@@ -91,8 +91,8 @@ public class ReplayDeContrato {
     private GanchosDeOracao ganchos;
 
     /**
-     * O que o harness precisa do app e ainda nao tem API publica: o cache de senhas temporarias e o dedup em memoria do
-     * alerta (o cache.clear() do gravador).
+     * O que o harness precisa do app fora do banco: o cache de senhas temporarias (SenhasTemporarias) e o dedup em
+     * memoria do alerta (AlertaDeErro), o cache.clear() do gravador.
      */
     public interface GanchosDeOracao {
         /** Antes de cada cenario: zera senhas temporarias e o dedup do alerta-admin. */

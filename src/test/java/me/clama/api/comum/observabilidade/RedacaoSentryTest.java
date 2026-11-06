@@ -33,6 +33,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 @SpringBootTest(properties = {"sentry.dsn=https://chave@localhost/1", "clama.fila.scheduler-ativo=true"})
 @Import({BancoDeTeste.class, RedacaoSentryTest.Config.class})
 @ActiveProfiles("test")
+// scheduler ligado: parar no fim, senao o contexto em cache executa os jobs (gerar/enviar/alerta) dos outros testes
+@org.springframework.test.annotation.DirtiesContext
 class RedacaoSentryTest {
 	record Falha() {}
 

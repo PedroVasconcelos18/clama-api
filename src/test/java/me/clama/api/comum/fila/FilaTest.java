@@ -33,6 +33,8 @@ import org.testcontainers.utility.DockerImageName;
 @SpringBootTest(properties = "clama.fila.scheduler-ativo=true")
 @Import({BancoDeTeste.class, FilaTest.Config.class})
 @ActiveProfiles("test")
+// scheduler ligado: parar no fim, senao o contexto em cache executa os jobs (gerar/enviar/alerta) dos outros testes
+@org.springframework.test.annotation.DirtiesContext
 class FilaTest {
 	record JobDeTeste(String valor) {}
 

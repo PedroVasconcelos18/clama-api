@@ -12,9 +12,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import me.clama.api.BancoDeTeste;
 import me.clama.api.comum.email.CaixaDeSaidaEmMemoria;
@@ -24,11 +21,8 @@ import me.clama.api.comum.fila.TipoDeJob;
 import me.clama.api.comum.ratelimit.RateLimiter;
 import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.identidade.token.ServicoDeTokens;
-import me.clama.api.oracao.ClienteClaude;
-import me.clama.api.oracao.CreditosEsgotados;
-import me.clama.api.pedido.Pedido;
-import me.clama.api.pedido.PedidoRepository;
-import org.hibernate.Hibernate;
+import me.clama.api.oracao.AlertaDeErro;
+import me.clama.api.oracao.SenhasTemporarias;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
@@ -71,10 +65,9 @@ class ContratoOracaoTest {
     /** Gravados (os .json da pasta). */
     static final int GRAVADOS = 37;
     /** Grupos ligados, por prefixo do arquivo. Cada task move o seu prefixo de PENDENTES para LIGADOS. */
-    static final List<String> LIGADOS = List.of();
+    static final List<String> LIGADOS = List.of("job_gerar_", "job_enviar_", "job_alerta_");
     /** Gravados mas ainda sem implementacao. */
-    static final List<String> PENDENTES = List.of("webhook_", "gratuito_", "job_gerar_", "job_enviar_",
-            "job_boas_vindas_", "job_alerta_");
+    static final List<String> PENDENTES = List.of("webhook_", "gratuito_", "job_boas_vindas_");
     static final List<String> TABELAS = List.of("users_user", "token_blacklist_outstandingtoken",
             "token_blacklist_blacklistedtoken", "plans_plan", "instituicoes_instituicao", "orders_pedido",
             "prompts_prompttemplate", "documents_documentocontexto", "instituicoes_repasse", "payments_webhookevento",
@@ -133,9 +126,7 @@ class ContratoOracaoTest {
         }
     }
 
-    // allowZeroInvocations: todos pendentes ate a Task 4 ligar o 1o prefixo (a guarda de cenarios() segue valendo);
-    // tirar quando LIGADOS deixar de ser vazio
-    @ParameterizedTest(name = "{0}", allowZeroInvocations = true)
+    @ParameterizedTest(name = "{0}")
     @MethodSource("cenarios")
     void cenario(Path json) throws Exception {
         replay().executar(json, base());
@@ -193,38 +184,6 @@ class ContratoOracaoTest {
         replay().executar(Files.writeString(dir.resolve("noop.json"), c.toString()), base());
     }
 
-    /**
-     * Ate a Task 4 ligar "job_gerar_": so a requisicao a Anthropic de cada job_gerar_* gravado. Semeia o cenario, chama
-     * o {@link ClienteClaude} no lugar do job e o harness compara o que chegou ao stub com "anthropic_requisicoes". O
-     * resto do cenario (e-mails, jobs, estado final) e da Task 4.
-     */
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("cenariosGerarComAnthropic")
-    void requisicaoDoGerarIgualAGravada(Path json, @TempDir Path dir) throws Exception {
-        ObjectNode c = (ObjectNode) JSON.readTree(json.toFile());
-        ((ObjectNode) c.get("job")).put("tipo", JobSintetico.CLAUDE);
-        c.remove(List.of("emails", "jobs_enfileirados", "senhas_temporarias_final", "estado_final"));
-        JobSintetico.RESULTADO.set(null);
-        replay().executar(Files.writeString(dir.resolve(json.getFileName()), c.toString()), base());
-
-        JsonNode resposta = c.get("anthropic").get(0);
-        if (resposta.get("status").asInt() == 200) {
-            assertThat(JobSintetico.RESULTADO.get())
-                    .isEqualTo(resposta.get("corpo").get("content").get(0).get("text").asString());
-        } else {
-            assertThat(JobSintetico.RESULTADO.get()).isInstanceOf(CreditosEsgotados.class);
-        }
-    }
-
-    static Stream<Named<Path>> cenariosGerarComAnthropic() throws Exception {
-        try (Stream<Path> s = Files.list(CENARIOS)) {
-            List<Path> lista = s.filter(p -> p.getFileName().toString().startsWith("job_gerar_"))
-                    .filter(p -> JSON.readTree(p.toFile()).has("anthropic_requisicoes")).sorted().toList();
-            assertThat(lista).hasSize(4); // ok_simples, ok_com_documentos, ok_sem_idade_sexo, creditos_esgotados
-            return lista.stream().map(p -> Named.of(p.getFileName().toString(), p));
-        }
-    }
-
     private URI base() {
         return URI.create("http://localhost:" + porta);
     }
@@ -233,31 +192,31 @@ class ContratoOracaoTest {
         return new ReplayDeContrato(ctx.getBean(JdbcTemplate.class), ctx.getBean(UsuarioRepository.class),
                 ctx.getBean(ServicoDeTokens.class), ctx.getBean(RateLimiter.class), TABELAS)
                 .comStubs(Map.of("mercadopago", MERCADO_PAGO, "anthropic", ANTHROPIC), ctx.getEnvironment())
-                .comOracao(caixa, jobs, GANCHOS);
+                .comOracao(caixa, jobs, ganchos());
     }
 
-    /**
-     * ponytail: ganchos provisorios (mapa local) so para o sintetico; a Task 4 troca pelo SenhasTemporarias real e
-     * pelo dedup do AlertaDeErro, senao os cenarios com senha falham.
-     */
-    static final ReplayDeContrato.GanchosDeOracao GANCHOS = new ReplayDeContrato.GanchosDeOracao() {
-        private final Map<String, String> senhas = new ConcurrentHashMap<>();
+    /** O cache de senhas temporarias e o dedup do alerta-admin do app (o cache.clear() do gravador). */
+    private ReplayDeContrato.GanchosDeOracao ganchos() {
+        SenhasTemporarias senhas = ctx.getBean(SenhasTemporarias.class);
+        AlertaDeErro alerta = ctx.getBean(AlertaDeErro.class);
+        return new ReplayDeContrato.GanchosDeOracao() {
+            @Override
+            public void limpar() {
+                senhas.limpar();
+                alerta.limpar();
+            }
 
-        @Override
-        public void limpar() {
-            senhas.clear();
-        }
+            @Override
+            public void guardarSenha(String chave, String senha) {
+                senhas.guardar(chave, senha);
+            }
 
-        @Override
-        public void guardarSenha(String chave, String senha) {
-            senhas.put(chave, senha);
-        }
-
-        @Override
-        public boolean senhaExiste(String chave) {
-            return senhas.containsKey(chave);
-        }
-    };
+            @Override
+            public boolean senhaExiste(String chave) {
+                return senhas.ler(chave).isPresent();
+            }
+        };
+    }
 
     private static Path sintetico(Path dir, String nome, java.util.function.Consumer<ObjectNode> mudar)
             throws Exception {
@@ -299,44 +258,6 @@ class ContratoOracaoTest {
     @TestConfiguration(proxyBeanMethods = false)
     static class JobSintetico {
         static final String NOME = "contrato-sintetico";
-        static final String CLAUDE = "contrato-claude";
-        /** O texto gerado ou a excecao do ultimo contrato-claude. */
-        static final AtomicReference<Object> RESULTADO = new AtomicReference<>();
-
-        /** No lugar do gerar-oracao (Task 4): le o pedido de "arg" e chama a Anthropic pelo ClienteClaude. */
-        @Bean
-        TipoDeJob<String> jobClaude(PedidoRepository pedidos, ClienteClaude claude, TransactionTemplate tx) {
-            return new TipoDeJob<>() {
-                @Override
-                public String nome() {
-                    return CLAUDE;
-                }
-
-                @Override
-                public Class<String> payload() {
-                    return String.class;
-                }
-
-                @Override
-                public Duration esperaEntreTentativas() {
-                    return Duration.ofSeconds(1);
-                }
-
-                @Override
-                public void executar(String arg) {
-                    Pedido p = tx.execute(s -> {
-                        Pedido lido = pedidos.findById(UUID.fromString(arg)).orElseThrow();
-                        Hibernate.initialize(lido.getPlano());
-                        return lido;
-                    });
-                    try {
-                        RESULTADO.set(claude.gerar(p));
-                    } catch (RuntimeException e) {
-                        RESULTADO.set(e);
-                    }
-                }
-            };
-        }
 
         @Bean
         TipoDeJob<String> jobSintetico(Environment env, CaixaDeSaidaEmMemoria caixa, ObjectProvider<Fila> fila,

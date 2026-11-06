@@ -15,6 +15,8 @@ import org.springframework.test.context.ActiveProfiles;
 @SpringBootTest(properties = "clama.fila.scheduler-ativo=true")
 @Import(BancoDeTeste.class)
 @ActiveProfiles("test")
+// scheduler ligado: parar no fim, senao o contexto em cache executa os jobs (gerar/enviar/alerta) dos outros testes
+@org.springframework.test.annotation.DirtiesContext
 class FilaOrdemTest {
 	@Autowired ConfigurableApplicationContext ctx;
 
