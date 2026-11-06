@@ -98,6 +98,24 @@ class PromptAdminTest {
         return r;
     }
 
+    @Autowired
+    PromptTemplateRepository prompts;
+
+    @Test
+    void buscarAtivoVazioUmOuVarios() {
+        assertThat(prompts.buscarAtivo()).isEmpty();
+        UUID a = UUID.randomUUID();
+        UUID b = UUID.randomUUID();
+        String sql = "insert into prompts_prompttemplate (id, created_at, updated_at, nome, versao, system_prompt,"
+                + " instrucoes_por_complexidade, ativo) values (?, now(), now(), ?, ?, 's', '{}', true)";
+        jdbc.update(sql, a, "ativo-a", 1);
+        assertThat(prompts.buscarAtivo()).hasValueSatisfying(p -> assertThat(p.getId()).isEqualTo(a));
+        jdbc.update(sql, b, "ativo-b", 2);
+        org.assertj.core.api.Assertions.assertThatThrownBy(prompts::buscarAtivo)
+                .hasRootCauseInstanceOf(IllegalStateException.class) // o proxy do repositorio embrulha em DataAccessException
+                .hasRootCauseMessage("mais de um PromptTemplate ativo");
+    }
+
     @Test
     void ativarConcorrenteDeixaUmAtivo() throws Exception {
         List<UUID> ids = new ArrayList<>();
