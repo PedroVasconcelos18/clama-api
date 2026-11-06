@@ -140,7 +140,13 @@ class DocumentosAdminController {
         }
         String sincronizado = fileId;
         DocumentoContexto d = tx.execute(st -> {
-            DocumentoContexto atual = documentos.findById(lido.getId()).orElseThrow(DocumentosAdminController::nao);
+            DocumentoContexto atual = documentos.findById(lido.getId()).orElseThrow(() -> {
+                if (sincronizado != null) {
+                    LOG.warn("Documento sumiu apos o upload na Anthropic; file_id orfao file_id={} documento_id={}",
+                            sincronizado, lido.getId());
+                }
+                return nao();
+            });
             if (sincronizado != null) {
                 atual.sincronizar(sincronizado);
             }
