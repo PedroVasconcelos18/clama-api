@@ -19,15 +19,6 @@ public interface PromptTemplateRepository extends JpaRepository<PromptTemplate, 
     /** get_active() do Django; geracao de oracao (Etapa 4). */
     List<PromptTemplate> findByAtivoTrue();
 
-    /** Nenhum ativo: vazio (a Etapa 4 mapeia para no_active_prompt); mais de um: MultipleObjectsReturned do Django. */
-    default Optional<PromptTemplate> buscarAtivo() {
-        List<PromptTemplate> ativos = findByAtivoTrue();
-        if (ativos.size() > 1) {
-            throw new IllegalStateException("mais de um PromptTemplate ativo");
-        }
-        return ativos.stream().findFirst();
-    }
-
     @Modifying
     @Query("update PromptTemplate p set p.ativo = false where p.ativo = true and p.id <> :id")
     int desativarOutros(UUID id);

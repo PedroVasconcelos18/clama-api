@@ -5,6 +5,7 @@ AUTH_COOKIE_SECURE: "false"
 LIMITE_ANONIMO_ATIVO: "false"
 clama:
   fila:
+    scheduler-ativo: false
     polling: 100ms
     heartbeat: 1s
 spring:

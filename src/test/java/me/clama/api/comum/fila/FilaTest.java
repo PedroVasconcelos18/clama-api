@@ -30,7 +30,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
-@SpringBootTest
+@SpringBootTest(properties = "clama.fila.scheduler-ativo=true")
 @Import({BancoDeTeste.class, FilaTest.Config.class})
 @ActiveProfiles("test")
 class FilaTest {
@@ -112,6 +112,46 @@ class FilaTest {
 	void jobRodaDepoisDoCommit() {
 		tx.executeWithoutResult(s -> fila.enfileirar(job, new JobDeTeste("x")));
 		await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertThat(job.recebidos).containsExactly("x"));
+	}
+
+	@Test
+	void instanciaDeterministicaNaoDuplica() {
+		boolean[] r = new boolean[3];
+		tx.executeWithoutResult(s -> {
+			r[0] = fila.enfileirar(job, "gerar/1", new JobDeTeste("a"));
+			r[1] = fila.enfileirar(job, "gerar/1", new JobDeTeste("b"), Instant.now());
+			r[2] = fila.enfileirar(job, "gerar/2", new JobDeTeste("c"));
+		});
+		assertThat(r).containsExactly(true, false, true);
+		await().atMost(Duration.ofSeconds(5)).until(() -> job.chamadas.get() == 2);
+		assertThat(job.recebidos).containsExactlyInAnyOrder("a", "c");
+	}
+
+	@Test
+	void duplicadoNaoQuebraATransacaoDoChamador() {
+		tx.executeWithoutResult(s -> fila.enfileirar(job, "gerar/1", new JobDeTeste("a"), Instant.now().plusSeconds(60)));
+		tx.executeWithoutResult(s -> {
+			assertThat(fila.enfileirar(job, "gerar/1", new JobDeTeste("b"))).isFalse();
+			// a transacao segue utilizavel e commita
+			assertThat(fila.enfileirar(job, "gerar/2", new JobDeTeste("c"), Instant.now().plusSeconds(60))).isTrue();
+			jdbc.queryForObject("select 1", Integer.class);
+		});
+		assertThat(linhas()).isEqualTo(2);
+	}
+
+	@Test
+	void duplicadoComRollbackDoPrimeiroNaoFicaPreso() {
+		assertThatThrownBy(() -> tx.executeWithoutResult(s -> {
+			fila.enfileirar(job, "gerar/1", new JobDeTeste("a"));
+			throw new IllegalArgumentException("rollback");
+		})).isInstanceOf(IllegalArgumentException.class);
+		tx.executeWithoutResult(s -> assertThat(fila.enfileirar(job, "gerar/1", new JobDeTeste("b"))).isTrue());
+		await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertThat(job.recebidos).containsExactly("b"));
+	}
+
+	@Test
+	void enfileirarSemTransacaoComInstanciaFalha() {
+		assertThatThrownBy(() -> fila.enfileirar(job, "gerar/1", new JobDeTeste("x"))).isInstanceOf(IllegalStateException.class);
 	}
 
 	@Test

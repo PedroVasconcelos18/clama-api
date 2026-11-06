@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitialization;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -109,6 +110,8 @@ public class FilaConfig {
 	}
 
 	// so inicia o polling depois do Flyway: na 1a subida em prod scheduled_tasks ainda nao existe
+	// desligado nos testes: contextos em cache dividem o mesmo scheduled_tasks e um roubaria o job do outro
+	@ConditionalOnProperty(name = "clama.fila.scheduler-ativo", havingValue = "true", matchIfMissing = true)
 	@DependsOnDatabaseInitialization
 	// ponytail: uma instancia e 4 threads; aumentar se a fila acumular
 	@Bean(initMethod = "start", destroyMethod = "stop")

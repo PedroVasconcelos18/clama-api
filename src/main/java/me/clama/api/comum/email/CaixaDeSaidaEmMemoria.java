@@ -8,8 +8,9 @@ public class CaixaDeSaidaEmMemoria implements EnviadorDeEmail {
     private final List<Email> enviados = new CopyOnWriteArrayList<>();
 
     @Override
-    public void enviar(Email e) {
+    public ResultadoEnvio enviar(Email e) {
         enviados.add(e);
+        return ResultadoEnvio.ENVIADO;
     }
 
     public List<Email> enviados() {

@@ -27,6 +27,7 @@ class ResendEnviadorTest {
 	final List<String[]> headers = new CopyOnWriteArrayList<>();
 	final List<Integer> respostas = new CopyOnWriteArrayList<>();
 	final List<Duration> dormiu = new ArrayList<>();
+	volatile String corpo409 = "";
 
 	@BeforeEach
 	void sobe() throws Exception {
@@ -42,7 +43,7 @@ class ResendEnviadorTest {
 			int i = corpos.size() - 1;
 			int status = i < respostas.size() ? respostas.get(i) : 200;
 			byte[] b = (status == 422 ? "{\"name\":\"validation_error\",\"message\":\"Invalid `to` field\"}"
-					: "{\"id\":\"abc\"}").getBytes(StandardCharsets.UTF_8);
+					: status == 409 ? corpo409 : "{\"id\":\"abc\"}").getBytes(StandardCharsets.UTF_8);
 			ex.sendResponseHeaders(status, b.length);
 			ex.getResponseBody().write(b);
 			ex.close();
@@ -58,6 +59,43 @@ class ResendEnviadorTest {
 	}
 
 	static final Email EMAIL = new Email("ana@exemplo.com", "Assunto", "texto", "<p>html</p>");
+
+	@Test
+	void retornaEnviadoNoSucesso() {
+		assertThat(enviador().enviar(EMAIL)).isEqualTo(ResultadoEnvio.ENVIADO);
+	}
+
+	@Test
+	void conflitoInvalidIdempotentRequestEJaEnviadoSemRetentar() {
+		respostas.add(409);
+		corpo409 = "{\"statusCode\":409,\"name\":\"invalid_idempotent_request\",\"message\":\"x\"}";
+		assertThat(enviador().enviar(EMAIL.comChave("oracao/1"))).isEqualTo(ResultadoEnvio.JA_ENVIADO);
+		assertThat(corpos).hasSize(1);
+		assertThat(dormiu).isEmpty();
+	}
+
+	@Test
+	void conflitoInvalidIdempotentRequestPeloCampoType() {
+		respostas.add(409);
+		corpo409 = "{\"type\":\"invalid_idempotent_request\"}";
+		assertThat(enviador().enviar(EMAIL.comChave("oracao/1"))).isEqualTo(ResultadoEnvio.JA_ENVIADO);
+	}
+
+	@Test
+	void conflitoConcurrentIdempotentRequestsSegueErroRetentavel() {
+		respostas.add(409);
+		corpo409 = "{\"name\":\"concurrent_idempotent_requests\",\"message\":\"x\"}";
+		assertThatThrownBy(() -> enviador().enviar(EMAIL.comChave("oracao/1")))
+				.isInstanceOfSatisfying(HttpStatusException.class, e -> assertThat(e.status()).isEqualTo(409));
+		assertThat(corpos).hasSize(1);
+	}
+
+	@Test
+	void conflito409SemCorpoReconhecivelEErro() {
+		respostas.add(409);
+		corpo409 = "nao e json";
+		assertThatThrownBy(() -> enviador().enviar(EMAIL)).isInstanceOf(HttpStatusException.class);
+	}
 
 	@Test
 	void enviaPayloadDoAnymail() throws Exception {
@@ -158,7 +196,7 @@ class ResendEnviadorTest {
 				.run(ctx -> {
 					EnviadorDeEmail e = ctx.getBean(EnviadorDeEmail.class);
 					assertThat(e).isInstanceOf(CaixaDeSaidaEmMemoria.class);
-					e.enviar(EMAIL);
+					assertThat(e.enviar(EMAIL)).isEqualTo(ResultadoEnvio.ENVIADO);
 					assertThat(((CaixaDeSaidaEmMemoria) e).enviados()).containsExactly(EMAIL);
 					((CaixaDeSaidaEmMemoria) e).limpar();
 					assertThat(((CaixaDeSaidaEmMemoria) e).enviados()).isEmpty();

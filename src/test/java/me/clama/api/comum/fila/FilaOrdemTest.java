@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 /** O scheduler (initMethod start) so pode iniciar depois do Flyway: scheduled_tasks nasce na migration V1. */
-@SpringBootTest
+@SpringBootTest(properties = "clama.fila.scheduler-ativo=true")
 @Import(BancoDeTeste.class)
 @ActiveProfiles("test")
 class FilaOrdemTest {

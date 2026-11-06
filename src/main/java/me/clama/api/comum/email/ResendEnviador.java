@@ -13,10 +13,14 @@ import java.util.Map;
 import java.util.function.Consumer;
 import me.clama.api.comum.retry.HttpStatusException;
 import me.clama.api.comum.retry.Retentativa;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /** POST /emails da Resend com o mesmo payload do Anymail e 3 tentativas (1s, 2s) como o with_retry. */
 public class ResendEnviador implements EnviadorDeEmail {
+    private static final Logger LOG = LoggerFactory.getLogger(ResendEnviador.class);
     static final String REPLY_TO = "contato@clama.me";
 
     private final String chave;
@@ -35,7 +39,7 @@ public class ResendEnviador implements EnviadorDeEmail {
     }
 
     @Override
-    public void enviar(Email e) {
+    public ResultadoEnvio enviar(Email e) {
         if (chave == null || chave.isBlank()) throw new IllegalStateException("RESEND_API_KEY ausente");
         Map<String, Object> corpo = new LinkedHashMap<>();
         corpo.put("from", de);
@@ -53,12 +57,16 @@ public class ResendEnviador implements EnviadorDeEmail {
         // retentativa (aqui ou do job) com a mesma chave nao duplica o e-mail por 24 h
         if (e.chaveDeIdempotencia() != null) b.header("Idempotency-Key", e.chaveDeIdempotencia());
         HttpRequest req = b.build();
-        Retentativa.executar(() -> {
+        return Retentativa.executar(() -> {
             try {
                 HttpResponse<String> r = http.send(req, HttpResponse.BodyHandlers.ofString());
                 // 3xx tambem e erro (o HttpClient nao segue redirect); so 5xx e retentado
+                if (r.statusCode() == 409 && ehChaveJaUsada(r.body())) {
+                    LOG.warn("Resend 409 invalid_idempotent_request: e-mail ja enviado (chave {})", e.chaveDeIdempotencia());
+                    return ResultadoEnvio.JA_ENVIADO;
+                }
                 if (r.statusCode() / 100 != 2) throw new HttpStatusException(r.statusCode(), r.body());
-                return null;
+                return ResultadoEnvio.ENVIADO;
             } catch (IOException ex) {
                 throw new UncheckedIOException(ex);
             } catch (InterruptedException ex) {
@@ -66,5 +74,16 @@ public class ResendEnviador implements EnviadorDeEmail {
                 throw new IllegalStateException("envio interrompido", ex);
             }
         }, 3, Retentativa.ESPERAS_PADRAO, Retentativa::padrao, dormir);
+    }
+
+    /** concurrent_idempotent_requests (outro envio em curso) fica como erro: o retry do job resolve. */
+    private boolean ehChaveJaUsada(String body) {
+        try {
+            JsonNode n = json.readTree(body);
+            return "invalid_idempotent_request".equals(n.path("name").asString(null))
+                    || "invalid_idempotent_request".equals(n.path("type").asString(null));
+        } catch (RuntimeException ex) {
+            return false;
+        }
     }
 }

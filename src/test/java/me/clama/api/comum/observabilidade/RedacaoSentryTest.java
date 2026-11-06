@@ -30,7 +30,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.support.TransactionTemplate;
 
-@SpringBootTest(properties = "sentry.dsn=https://chave@localhost/1")
+@SpringBootTest(properties = {"sentry.dsn=https://chave@localhost/1", "clama.fila.scheduler-ativo=true"})
 @Import({BancoDeTeste.class, RedacaoSentryTest.Config.class})
 @ActiveProfiles("test")
 class RedacaoSentryTest {
