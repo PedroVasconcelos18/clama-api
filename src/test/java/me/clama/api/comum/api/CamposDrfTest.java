@@ -98,4 +98,21 @@ class CamposDrfTest {
         c.inteiro("b", true, 0, 10);
         assertThat(erros(c)).containsOnlyKeys("a", "b");
     }
+
+    /** Serializer.errors troca o "null" do corpo nulo por "No data provided" (sem traducao no DRF). */
+    @Test
+    void corpoNuloComoOSerializerDoDrf() {
+        assertThat(erros(() -> c("null"))).containsExactly(Map.entry("non_field_errors", List.of("No data provided")));
+        assertThat(erros(() -> c("[]"))).containsExactly(
+                Map.entry("non_field_errors", List.of("Dado inválido. Esperava um dicionário, mas recebeu list.")));
+    }
+
+    static Map<String, List<String>> erros(Runnable r) {
+        try {
+            r.run();
+            return Map.of();
+        } catch (CamposDrf.Invalidos e) {
+            return e.erros();
+        }
+    }
 }

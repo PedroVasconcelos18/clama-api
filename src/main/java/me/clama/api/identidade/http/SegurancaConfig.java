@@ -4,17 +4,24 @@ import jakarta.servlet.DispatcherType;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.comum.erro.PastoralExceptionHandler;
+import me.clama.api.identidade.Usuario;
 import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.identidade.token.ServicoDeTokens;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.authorization.AuthorizationResult;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -30,6 +37,11 @@ public class SegurancaConfig {
     static final String SEM_PERMISSAO = "Você não tem permissão para executar essa ação.";
     /** MSG_NO_PERMISSION do permission_denied do AdminAPIView/AdminGenericAPIView. */
     static final String SO_ADMIN = "Esse espaço é só para admins do Clama.";
+    /**
+     * permission_classes = [IsAuthenticated, IsCustomerPasswordCurrent] (clama/core/permissions.py): anonimo 401,
+     * senha temporaria 403 pastoral. Roda no filtro, antes do throttle, como o check_permissions do DRF.
+     */
+    static final String[] SENHA_EM_DIA = {"/api/pedidos/"};
 
     /** CSRF_COOKIE_PATH=/api, CSRF_COOKIE_HTTPONLY=True, SameSite e idade padrao do Django (1 ano). */
     @Bean
@@ -57,17 +69,43 @@ public class SegurancaConfig {
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((req, resp, ex) ->
                                 PastoralExceptionHandler.escrever(resp, PastoralException.naoAutenticado()))
-                        .accessDeniedHandler((req, resp, ex) -> PastoralExceptionHandler.escrever(resp, 403,
-                                Map.of("detail", req.getRequestURI().startsWith("/api/admin/") ? SO_ADMIN : SEM_PERMISSAO))))
+                        .accessDeniedHandler((req, resp, ex) -> {
+                            if (ex instanceof SenhaTemporaria) {
+                                PastoralExceptionHandler.escrever(resp, PastoralException.senhaTemporaria());
+                            } else {
+                                PastoralExceptionHandler.escrever(resp, 403, Map.of("detail",
+                                        req.getRequestURI().startsWith("/api/admin/") ? SO_ADMIN : SEM_PERMISSAO));
+                            }
+                        }))
                 // nega por padrao: rota nova sob /api/admin/ ja nasce IsClamaAdmin, sem lista pra manter
                 .authorizeHttpRequests(a -> a
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll() // /error de pedido ja autorizado
                         .requestMatchers(FiltroJwtCookie.PUBLICAS, FiltroJwtCookie.ABERTAS).permitAll()
                         .requestMatchers(semRota(mapeamentos)).permitAll()
                         .requestMatchers("/api/admin/**").hasAuthority(FiltroJwtCookie.ADMIN)
+                        .requestMatchers(SENHA_EM_DIA).access(SegurancaConfig::senhaEmDia)
                         .requestMatchers("/api/customer/**").authenticated()
                         .anyRequest().denyAll())
                 .build();
+    }
+
+    /** CustomerPasswordChangeRequiredError: vira o 403 pastoral no accessDeniedHandler. */
+    static final class SenhaTemporaria extends AccessDeniedException {
+        SenhaTemporaria() {
+            super("force_change_password");
+        }
+    }
+
+    private static AuthorizationResult senhaEmDia(Supplier<? extends Authentication> auth,
+            RequestAuthorizationContext ctx) {
+        Authentication a = auth.get();
+        if (a == null || !(a.getPrincipal() instanceof Usuario u)) {
+            return new AuthorizationDecision(false); // anonimo: o ExceptionTranslationFilter responde 401
+        }
+        if (u.isForceChangePassword()) {
+            throw new SenhaTemporaria();
+        }
+        return new AuthorizationDecision(true);
     }
 
     /**

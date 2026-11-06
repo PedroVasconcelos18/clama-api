@@ -4,7 +4,9 @@ import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.Duration;
+import java.util.Locale;
 import me.clama.api.comum.erro.PastoralException;
+import me.clama.api.comum.texto.TextoPython;
 import me.clama.api.identidade.Usuario;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -45,20 +47,37 @@ public class InterceptorDeTaxa implements HandlerInterceptor, WebMvcConfigurer {
             return true;
         }
         Usuario usuario = usuarioLogado();
-        LimiteDeTaxa escopo = metodo.getMethodAnnotation(LimiteDeTaxa.class);
-        if (escopo != null) {
-            String chave = usuario != null ? String.valueOf(usuario.getId()) : ClienteIp.de(req);
-            checar(escopo.escopo(), chave, escopo.limite(), Duration.ofSeconds(escopo.janelaSegundos()));
+        LimiteDeTaxa[] escopos = metodo.getMethod().getAnnotationsByType(LimiteDeTaxa.class);
+        if (escopos.length > 0) {
+            long espera = -1;
+            for (LimiteDeTaxa e : escopos) {
+                String chave = chave(e.chave(), usuario, req);
+                if (chave != null) {
+                    espera = Math.max(espera, limiter.permitir(e.escopo(), chave, e.limite(),
+                            Duration.ofSeconds(e.janelaSegundos())).orElse(-1));
+                }
+            }
+            if (espera >= 0) {
+                throw PastoralException.limiteExcedido(espera);
+            }
         } else if (usuario == null && anonimoAtivo) {
-            checar("anon", ClienteIp.de(req), 60, MINUTO);
+            limiter.permitir("anon", ClienteIp.de(req), 60, MINUTO).ifPresent(s -> {
+                throw PastoralException.limiteExcedido(s);
+            });
         }
         return true;
     }
 
-    private void checar(String escopo, String chave, int limite, Duration janela) {
-        limiter.permitir(escopo, chave, limite, janela).ifPresent(s -> {
-            throw PastoralException.limiteExcedido(s);
-        });
+    /**
+     * null = o escopo nao se aplica. ponytail: logado sem e-mail, o EmailScopedThrottle cai no "email" do corpo;
+     * aqui fica sem limite (todo usuario tem e-mail).
+     */
+    private static String chave(LimiteDeTaxa.Chave tipo, Usuario usuario, HttpServletRequest req) {
+        if (tipo == LimiteDeTaxa.Chave.USUARIO_OU_IP) {
+            return usuario != null ? String.valueOf(usuario.getId()) : ClienteIp.de(req);
+        }
+        String email = usuario == null || usuario.getEmail() == null ? "" : usuario.getEmail();
+        return email.isEmpty() ? null : TextoPython.strip(email.toLowerCase(Locale.ROOT));
     }
 
     private static Usuario usuarioLogado() {

@@ -1,0 +1,5007 @@
+{
+ "gerado_por": "probe DRF real (clama-backend .venv, config.settings.test, Turnstile mock); ver task-3-report.md",
+ "planos": {
+  "ativo": "55555555-5555-4555-8555-000000000001",
+  "inativo": "55555555-5555-4555-8555-000000000004"
+ },
+ "instituicao": "66666666-6666-4666-8666-000000000001",
+ "casos": [
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "nome": [
+     "Certifique-se de que este campo não tenha mais de 120 caracteres."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": 123,
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": true,
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "nome": [
+     "Não é uma string válida."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": null,
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "nome": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": [
+     "a"
+    ],
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "nome": [
+     "Não é uma string válida."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "ab\u0000c",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "nome": [
+     "Caracteres nulos não são permitidos."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": " A ",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "nome": [
+     "Conta um pouco de você no nome — pelo menos 2 letras."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "nome": [
+     "Por favor, digite seu nome."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\u0000",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "nome": [
+     "Certifique-se de que este campo não tenha mais de 120 caracteres.",
+     "Caracteres nulos não são permitidos."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "x",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Por favor, digite seu e-mail."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "  ",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Por favor, digite seu e-mail."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": null,
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@x.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Certifique-se de que este campo não tenha mais de 254 caracteres."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": 5,
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": " Maria@Exemplo.com ",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@ção.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "\"a b\"@x.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@[1.2.3.4]",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@[01.2.3.4]",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@[::1]",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@localhost",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@x",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@-x.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@x.com.",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a..b@x.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@b@x.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@x.c",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@x.c-",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@x.123",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a b@x.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "ação@x.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@X.COM",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "111111111111111111111",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "telefone": [
+     "Certifique-se de que este campo não tenha mais de 20 caracteres."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": null,
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "telefone": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": 11999,
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": [],
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "telefone": [
+     "Não é uma string válida."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "  (11) 9  ",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": null,
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "cpf_cnpj": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "1111111111111111111",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "cpf_cnpj": [
+     "Certifique-se de que este campo não tenha mais de 18 caracteres."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "abc",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "cpf_cnpj": [
+     "CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": 52998224725,
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "   ",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "cpf_cnpj": [
+     "CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-2５",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": -1,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "idade": [
+     "Certifque-se de que este valor seja maior ou igual a 0."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 32768,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "idade": [
+     "Certifique-se de que este valor seja inferior ou igual a 32767."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": "abc",
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "idade": [
+     "Um número inteiro válido é exigido."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": "35",
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35.5,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "idade": [
+     "Um número inteiro válido é exigido."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35.0,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": true,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "idade": [
+     "Um número inteiro válido é exigido."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": "",
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "idade": [
+     "Um número inteiro válido é exigido."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": null,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "x",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "sexo": [
+     "\"x\" não é uma escolha válida."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": null,
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "sexo": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": 1,
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "sexo": [
+     "\"1\" não é uma escolha válida."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": " feminino ",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "sexo": [
+     "\" feminino \" não é uma escolha válida."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "nao_informado",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": null,
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "pedido_oracao": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": 1,
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "  oi  ",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "a\u0000",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "pedido_oracao": [
+     "Caracteres nulos não são permitidos."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "instituicao": [
+     "66666666-6666-4666-8666-000000000001"
+    ]
+   },
+   "resposta": {
+    "instituicao": [
+     "O valor “['66666666-6666-4666-8666-000000000001']” não é um UUID válido"
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "instituicao": true
+   },
+   "resposta": {
+    "instituicao": [
+     "Instituição inválida. Escolha uma da lista, por favor."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "instituicao": ""
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "instituicao": null
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "instituicao": 1.5
+   },
+   "resposta": {
+    "instituicao": [
+     "O valor “1.5” não é um UUID válido"
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "instituicao": -1
+   },
+   "resposta": {
+    "instituicao": [
+     "O valor “-1” não é um UUID válido"
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "instituicao": 340282366920938463463374607431768211456
+   },
+   "resposta": {
+    "instituicao": [
+     "O valor “340282366920938463463374607431768211456” não é um UUID válido"
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "instituicao": {}
+   },
+   "resposta": {
+    "instituicao": [
+     "O valor “{}” não é um UUID válido"
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "instituicao": {
+     "a": [
+      1,
+      "b'c",
+      null,
+      false
+     ]
+    }
+   },
+   "resposta": {
+    "instituicao": [
+     "O valor “{'a': [1, \"b'c\", None, False]}” não é um UUID válido"
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "instituicao": "66666666-6666-4666-8666-000000000001"
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "instituicao": "66666666666646668666000000000001"
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "instituicao": "{66666666-6666-4666-8666-000000000001}"
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "instituicao": "urn:uuid:66666666-6666-4666-8666-000000000001"
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "instituicao": "66666666-6666-4666-8666-00000000000"
+   },
+   "resposta": {
+    "instituicao": [
+     "O valor “66666666-6666-4666-8666-00000000000” não é um UUID válido"
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": "abc",
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "valor_centavos": [
+     "Um número inteiro válido é exigido."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 2147483648,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "valor_centavos": [
+     "Certifique-se de que este valor seja inferior ou igual a 2147483647."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 99.5,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "valor_centavos": [
+     "Um número inteiro válido é exigido."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": "3000",
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": true,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "valor_centavos": [
+     "Um número inteiro válido é exigido."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": null,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "valor_centavos": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": -5,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "valor_centavos": [
+     "O valor mínimo é R$ 1,00 — qualquer oferta acima ajuda o Clama."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 100,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 1999,
+    "canal_entrega": "email",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "sms",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "canal_entrega": [
+     "Por favor, escolha entre E-mail ou WhatsApp."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": null,
+    "consent_aceito": true
+   },
+   "resposta": {
+    "canal_entrega": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "canal_entrega": [
+     "Por favor, escolha entre E-mail ou WhatsApp."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "EMAIL",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "canal_entrega": [
+     "Por favor, escolha entre E-mail ou WhatsApp."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": true,
+    "consent_aceito": true
+   },
+   "resposta": {
+    "canal_entrega": [
+     "Por favor, escolha entre E-mail ou WhatsApp."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": "abc"
+   },
+   "resposta": {
+    "consent_aceito": [
+     "Deve ser um valor booleano válido."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": null
+   },
+   "resposta": {
+    "consent_aceito": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": "true"
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": 0
+   },
+   "resposta": {
+    "consent_aceito": [
+     "Para enviar seu pedido, é preciso concordar com a política de privacidade."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": "False"
+   },
+   "resposta": {
+    "consent_aceito": [
+     "Para enviar seu pedido, é preciso concordar com a política de privacidade."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": " 1 ",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "whatsapp",
+    "consent_aceito": true
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 50,
+    "canal_entrega": "whatsapp",
+    "consent_aceito": true
+   },
+   "resposta": {
+    "valor_centavos": [
+     "O valor mínimo é R$ 1,00 — qualquer oferta acima ajuda o Clama."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "",
+    "email": "x",
+    "telefone": "111111111111111111111",
+    "cpf_cnpj": "1",
+    "idade": -1,
+    "sexo": "x",
+    "pedido_oracao": null,
+    "valor_centavos": 1,
+    "canal_entrega": "x",
+    "consent_aceito": false,
+    "plano": "x",
+    "instituicao": "x",
+    "device_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "turnstile_token": ""
+   },
+   "resposta": {
+    "nome": [
+     "Por favor, digite seu nome."
+    ],
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ],
+    "telefone": [
+     "Certifique-se de que este campo não tenha mais de 20 caracteres."
+    ],
+    "cpf_cnpj": [
+     "CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos."
+    ],
+    "idade": [
+     "Certifque-se de que este valor seja maior ou igual a 0."
+    ],
+    "sexo": [
+     "\"x\" não é uma escolha válida."
+    ],
+    "pedido_oracao": [
+     "Este campo pode não ser nulo."
+    ],
+    "plano": [
+     "O valor “x” não é um UUID válido"
+    ],
+    "instituicao": [
+     "O valor “x” não é um UUID válido"
+    ],
+    "valor_centavos": [
+     "O valor mínimo é R$ 1,00 — qualquer oferta acima ajuda o Clama."
+    ],
+    "canal_entrega": [
+     "Por favor, escolha entre E-mail ou WhatsApp."
+    ],
+    "consent_aceito": [
+     "Para enviar seu pedido, é preciso concordar com a política de privacidade."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "plano": "nao-uuid"
+   },
+   "resposta": {
+    "plano": [
+     "O valor “nao-uuid” não é um UUID válido"
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "plano": 123
+   },
+   "resposta": {
+    "plano": [
+     "Pk inválido \"123\" - objeto não existe."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "plano": "99999999-9999-4999-8999-999999999999"
+   },
+   "resposta": {
+    "plano": [
+     "Pk inválido \"99999999-9999-4999-8999-999999999999\" - objeto não existe."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "plano": [
+     "55555555-5555-4555-8555-000000000001"
+    ]
+   },
+   "resposta": {
+    "plano": [
+     "O valor “['55555555-5555-4555-8555-000000000001']” não é um UUID válido"
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "plano": true
+   },
+   "resposta": {
+    "plano": [
+     "Tipo incorreto. Esperava valor pk, recebeu bool."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "plano": ""
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "plano": null
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "plano": {}
+   },
+   "resposta": {
+    "plano": [
+     "O valor “{}” não é um UUID válido"
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "plano": "55555555-5555-4555-8555-000000000001"
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "plano": "99999999999949998999999999999999"
+   },
+   "resposta": {
+    "plano": [
+     "Pk inválido \"99999999999949998999999999999999\" - objeto não existe."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "whatsapp",
+    "consent_aceito": true,
+    "plano": "55555555-5555-4555-8555-000000000004"
+   },
+   "resposta": {
+    "plano": [
+     "Esse plano não está disponível no momento."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo": {
+    "nome": "",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "plano": "55555555-5555-4555-8555-000000000004"
+   },
+   "resposta": {
+    "nome": [
+     "Por favor, digite seu nome."
+    ],
+    "plano": [
+     "Esse plano não está disponível no momento."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "nome": [
+     "Certifique-se de que este campo não tenha mais de 120 caracteres."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": 123,
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": true,
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "nome": [
+     "Não é uma string válida."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": null,
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "nome": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": [
+     "a"
+    ],
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "nome": [
+     "Não é uma string válida."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "ab\u0000c",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "nome": [
+     "Caracteres nulos não são permitidos."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": " A ",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "nome": [
+     "Conta um pouco de você no nome — pelo menos 2 letras."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "nome": [
+     "Por favor, digite seu nome."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\u0000",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "nome": [
+     "Certifique-se de que este campo não tenha mais de 120 caracteres.",
+     "Caracteres nulos não são permitidos."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "x",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Por favor, digite seu e-mail."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "  ",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Por favor, digite seu e-mail."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": null,
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@x.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Certifique-se de que este campo não tenha mais de 254 caracteres."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": 5,
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": " Maria@Exemplo.com ",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@ção.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "\"a b\"@x.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@[1.2.3.4]",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@[01.2.3.4]",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@[::1]",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@localhost",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@x",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@-x.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@x.com.",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a..b@x.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@b@x.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@x.c",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@x.c-",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@x.123",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a b@x.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "ação@x.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@X.COM",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "111111111111111111111",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "telefone": [
+     "Certifique-se de que este campo não tenha mais de 20 caracteres."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": null,
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "telefone": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": 11999,
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": [],
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "telefone": [
+     "Não é uma string válida."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "  (11) 9  ",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": null,
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "cpf_cnpj": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "1111111111111111111",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "cpf_cnpj": [
+     "Certifique-se de que este campo não tenha mais de 18 caracteres."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "abc",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "cpf_cnpj": [
+     "CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": 52998224725,
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "   ",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "cpf_cnpj": [
+     "CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-2５",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": -1,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "idade": [
+     "Certifque-se de que este valor seja maior ou igual a 0."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 32768,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "idade": [
+     "Certifique-se de que este valor seja inferior ou igual a 32767."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": "abc",
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "idade": [
+     "Um número inteiro válido é exigido."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": "35",
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35.5,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "idade": [
+     "Um número inteiro válido é exigido."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35.0,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": true,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "idade": [
+     "Um número inteiro válido é exigido."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": "",
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "idade": [
+     "Um número inteiro válido é exigido."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": null,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "x",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "sexo": [
+     "\"x\" não é uma escolha válida."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": null,
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "sexo": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": 1,
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "sexo": [
+     "\"1\" não é uma escolha válida."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": " feminino ",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "sexo": [
+     "\" feminino \" não é uma escolha válida."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "nao_informado",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": null,
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "pedido_oracao": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": 1,
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "  oi  ",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "a\u0000",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "pedido_oracao": [
+     "Caracteres nulos não são permitidos."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp",
+    "instituicao": [
+     "66666666-6666-4666-8666-000000000001"
+    ]
+   },
+   "resposta": {
+    "instituicao": [
+     "O valor “['66666666-6666-4666-8666-000000000001']” não é um UUID válido"
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp",
+    "instituicao": true
+   },
+   "resposta": {
+    "instituicao": [
+     "Instituição inválida. Escolha uma da lista, por favor."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp",
+    "instituicao": ""
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp",
+    "instituicao": null
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp",
+    "instituicao": 1.5
+   },
+   "resposta": {
+    "instituicao": [
+     "O valor “1.5” não é um UUID válido"
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp",
+    "instituicao": -1
+   },
+   "resposta": {
+    "instituicao": [
+     "O valor “-1” não é um UUID válido"
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp",
+    "instituicao": 340282366920938463463374607431768211456
+   },
+   "resposta": {
+    "instituicao": [
+     "O valor “340282366920938463463374607431768211456” não é um UUID válido"
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp",
+    "instituicao": {}
+   },
+   "resposta": {
+    "instituicao": [
+     "O valor “{}” não é um UUID válido"
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp",
+    "instituicao": {
+     "a": [
+      1,
+      "b'c",
+      null,
+      false
+     ]
+    }
+   },
+   "resposta": {
+    "instituicao": [
+     "O valor “{'a': [1, \"b'c\", None, False]}” não é um UUID válido"
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp",
+    "instituicao": "66666666-6666-4666-8666-000000000001"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp",
+    "instituicao": "66666666666646668666000000000001"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp",
+    "instituicao": "{66666666-6666-4666-8666-000000000001}"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp",
+    "instituicao": "urn:uuid:66666666-6666-4666-8666-000000000001"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp",
+    "instituicao": "66666666-6666-4666-8666-00000000000"
+   },
+   "resposta": {
+    "instituicao": [
+     "O valor “66666666-6666-4666-8666-00000000000” não é um UUID válido"
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": "abc",
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "valor_centavos": [
+     "Um número inteiro válido é exigido."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 2147483648,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "valor_centavos": [
+     "Certifique-se de que este valor seja inferior ou igual a 2147483647."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 99.5,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "valor_centavos": [
+     "Um número inteiro válido é exigido."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": "3000",
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": true,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "valor_centavos": [
+     "Um número inteiro válido é exigido."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": null,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "valor_centavos": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": -5,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "valor_centavos": [
+     "O valor mínimo é R$ 1,00 — qualquer oferta acima ajuda o Clama."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 100,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 1999,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "sms",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "canal_entrega": [
+     "Por favor, escolha entre E-mail ou WhatsApp."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": null,
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "canal_entrega": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "canal_entrega": [
+     "Por favor, escolha entre E-mail ou WhatsApp."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "EMAIL",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "canal_entrega": [
+     "Por favor, escolha entre E-mail ou WhatsApp."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": true,
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "canal_entrega": [
+     "Por favor, escolha entre E-mail ou WhatsApp."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": "abc",
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "consent_aceito": [
+     "Deve ser um valor booleano válido."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": null,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "consent_aceito": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": "true",
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": 0,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "consent_aceito": [
+     "Para enviar seu pedido, é preciso concordar com a política de privacidade."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": "False",
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "consent_aceito": [
+     "Para enviar seu pedido, é preciso concordar com a política de privacidade."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": " 1 ",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "whatsapp",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 50,
+    "canal_entrega": "whatsapp",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "valor_centavos": [
+     "O valor mínimo é R$ 1,00 — qualquer oferta acima ajuda o Clama."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "",
+    "email": "x",
+    "telefone": "111111111111111111111",
+    "cpf_cnpj": "1",
+    "idade": -1,
+    "sexo": "x",
+    "pedido_oracao": null,
+    "valor_centavos": 1,
+    "canal_entrega": "x",
+    "consent_aceito": false,
+    "turnstile_token": "",
+    "device_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "plano": "x",
+    "instituicao": "x"
+   },
+   "resposta": {
+    "nome": [
+     "Por favor, digite seu nome."
+    ],
+    "email": [
+     "Confira seu e-mail — parece que faltou algo."
+    ],
+    "telefone": [
+     "Certifique-se de que este campo não tenha mais de 20 caracteres."
+    ],
+    "cpf_cnpj": [
+     "CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos."
+    ],
+    "idade": [
+     "Certifque-se de que este valor seja maior ou igual a 0."
+    ],
+    "sexo": [
+     "\"x\" não é uma escolha válida."
+    ],
+    "pedido_oracao": [
+     "Este campo pode não ser nulo."
+    ],
+    "instituicao": [
+     "O valor “x” não é um UUID válido"
+    ],
+    "valor_centavos": [
+     "O valor mínimo é R$ 1,00 — qualquer oferta acima ajuda o Clama."
+    ],
+    "canal_entrega": [
+     "Por favor, escolha entre E-mail ou WhatsApp."
+    ],
+    "consent_aceito": [
+     "Para enviar seu pedido, é preciso concordar com a política de privacidade."
+    ],
+    "device_hash": [
+     "Certifique-se de que este campo não tenha mais de 128 caracteres."
+    ],
+    "turnstile_token": [
+     "Verificação anti-robô falhou. Atualize a página e tente de novo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": null,
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "turnstile_token": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "turnstile_token": [
+     "Certifique-se de que este campo não tenha mais de 2048 caracteres."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "   ",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "turnstile_token": [
+     "Verificação anti-robô falhou. Atualize a página e tente de novo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": 5,
+    "device_hash": "fp"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": true,
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "turnstile_token": [
+     "Não é uma string válida."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+   },
+   "resposta": {
+    "device_hash": [
+     "Certifique-se de que este campo não tenha mais de 128 caracteres."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": null
+   },
+   "resposta": {
+    "device_hash": [
+     "Este campo pode não ser nulo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": 7
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": ""
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@mailinator.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "turnstile_token": [
+     "Verificação anti-robô falhou. Atualize a página e tente de novo."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "a@MAILINATOR.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "error": {
+     "code": "email_descartavel",
+     "message": "E-mail descartável não permitido",
+     "pastoral_message": "Use um e-mail principal para receber sua oração — e-mails temporários não funcionam aqui."
+    }
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": " a@mailinator.com ",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp"
+   },
+   "resposta": {
+    "error": {
+     "code": "email_descartavel",
+     "message": "E-mail descartável não permitido",
+     "pastoral_message": "Use um e-mail principal para receber sua oração — e-mails temporários não funcionam aqui."
+    }
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 201,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "(11) 99999-8888",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "email",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp",
+    "plano": "lixo"
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo": {
+    "nome": "Maria Silva",
+    "email": "maria@exemplo.com",
+    "telefone": "",
+    "cpf_cnpj": "529.982.247-25",
+    "idade": 35,
+    "sexo": "feminino",
+    "pedido_oracao": "x",
+    "valor_centavos": 3000,
+    "canal_entrega": "whatsapp",
+    "consent_aceito": true,
+    "turnstile_token": "tok",
+    "device_hash": "fp",
+    "plano": "55555555-5555-4555-8555-000000000004"
+   },
+   "resposta": {
+    "telefone": [
+     "Para receber no WhatsApp, precisamos do seu telefone."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo_cru": "[]",
+   "resposta": {
+    "non_field_errors": [
+     "Dado inválido. Esperava um dicionário, mas recebeu list."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo_cru": "[]",
+   "resposta": {
+    "non_field_errors": [
+     "Dado inválido. Esperava um dicionário, mas recebeu list."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo_cru": "\"x\"",
+   "resposta": {
+    "non_field_errors": [
+     "Dado inválido. Esperava um dicionário, mas recebeu str."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo_cru": "\"x\"",
+   "resposta": {
+    "non_field_errors": [
+     "Dado inválido. Esperava um dicionário, mas recebeu str."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo_cru": "null",
+   "resposta": {
+    "non_field_errors": [
+     "No data provided"
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo_cru": "null",
+   "resposta": {
+    "non_field_errors": [
+     "No data provided"
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo_cru": "",
+   "resposta": {
+    "nome": [
+     "Este campo é obrigatório."
+    ],
+    "email": [
+     "Este campo é obrigatório."
+    ],
+    "cpf_cnpj": [
+     "Este campo é obrigatório."
+    ],
+    "valor_centavos": [
+     "Este campo é obrigatório."
+    ],
+    "consent_aceito": [
+     "Este campo é obrigatório."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo_cru": "",
+   "resposta": {
+    "nome": [
+     "Este campo é obrigatório."
+    ],
+    "email": [
+     "Este campo é obrigatório."
+    ],
+    "cpf_cnpj": [
+     "Este campo é obrigatório."
+    ],
+    "valor_centavos": [
+     "Este campo é obrigatório."
+    ],
+    "consent_aceito": [
+     "Este campo é obrigatório."
+    ],
+    "turnstile_token": [
+     "Verificação anti-robô falhou. Atualize a página e tente de novo."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo_cru": "1",
+   "resposta": {
+    "non_field_errors": [
+     "Dado inválido. Esperava um dicionário, mas recebeu int."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo_cru": "1",
+   "resposta": {
+    "non_field_errors": [
+     "Dado inválido. Esperava um dicionário, mas recebeu int."
+    ]
+   }
+  },
+  {
+   "rota": "pedidos",
+   "status": 400,
+   "corpo_cru": "{}",
+   "resposta": {
+    "nome": [
+     "Este campo é obrigatório."
+    ],
+    "email": [
+     "Este campo é obrigatório."
+    ],
+    "cpf_cnpj": [
+     "Este campo é obrigatório."
+    ],
+    "valor_centavos": [
+     "Este campo é obrigatório."
+    ],
+    "consent_aceito": [
+     "Este campo é obrigatório."
+    ]
+   }
+  },
+  {
+   "rota": "doacoes",
+   "status": 400,
+   "corpo_cru": "{}",
+   "resposta": {
+    "nome": [
+     "Este campo é obrigatório."
+    ],
+    "email": [
+     "Este campo é obrigatório."
+    ],
+    "cpf_cnpj": [
+     "Este campo é obrigatório."
+    ],
+    "valor_centavos": [
+     "Este campo é obrigatório."
+    ],
+    "consent_aceito": [
+     "Este campo é obrigatório."
+    ],
+    "turnstile_token": [
+     "Verificação anti-robô falhou. Atualize a página e tente de novo."
+    ]
+   }
+  }
+ ]
+}

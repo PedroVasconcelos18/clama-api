@@ -1,9 +1,13 @@
 package me.clama.api.comum.texto;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
+import tools.jackson.databind.JsonNode;
 
-/** Equivalentes de str.strip() e str.isdigit() do Python (o Django depende deles). */
+/** Equivalentes de str.strip(), str.isdigit(), str() e repr() do Python (o Django depende deles). */
 public final class TextoPython {
     private TextoPython() {}
 
@@ -66,4 +70,70 @@ public final class TextoPython {
         return false;
     }
 
+    /** str() do Python sobre o valor que o json.loads devolveria (string sai crua, o resto como repr). */
+    public static String str(JsonNode v) {
+        return v.isString() ? v.asString() : repr(v);
+    }
+
+    /** repr() do Python sobre o valor que o json.loads devolveria. */
+    public static String repr(JsonNode v) {
+        if (v.isNull()) {
+            return "None";
+        }
+        if (v.isBoolean()) {
+            return v.asBoolean() ? "True" : "False";
+        }
+        if (v.isIntegralNumber()) {
+            return v.bigIntegerValue().toString();
+        }
+        if (v.isNumber()) {
+            return reprFloat(v.doubleValue());
+        }
+        if (v.isString()) {
+            return reprStr(v.asString());
+        }
+        if (v.isArray()) {
+            return v.valueStream().map(TextoPython::repr).collect(Collectors.joining(", ", "[", "]"));
+        }
+        return v.propertyStream().map(e -> reprStr(e.getKey()) + ": " + repr(e.getValue()))
+                .collect(Collectors.joining(", ", "{", "}"));
+    }
+
+    // ponytail: escapa so \\, aspas e controles ASCII; caracteres nao imprimiveis do Unicode saem crus (o Python escapa)
+    static String reprStr(String s) {
+        char aspa = s.indexOf('\'') >= 0 && s.indexOf('"') < 0 ? '"' : '\'';
+        StringBuilder sb = new StringBuilder().append(aspa);
+        for (char c : s.toCharArray()) {
+            switch (c) {
+                case '\\' -> sb.append("\\\\");
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                default -> {
+                    if (c == aspa) {
+                        sb.append('\\').append(c);
+                    } else if (c < 0x20 || c == 0x7f) {
+                        sb.append(String.format(Locale.ROOT, "\\x%02x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+                }
+            }
+        }
+        return sb.append(aspa).toString();
+    }
+
+    /** repr(float): os digitos mais curtos (os mesmos do Double.toString) e notacao cientifica fora de [1e-4, 1e16). */
+    static String reprFloat(double d) {
+        BigDecimal b = new BigDecimal(Double.toString(d)).stripTrailingZeros();
+        int exp = b.precision() - b.scale() - 1;
+        if (exp >= -4 && exp < 16) {
+            String p = b.toPlainString();
+            return p.contains(".") ? p : p + ".0";
+        }
+        String digitos = b.unscaledValue().abs().toString();
+        String mantissa = digitos.length() == 1 ? digitos : digitos.charAt(0) + "." + digitos.substring(1);
+        return (b.signum() < 0 ? "-" : "") + mantissa + "e" + (exp < 0 ? "-" : "+")
+                + String.format(Locale.ROOT, "%02d", Math.abs(exp));
+    }
 }

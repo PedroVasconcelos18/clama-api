@@ -12,6 +12,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import me.clama.api.catalogo.instituicao.Instituicao;
 import me.clama.api.catalogo.plano.Plano;
@@ -136,13 +137,14 @@ public class Pedido {
 
     @PrePersist
     void criado() {
-        createdAt = updatedAt = OffsetDateTime.now();
+        // micros: o timestamptz guarda micro e a resposta mostra o mesmo valor que ficou no banco
+        createdAt = updatedAt = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
     }
 
     /** auto_now: todo save() regrava updated_at. */
     @PreUpdate
     void atualizado() {
-        updatedAt = OffsetDateTime.now();
+        updatedAt = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
     }
 
     /** Pedido.marcar_como_pago: so a partir de aguardando_pagamento. */

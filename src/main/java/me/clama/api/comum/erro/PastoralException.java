@@ -31,6 +31,12 @@ public class PastoralException extends RuntimeException {
                 "Não conseguimos confirmar que este pedido veio de você. Recarregue a página e tente de novo.");
     }
 
+    /** CustomerPasswordChangeRequiredError (IsCustomerPasswordCurrent de clama/core/permissions.py). */
+    public static PastoralException senhaTemporaria() {
+        return new PastoralException(403, "customer_force_change_password",
+                "User must change temporary password before continuing", "Antes de continuar, atualize sua senha.");
+    }
+
     public static PastoralException limiteExcedido(long segundos) {
         return new PastoralException(429, "rate_limited", "Too many requests. Retry after " + segundos + " seconds.",
                 "Você fez vários pedidos seguidos — espera um instante e tenta de novo, com calma.");

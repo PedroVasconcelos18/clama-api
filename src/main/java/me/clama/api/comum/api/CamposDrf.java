@@ -41,7 +41,8 @@ public final class CamposDrf {
             return;
         }
         if (!corpo.isObject()) {
-            String erro = corpo.isNull() ? NULO
+            // Serializer.errors troca o "null" do corpo nulo por "No data provided" (sem traducao no DRF)
+            String erro = corpo.isNull() ? "No data provided"
                     : "Dado inválido. Esperava um dicionário, mas recebeu " + tipoPython(corpo) + ".";
             throw new Invalidos(Map.of("non_field_errors", List.of(erro)));
         }
@@ -59,6 +60,15 @@ public final class CamposDrf {
 
     /** obrigatorio=false (PATCH, ou campo com default): ausente devolve null sem erro. */
     public String texto(String campo, boolean obrigatorio, Function<String, List<String>> validadores) {
+        return texto(campo, obrigatorio, BRANCO, validadores);
+    }
+
+    /**
+     * msgBranco: error_messages["blank"] do campo; null = allow_blank (devolve "" sem rodar os validadores, como o
+     * DRF). Os validadores recebem o valor ja aparado.
+     */
+    public String texto(String campo, boolean obrigatorio, String msgBranco,
+            Function<String, List<String>> validadores) {
         JsonNode v = corpo.get(campo);
         if (v == null) {
             return obrigatorio ? erro(campo, OBRIGATORIO) : null;
@@ -71,7 +81,7 @@ public final class CamposDrf {
         }
         String s = TextoPython.strip(v.asString());
         if (s.isEmpty()) {
-            return erro(campo, BRANCO);
+            return msgBranco == null ? s : erro(campo, msgBranco);
         }
         List<String> msgs = new ArrayList<>(validadores.apply(s));
         if (s.indexOf('\0') >= 0) {
@@ -90,18 +100,7 @@ public final class CamposDrf {
 
     /** CharField(allow_blank=True, required=False) do TextField(blank=True): ausente devolve null. */
     public String textoEmBranco(String campo) {
-        JsonNode v = corpo.get(campo);
-        if (v == null) {
-            return null;
-        }
-        if (v.isNull()) {
-            return erro(campo, NULO);
-        }
-        if (!v.isString() && !v.isNumber()) {
-            return erro(campo, NAO_E_STRING);
-        }
-        String s = TextoPython.strip(v.asString());
-        return s.indexOf('\0') >= 0 ? erro(campo, CARACTERES_NULOS) : s;
+        return texto(campo, false, null, s -> List.of());
     }
 
     public String erro(String campo, String msg) {
@@ -111,6 +110,11 @@ public final class CamposDrf {
 
     /** IntegerField(min_value, max_value): aceita int, float inteiro ("12.0") e string numerica; bool nao. */
     public Integer inteiro(String campo, boolean obrigatorio, int min, int max) {
+        return inteiro(campo, obrigatorio, min, max, "Certifque-se de que este valor seja maior ou igual a " + min + ".");
+    }
+
+    /** msgMin: error_messages["min_value"] do campo (o texto padrao do DRF pt-BR tem o erro "Certifque"). */
+    public Integer inteiro(String campo, boolean obrigatorio, int min, int max, String msgMin) {
         JsonNode v = corpo.get(campo);
         if (v == null) {
             if (obrigatorio) {
@@ -135,7 +139,7 @@ public final class CamposDrf {
             return null;
         }
         if (n.compareTo(java.math.BigInteger.valueOf(min)) < 0) {
-            erro(campo, "Certifque-se de que este valor seja maior ou igual a " + min + ".");
+            erro(campo, msgMin);
             return null;
         }
         if (n.compareTo(java.math.BigInteger.valueOf(max)) > 0) {
@@ -185,6 +189,11 @@ public final class CamposDrf {
 
     /** ChoiceField: devolve o valor se for uma das opcoes. */
     public String escolha(String campo, boolean obrigatorio, List<String> opcoes) {
+        return escolha(campo, obrigatorio, opcoes, null);
+    }
+
+    /** msgInvalida: error_messages["invalid_choice"] do campo (null = o padrao, com o valor). */
+    public String escolha(String campo, boolean obrigatorio, List<String> opcoes, String msgInvalida) {
         JsonNode v = corpo.get(campo);
         if (v == null) {
             return obrigatorio ? erro(campo, OBRIGATORIO) : null;
@@ -192,12 +201,11 @@ public final class CamposDrf {
         if (v.isNull()) {
             return erro(campo, NULO);
         }
-        String s = v.isBoolean() ? (v.asBoolean() ? "True" : "False")
-                : v.isContainer() ? v.toString() : v.asString(); // str() do Python
+        String s = TextoPython.str(v);
         if (v.isString() && opcoes.contains(s)) {
             return s;
         }
-        return erro(campo, "\"" + s + "\" não é uma escolha válida.");
+        return erro(campo, msgInvalida != null ? msgInvalida : "\"" + s + "\" não é uma escolha válida.");
     }
 
     /** MaxLengthValidator do CharField (conta code points, como o len() do Python). */
