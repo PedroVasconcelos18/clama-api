@@ -1,6 +1,7 @@
 package me.clama.api.pedido.api;
 
 import io.sentry.Sentry;
+import io.sentry.SentryLevel;
 import jakarta.servlet.http.HttpServletRequest;
 import me.clama.api.catalogo.plano.Plano;
 import me.clama.api.catalogo.plano.PlanoRepository;
@@ -66,10 +67,10 @@ class PedidoGratuitoController {
         });
     }
 
-    private Plano planoGratuito() {
+    Plano planoGratuito() {
         return planos.findFirstByComplexidadeAndVisivelFalseAndAtivoTrueOrderByOrdem("simples_gratuita")
                 .orElseThrow(() -> {
-                    Sentry.captureMessage("Plano freemium (simples_gratuita) ausente");
+                    Sentry.captureMessage("Plano freemium (simples_gratuita) ausente", SentryLevel.ERROR);
                     return new PastoralException(503, "freemium_indisponivel", "Plano freemium não configurado",
                             "Estamos com problemas momentâneos. Tente em alguns minutos.");
                 });

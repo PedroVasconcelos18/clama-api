@@ -86,10 +86,11 @@ class PedidosThrottleTest {
         Long id = jdbc.queryForObject("select id from users_user where email = ''", Long.class);
         ApiDePedidos.Sessao s = api.sessao(tokens.emitirPar(usuarios.findById(id).orElseThrow()).access());
         for (int i = 0; i < 10; i++) {
-            assertThat(api.post("/api/pedidos/", "{}", s, "X-Forwarded-For", "198.51.100." + i).statusCode())
-                    .isEqualTo(400);
+            // o escopo pedidos_create e dividido com /api/pedidos/gratuito/ (400 tambem conta nas duas)
+            String rota = i < 4 ? "/api/pedidos/" : "/api/pedidos/gratuito/";
+            assertThat(api.post(rota, "{}", s, "X-Forwarded-For", "198.51.100." + i).statusCode()).isEqualTo(400);
         }
-        HttpResponse<String> r = api.post("/api/pedidos/", "{}", s);
+        HttpResponse<String> r = api.post("/api/pedidos/gratuito/", "{}", s);
         assertThat(r.statusCode()).isEqualTo(429);
         assertThat(r.body()).containsPattern("Retry after (60|5\\d) seconds\\.");
     }
