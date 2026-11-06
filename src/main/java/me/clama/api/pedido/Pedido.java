@@ -26,6 +26,7 @@ import org.hibernate.annotations.ColumnTransformer;
  * vazio e gravado como token Fernet de "", como o django-encrypted-model-fields).
  */
 @Entity
+@org.hibernate.annotations.DynamicUpdate // so as colunas alteradas: escritores concorrentes e PII cifrada intocada
 @Table(name = "orders_pedido")
 public class Pedido {
     @Id

@@ -177,4 +177,23 @@ class PedidoRepositoryTest {
         assertThatThrownBy(p::marcarComoPago).isInstanceOf(TransicaoInvalida.class);
         assertThat(p.getStatus()).isEqualTo(StatusPedido.PAGO);
     }
+
+    @Test
+    void atualizarSoOStatusNaoReescreveAsColunasCifradas() {
+        Pedido p = novo();
+        p.setTelefone("(11) 99999-8888");
+        p.setCpfCnpj("52998224725");
+        p.setPedidoOracao("Peço oração.");
+        Pedido salvo = repo.saveAndFlush(p);
+        String sql = "SELECT nome,email,telefone,cpf_cnpj,pedido_oracao,oracao_gerada FROM orders_pedido WHERE id=?";
+        Map<String, Object> antes = jdbc.queryForMap(sql, salvo.getId());
+
+        salvo.setStatus(StatusPedido.ENVIADA);
+        repo.saveAndFlush(salvo);
+
+        // Fernet tem IV aleatorio: reescrever a coluna mudaria o token
+        assertThat(jdbc.queryForMap(sql, salvo.getId())).isEqualTo(antes);
+        assertThat(jdbc.queryForObject("SELECT status FROM orders_pedido WHERE id=?", String.class, salvo.getId()))
+                .isEqualTo("enviada");
+    }
 }

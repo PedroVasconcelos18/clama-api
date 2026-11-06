@@ -16,6 +16,7 @@ import me.clama.api.comum.cripto.HashIdentificador;
 
 /** Tabela users_user criada pelo Django; nenhuma mudanca de schema. */
 @Entity
+@org.hibernate.annotations.DynamicUpdate // so as colunas alteradas: escritores concorrentes e PII cifrada intocada
 @Table(name = "users_user")
 @EntityListeners(Usuario.RecalculaHashes.class)
 public class Usuario {
