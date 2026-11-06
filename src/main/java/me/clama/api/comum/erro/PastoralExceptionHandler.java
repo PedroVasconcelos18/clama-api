@@ -7,8 +7,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import me.clama.api.comum.api.CamposDrf;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -46,6 +48,16 @@ public class PastoralExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ResponseEntity<Map<String, String>> jsonInvalido(HttpMessageNotReadableException e) {
         return ResponseEntity.badRequest().body(Map.of("detail", JSON_INVALIDO));
+    }
+
+    /** MethodNotAllowed do DRF. So rota conhecida chega aqui: URL desconhecida continua 404. */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    ResponseEntity<Map<String, String>> metodoNaoPermitido(HttpRequestMethodNotSupportedException e) {
+        var r = ResponseEntity.status(405);
+        if (e.getSupportedHttpMethods() != null) {
+            r.allow(e.getSupportedHttpMethods().toArray(HttpMethod[]::new));
+        }
+        return r.body(Map.of("detail", "Método \"" + e.getMethod() + "\" não é permitido."));
     }
 
     /** Para quem responde fora do Spring MVC (filtros de seguranca). */

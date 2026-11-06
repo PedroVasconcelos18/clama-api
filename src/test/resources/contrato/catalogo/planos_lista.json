@@ -1,0 +1,80 @@
+{
+  "cenario": "planos_lista",
+  "usuarios": [],
+  "dados": {
+    "plans_plan": [
+      {
+        "id": "11111111-1111-4111-8111-000000000001",
+        "nome": "Pedido + Versículo",
+        "valor_centavos": 3000,
+        "descricao": "Descrição de Pedido + Versículo.",
+        "complexidade": "com_versiculo",
+        "ordem": 2,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "11111111-1111-4111-8111-000000000002",
+        "nome": "Pedido de Oração",
+        "valor_centavos": 2000,
+        "descricao": "Descrição de Pedido de Oração.",
+        "complexidade": "simples",
+        "ordem": 1,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "11111111-1111-4111-8111-000000000003",
+        "nome": "Plano Antigo",
+        "valor_centavos": 1500,
+        "descricao": "Descrição de Plano Antigo.",
+        "complexidade": "simples",
+        "ordem": 0,
+        "ativo": false,
+        "visivel": true
+      },
+      {
+        "id": "11111111-1111-4111-8111-000000000004",
+        "nome": "Gratuito",
+        "valor_centavos": 1,
+        "descricao": "Descrição de Gratuito.",
+        "complexidade": "simples_gratuita",
+        "ordem": 9,
+        "ativo": true,
+        "visivel": false
+      }
+    ]
+  },
+  "passos": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/planos/"
+      },
+      "response": {
+        "status": 200,
+        "body": [
+          {
+            "id": "<uuid>",
+            "nome": "Pedido de Oração",
+            "valor_centavos": 2000,
+            "valor_reais_str": "R$ 20,00",
+            "descricao": "Descrição de Pedido de Oração.",
+            "complexidade": "simples",
+            "ordem": 1
+          },
+          {
+            "id": "<uuid>",
+            "nome": "Pedido + Versículo",
+            "valor_centavos": 3000,
+            "valor_reais_str": "R$ 30,00",
+            "descricao": "Descrição de Pedido + Versículo.",
+            "complexidade": "com_versiculo",
+            "ordem": 2
+          }
+        ],
+        "cookies": []
+      }
+    }
+  ]
+}

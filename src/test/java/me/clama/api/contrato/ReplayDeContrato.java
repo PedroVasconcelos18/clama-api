@@ -2,12 +2,17 @@ package me.clama.api.contrato;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.ByteArrayOutputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.sql.PreparedStatement;
+import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,7 +36,7 @@ import tools.jackson.databind.node.NullNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * Reexecuta um cenario gravado do Django (clama-backend/contrato/test_gravar_identidade.py) contra o Java e compara
+ * Reexecuta um cenario gravado do Django (clama-backend/contrato/test_gravar_*.py) contra o Java e compara
  * status, corpo e cookies, normalizados com as regras do contrato/normalizar.py. O jar imita o do test client do
  * Django: cookie apagado fica com valor "" e continua sendo enviado.
  */
@@ -43,6 +48,8 @@ public class ReplayDeContrato {
     private static final Pattern JWT = Pattern.compile("^eyJ[\\w-]*\\.[\\w-]+\\.[\\w-]*$", COMO_PYTHON);
     private static final Pattern TS = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}:\\d{2}", COMO_PYTHON);
     private static final Pattern REFRESH = Pattern.compile("\\{refresh:(.+)\\}", COMO_PYTHON);
+    private static final Pattern UUID = Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+    private static final String FRONTEIRA = "ContratoClamaFronteira";
     private static final Pattern SET_COOKIE = Pattern.compile("\\{set_cookie:(\\d+):(.+)\\}", COMO_PYTHON);
 
     private final JdbcTemplate jdbc;
@@ -71,6 +78,11 @@ public class ReplayDeContrato {
         for (JsonNode u : cenario.path("usuarios")) {
             criarUsuario(u);
         }
+        for (Map.Entry<String, JsonNode> tabela : cenario.path("dados").properties()) {
+            for (JsonNode linha : tabela.getValue()) {
+                inserir(tabela.getKey(), linha);
+            }
+        }
 
         Map<String, String> jar = new LinkedHashMap<>();
         Contexto ctx = new Contexto();
@@ -85,12 +97,20 @@ public class ReplayDeContrato {
             }
 
             String metodo = req.get("method").asString();
-            String corpo = req.has("body") ? JSON.writeValueAsString(req.get("body")) : null;
+            byte[] corpo = null;
+            String tipo = null;
+            if (req.has("body")) {
+                corpo = JSON.writeValueAsBytes(req.get("body"));
+                tipo = "application/json";
+            } else if (req.has("multipart")) {
+                corpo = multipart(req.get("multipart"));
+                tipo = "multipart/form-data; boundary=" + FRONTEIRA;
+            }
             HttpRequest.Builder b = HttpRequest.newBuilder(base.resolve(req.get("path").asString()))
                     .method(metodo, corpo == null ? HttpRequest.BodyPublishers.noBody()
-                            : HttpRequest.BodyPublishers.ofString(corpo));
-            if (corpo != null) {
-                b.header("Content-Type", "application/json");
+                            : HttpRequest.BodyPublishers.ofByteArray(corpo));
+            if (tipo != null) {
+                b.header("Content-Type", tipo);
             }
             for (Map.Entry<String, JsonNode> h : req.path("headers").properties()) {
                 b.header(h.getKey(), resolver(h.getValue().asString(), ctx));
@@ -148,6 +168,48 @@ public class ReplayDeContrato {
         u.setCpfCnpj(d.get("cpf_cnpj").isNull() ? null : d.get("cpf_cnpj").asString());
         u.setTelefone(d.get("telefone").isNull() ? null : d.get("telefone").asString());
         usuarios.saveAndFlush(u);
+    }
+
+    /**
+     * Linha de "dados" (o Model.objects.create do gravador). Valores vao como texto de tipo nao especificado e o
+     * Postgres converte pela coluna (uuid, jsonb, timestamptz...). created_at/updated_at sao o now() da insercao,
+     * como o auto_now do TimestampedModel; clock_timestamp() mantem a ordem de insercao.
+     */
+    private void inserir(String tabela, JsonNode linha) {
+        List<String> colunas = new ArrayList<>();
+        List<String> valores = new ArrayList<>();
+        for (Map.Entry<String, JsonNode> e : linha.properties()) {
+            colunas.add(e.getKey());
+            JsonNode v = e.getValue();
+            valores.add(v.isNull() ? null : v.isString() ? v.asString() : v.toString());
+        }
+        String sql = "INSERT INTO " + tabela + " (" + String.join(", ", colunas) + ", created_at, updated_at) VALUES ("
+                + "?, ".repeat(colunas.size()) + "clock_timestamp(), clock_timestamp())";
+        jdbc.update(c -> {
+            PreparedStatement ps = c.prepareStatement(sql);
+            for (int k = 0; k < valores.size(); k++) {
+                ps.setObject(k + 1, valores.get(k), Types.OTHER);
+            }
+            return ps;
+        });
+    }
+
+    /** _multipart do gravador: {"campos": {...}, "arquivos": [{campo, nome, content_type, conteudo_base64}]}. */
+    private static byte[] multipart(JsonNode m) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        for (Map.Entry<String, JsonNode> c : m.path("campos").properties()) {
+            out.writeBytes(("--" + FRONTEIRA + "\r\nContent-Disposition: form-data; name=\"" + c.getKey() + "\"\r\n\r\n"
+                    + c.getValue().asString() + "\r\n").getBytes(StandardCharsets.UTF_8));
+        }
+        for (JsonNode a : m.path("arquivos")) {
+            out.writeBytes(("--" + FRONTEIRA + "\r\nContent-Disposition: form-data; name=\"" + a.get("campo").asString()
+                    + "\"; filename=\"" + a.get("nome").asString() + "\"\r\nContent-Type: "
+                    + a.get("content_type").asString() + "\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+            out.writeBytes(Base64.getDecoder().decode(a.get("conteudo_base64").asString()));
+            out.writeBytes("\r\n".getBytes(StandardCharsets.UTF_8));
+        }
+        out.writeBytes(("--" + FRONTEIRA + "--\r\n").getBytes(StandardCharsets.UTF_8));
+        return out.toByteArray();
     }
 
     /** _resolver do gravador: {csrf}, {refresh:<email>}, {set_cookie:<passo>:<nome>}. */
@@ -230,6 +292,7 @@ public class ReplayDeContrato {
             if (TS.matcher(valor.asString()).lookingAt()) {
                 return NOS.stringNode("<ts>");
             }
+            return NOS.stringNode(UUID.matcher(valor.asString()).replaceAll("<uuid>"));
         }
         return valor;
     }

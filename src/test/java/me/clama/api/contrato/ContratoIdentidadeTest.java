@@ -66,10 +66,14 @@ class ContratoIdentidadeTest {
         var entrada = m.readTree("""
                 {"id": 7, "outro": {"id": true}, "lista": [{"id": 3}, 4],
                  "csrf_token": "abc", "ts": "2026-11-05 10:00:00 qualquer coisa", "data": "2026-11-05",
-                 "jwt": "eyJa.b-c.", "jwt_nl": "eyJa.b.c\\n", "jwt_cr": "eyJa.b.c\\r", "f": 1.0}""");
+                 "jwt": "eyJa.b-c.", "jwt_nl": "eyJa.b.c\\n", "jwt_cr": "eyJa.b.c\\r", "f": 1.0,
+                 "uuid": "http://x/documents/11111111-1111-4111-8111-00000000000a/a.pdf",
+                 "uuid_maiusculo": "11111111-1111-4111-8111-00000000000A"}""");
         assertThat(ReplayDeContrato.normalizar(entrada, null)).isEqualTo(m.readTree("""
                 {"id": "<id>", "outro": {"id": true}, "lista": [{"id": "<id>"}, 4],
                  "csrf_token": "<csrf>", "ts": "<ts>", "data": "2026-11-05",
-                 "jwt": "<jwt>", "jwt_nl": "<jwt>", "jwt_cr": "eyJa.b.c\\r", "f": 1.0}"""));
+                 "jwt": "<jwt>", "jwt_nl": "<jwt>", "jwt_cr": "eyJa.b.c\\r", "f": 1.0,
+                 "uuid": "http://x/documents/<uuid>/a.pdf",
+                 "uuid_maiusculo": "11111111-1111-4111-8111-00000000000A"}"""));
     }
 }

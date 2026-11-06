@@ -1,0 +1,157 @@
+{
+  "cenario": "instituicoes_admin_lista",
+  "usuarios": [
+    {
+      "email": "admin@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Admin",
+      "is_clama_admin": true,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    }
+  ],
+  "dados": {
+    "instituicoes_instituicao": [
+      {
+        "id": "22222222-2222-4222-8222-000000000001",
+        "nome": "Lar Esperança",
+        "logo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+        "ativo": true,
+        "ordem": 1
+      },
+      {
+        "id": "22222222-2222-4222-8222-000000000002",
+        "nome": "Associação Renal",
+        "logo": "",
+        "ativo": true,
+        "ordem": 0
+      },
+      {
+        "id": "22222222-2222-4222-8222-000000000003",
+        "nome": "Casa Fechada",
+        "logo": "",
+        "ativo": false,
+        "ordem": 0
+      },
+      {
+        "id": "22222222-2222-4222-8222-000000000004",
+        "nome": "Abrigo São José",
+        "logo": "",
+        "ativo": true,
+        "ordem": 0
+      }
+    ]
+  },
+  "passos": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login/",
+        "body": {
+          "email": "admin@exemplo.com",
+          "password": "Clama-forte-2026"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "user": {
+            "id": "<id>",
+            "email": "admin@exemplo.com",
+            "nome_completo": "Admin"
+          }
+        },
+        "cookies": [
+          {
+            "name": "clama_access",
+            "value": "<jwt>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 900
+          },
+          {
+            "name": "clama_refresh",
+            "value": "<jwt>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 604800
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/csrf/"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "csrf_token": "<csrf>"
+        },
+        "cookies": [
+          {
+            "name": "csrftoken",
+            "value": "<csrf>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 31449600
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/instituicoes/"
+      },
+      "response": {
+        "status": 200,
+        "body": [
+          {
+            "id": "<uuid>",
+            "nome": "Abrigo São José",
+            "logo": "",
+            "ativo": true,
+            "ordem": 0,
+            "created_at": "<ts>",
+            "updated_at": "<ts>"
+          },
+          {
+            "id": "<uuid>",
+            "nome": "Associação Renal",
+            "logo": "",
+            "ativo": true,
+            "ordem": 0,
+            "created_at": "<ts>",
+            "updated_at": "<ts>"
+          },
+          {
+            "id": "<uuid>",
+            "nome": "Casa Fechada",
+            "logo": "",
+            "ativo": false,
+            "ordem": 0,
+            "created_at": "<ts>",
+            "updated_at": "<ts>"
+          },
+          {
+            "id": "<uuid>",
+            "nome": "Lar Esperança",
+            "logo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+            "ativo": true,
+            "ordem": 1,
+            "created_at": "<ts>",
+            "updated_at": "<ts>"
+          }
+        ],
+        "cookies": []
+      }
+    }
+  ]
+}

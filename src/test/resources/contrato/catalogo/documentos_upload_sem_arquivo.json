@@ -1,0 +1,127 @@
+{
+  "cenario": "documentos_upload_sem_arquivo",
+  "usuarios": [
+    {
+      "email": "admin@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Admin",
+      "is_clama_admin": true,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    }
+  ],
+  "dados": {
+    "documents_documentocontexto": [
+      {
+        "id": "44444444-4444-4444-8444-000000000001",
+        "nome": "Catecismo",
+        "descricao": "Base doutrinária.",
+        "arquivo": "documents/44444444-4444-4444-8444-000000000001/catecismo.pdf",
+        "tipo_mime": "application/pdf",
+        "tamanho_bytes": 2048,
+        "anthropic_file_id": null,
+        "data_sincronizacao": null,
+        "ativo": false
+      },
+      {
+        "id": "44444444-4444-4444-8444-000000000002",
+        "nome": "Salmos",
+        "descricao": "",
+        "arquivo": "documents/44444444-4444-4444-8444-000000000002/salmos.txt",
+        "tipo_mime": "text/plain",
+        "tamanho_bytes": 512,
+        "anthropic_file_id": "file-abc123",
+        "data_sincronizacao": "2026-11-01T12:00:00+00:00",
+        "ativo": true
+      }
+    ]
+  },
+  "passos": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login/",
+        "body": {
+          "email": "admin@exemplo.com",
+          "password": "Clama-forte-2026"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "user": {
+            "id": "<id>",
+            "email": "admin@exemplo.com",
+            "nome_completo": "Admin"
+          }
+        },
+        "cookies": [
+          {
+            "name": "clama_access",
+            "value": "<jwt>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 900
+          },
+          {
+            "name": "clama_refresh",
+            "value": "<jwt>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 604800
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/csrf/"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "csrf_token": "<csrf>"
+        },
+        "cookies": [
+          {
+            "name": "csrftoken",
+            "value": "<csrf>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 31449600
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/documentos/",
+        "headers": {
+          "X-CSRFToken": "{csrf}"
+        },
+        "multipart": {
+          "campos": {
+            "nome": "Sem arquivo"
+          },
+          "arquivos": []
+        }
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "arquivo": [
+            "Nenhum arquivo foi submetido."
+          ]
+        },
+        "cookies": []
+      }
+    }
+  ]
+}

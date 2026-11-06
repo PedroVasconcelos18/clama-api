@@ -28,6 +28,8 @@ import org.springframework.web.util.ServletRequestPathUtils;
 @Configuration
 public class SegurancaConfig {
     static final String SEM_PERMISSAO = "Você não tem permissão para executar essa ação.";
+    /** MSG_NO_PERMISSION do permission_denied do AdminAPIView/AdminGenericAPIView. */
+    static final String SO_ADMIN = "Esse espaço é só para admins do Clama.";
 
     /** CSRF_COOKIE_PATH=/api, CSRF_COOKIE_HTTPONLY=True, SameSite e idade padrao do Django (1 ano). */
     @Bean
@@ -55,12 +57,12 @@ public class SegurancaConfig {
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((req, resp, ex) ->
                                 PastoralExceptionHandler.escrever(resp, PastoralException.naoAutenticado()))
-                        .accessDeniedHandler((req, resp, ex) ->
-                                PastoralExceptionHandler.escrever(resp, 403, Map.of("detail", SEM_PERMISSAO))))
+                        .accessDeniedHandler((req, resp, ex) -> PastoralExceptionHandler.escrever(resp, 403,
+                                Map.of("detail", req.getRequestURI().startsWith("/api/admin/") ? SO_ADMIN : SEM_PERMISSAO))))
                 // nega por padrao: rota nova sob /api/admin/ ja nasce IsClamaAdmin, sem lista pra manter
                 .authorizeHttpRequests(a -> a
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll() // /error de pedido ja autorizado
-                        .requestMatchers(FiltroJwtCookie.PUBLICAS).permitAll()
+                        .requestMatchers(FiltroJwtCookie.PUBLICAS, FiltroJwtCookie.ABERTAS).permitAll()
                         .requestMatchers(semRota(mapeamentos)).permitAll()
                         .requestMatchers("/api/admin/**").hasAuthority(FiltroJwtCookie.ADMIN)
                         .requestMatchers("/api/customer/**").authenticated()

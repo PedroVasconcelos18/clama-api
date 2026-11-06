@@ -44,6 +44,8 @@ class SegurancaTest {
                     + "Recarregue a página e tente de novo."));
 
     static final Map<String, Object> SEM_PERMISSAO = Map.of("detail", "Você não tem permissão para executar essa ação.");
+    /** MSG_NO_PERMISSION das views admin (gravado em contrato/catalogo/admin_customer_403.json). */
+    static final Map<String, Object> SO_ADMIN = Map.of("detail", "Esse espaço é só para admins do Clama.");
 
     /** Rotas que nao estao em lista nenhuma: a protecao tem que vir so do prefixo. */
     @RestController
@@ -107,7 +109,7 @@ class SegurancaTest {
         assertThat(corpo(anonimo)).isEqualTo(NAO_AUTENTICADO);
         HttpResponse<String> cliente = chamar("GET", "/api/admin/teste/", "Cookie", "clama_access=" + access());
         assertThat(cliente.statusCode()).isEqualTo(403);
-        assertThat(corpo(cliente)).isEqualTo(SEM_PERMISSAO);
+        assertThat(corpo(cliente)).isEqualTo(SO_ADMIN);
         String admin = "clama_access=" + tokens.emitirPar(usuario(true)).access();
         assertThat(chamar("GET", "/api/admin/teste/", "Cookie", admin).statusCode()).isEqualTo(200);
     }
@@ -130,6 +132,8 @@ class SegurancaTest {
         }
         // metodo errado numa rota que existe nao conta como "sem rota": anonimo continua barrado
         assertThat(chamar("GET", "/api/customer/auth/logout/").statusCode()).isEqualTo(401);
+        // e o 405 so vale pra rota que existe: metodo qualquer em URL desconhecida segue 404
+        assertThat(chamar("DELETE", "/api/admin/nao-existe/").statusCode()).isEqualTo(404);
     }
 
     /** GET /api/csrf/ e devolve {token, cookie csrftoken}. */

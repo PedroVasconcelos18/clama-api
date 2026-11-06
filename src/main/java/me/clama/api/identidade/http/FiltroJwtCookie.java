@@ -34,6 +34,12 @@ public class FiltroJwtCookie extends OncePerRequestFilter {
             "/api/admin/auth/refresh/", "/api/customer/auth/login/", "/api/customer/auth/refresh/");
     /** Unica fonte das rotas publicas: o filtro nao autentica nelas e o SegurancaConfig as libera. */
     static final RequestMatcher PUBLICAS = req -> ROTAS_PUBLICAS.contains(req.getRequestURI());
+    /**
+     * AllowAny com a autenticacao padrao do DRF: o SegurancaConfig libera, mas o filtro roda (cookie invalido da 401,
+     * como no Django, e logado nao conta no limite anonimo).
+     */
+    private static final Set<String> ROTAS_ABERTAS = Set.of("/api/planos/", "/api/instituicoes/");
+    static final RequestMatcher ABERTAS = req -> ROTAS_ABERTAS.contains(req.getRequestURI());
     /** IsClamaAdmin. */
     static final String ADMIN = "ADMIN";
     private static final Set<String> METODOS_SEGUROS = Set.of("GET", "HEAD", "OPTIONS", "TRACE");
