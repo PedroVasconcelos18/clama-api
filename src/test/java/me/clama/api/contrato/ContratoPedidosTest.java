@@ -78,9 +78,12 @@ class ContratoPedidosTest {
     static Stream<Named<Path>> cenarios() throws Exception {
         try (Stream<Path> s = Files.list(CENARIOS)) {
             List<Path> lista = s.filter(p -> p.toString().endsWith(".json")).sorted().toList();
-            return lista.stream().filter(p -> grupo(p, LIGADOS))
-                    .filter(p -> !List.of(MINIMO_5000, BACKEND_HTTP).contains(p.getFileName().toString()))
-                    .map(p -> Named.of(p.getFileName().toString(), p));
+            List<Path> rodam = lista.stream().filter(p -> grupo(p, LIGADOS))
+                    .filter(p -> !List.of(MINIMO_5000, BACKEND_HTTP).contains(p.getFileName().toString())).toList();
+            // guarda: 41 gravados = 39 aqui + 2 nas classes aninhadas; fonte vazia ou incompleta nao passa calada
+            assertThat(lista).hasSize(41);
+            assertThat(rodam).hasSize(39);
+            return rodam.stream().map(p -> Named.of(p.getFileName().toString(), p));
         }
     }
 
@@ -97,7 +100,7 @@ class ContratoPedidosTest {
         }
     }
 
-    @ParameterizedTest(name = "{0}", allowZeroInvocations = true)
+    @ParameterizedTest(name = "{0}")
     @MethodSource("cenarios")
     void cenario(Path json) throws Exception {
         replay().executar(json, URI.create("http://localhost:" + porta));

@@ -60,7 +60,11 @@ class ContratoCatalogoTest {
     static Stream<Named<Path>> cenarios() throws Exception {
         try (Stream<Path> s = Files.list(CENARIOS)) {
             List<Path> lista = s.filter(p -> p.toString().endsWith(".json")).sorted().toList();
-            return lista.stream().filter(p -> grupo(p, LIGADOS)).map(p -> Named.of(p.getFileName().toString(), p));
+            List<Path> rodam = lista.stream().filter(p -> grupo(p, LIGADOS)).toList();
+            // guarda: todo cenario gravado roda (35 arquivos); fonte vazia ou incompleta nao passa calada
+            assertThat(lista).hasSize(35);
+            assertThat(rodam).hasSameSizeAs(lista);
+            return rodam.stream().map(p -> Named.of(p.getFileName().toString(), p));
         }
     }
 
