@@ -25,6 +25,11 @@ public class ModelosDeEmail {
         this.loginUrl = base.replaceAll("/+$", "") + "/login";
     }
 
+    /** {FRONTEND_BASE_URL or FRONTEND_URL or http://localhost:5173}/login, como as tasks do Django montam. */
+    public String loginUrl() {
+        return loginUrl;
+    }
+
     public Email oracao(String para, String nome, String oracao) {
         oracao = n(oracao);
         String primeiro = primeiroNome(nome);

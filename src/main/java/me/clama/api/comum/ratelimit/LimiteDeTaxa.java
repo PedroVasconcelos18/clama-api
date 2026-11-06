@@ -29,6 +29,11 @@ public @interface LimiteDeTaxa {
         EMAIL_DO_USUARIO
     }
 
+    /** throttle_classes = []: fora ate do limite anonimo (ex.: webhook, que o provedor reenvia legitimamente). */
+    @Target(ElementType.METHOD)
+    @Retention(RetentionPolicy.RUNTIME)
+    @interface Nenhum {}
+
     @Target(ElementType.METHOD)
     @Retention(RetentionPolicy.RUNTIME)
     @interface Varios {

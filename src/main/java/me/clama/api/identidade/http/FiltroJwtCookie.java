@@ -32,7 +32,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 public class FiltroJwtCookie extends OncePerRequestFilter {
     private static final Set<String> ROTAS_PUBLICAS = Set.of("/api/health/", "/api/csrf/", "/api/admin/auth/login/",
-            "/api/admin/auth/refresh/", "/api/customer/auth/login/", "/api/customer/auth/refresh/");
+            "/api/admin/auth/refresh/", "/api/customer/auth/login/", "/api/customer/auth/refresh/",
+            // webhook do MP: autenticado pela assinatura (AssinaturaMercadoPago), sem cookie nem CSRF
+            "/api/webhooks/mercadopago/");
     /** Unica fonte das rotas publicas: o filtro nao autentica nelas e o SegurancaConfig as libera. */
     static final RequestMatcher PUBLICAS = req -> ROTAS_PUBLICAS.contains(req.getRequestURI());
     /**

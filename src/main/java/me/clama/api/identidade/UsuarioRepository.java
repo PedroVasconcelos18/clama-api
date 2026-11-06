@@ -11,6 +11,10 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     @Query("select u from Usuario u where lower(u.email) = lower(?1)")
     List<Usuario> buscarPorEmailIgnorandoCaixa(String email);
 
+    /** User.objects.filter(Q(email__iexact=email) | Q(email_hash=hash)), na ordem do .first(). */
+    @Query("select u from Usuario u where lower(u.email) = lower(?1) or u.emailHash = ?2 order by u.id")
+    List<Usuario> buscarPorEmailOuHash(String email, String emailHash);
+
     /** select_for_update().get(pk=...). */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from Usuario u where u.id = ?1")

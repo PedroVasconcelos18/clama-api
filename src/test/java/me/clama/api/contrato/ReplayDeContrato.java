@@ -22,6 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -101,7 +102,8 @@ public class ReplayDeContrato {
         /** "senhas_temporarias" do cenario, em texto claro. */
         void guardarSenha(String chave, String senha);
 
-        boolean senhaExiste(String chave);
+        /** A senha em texto claro, se ainda estiver no cache. */
+        Optional<String> senha(String chave);
     }
 
     /** tabelas: as que o cenario toca, truncadas (CASCADE) antes de cada execucao, como o User.objects.all().delete(). */
@@ -262,8 +264,16 @@ public class ReplayDeContrato {
             ArrayNode obtidas = NOS.arrayNode();
             for (Long id : jdbc.queryForList("SELECT id FROM users_user ORDER BY id", Long.class)) {
                 for (String chave : List.of("doador:temp_password:" + id, "freemium:temp_password:" + id)) {
-                    if (ganchos.senhaExiste(chave)) {
+                    Optional<String> senha = ganchos.senha(chave);
+                    if (senha.isPresent()) {
                         obtidas.add(chave);
+                        // a senha que o app guardou (nao a semeada pelo cenario) tem de ser a do hash gravado
+                        if (!cenario.path("senhas_temporarias").has(chave)) {
+                            String hash = jdbc.queryForObject("SELECT password FROM users_user WHERE id = ?",
+                                    String.class, id);
+                            assertThat(senhas.matches(senha.get(), hash))
+                                    .as("%s: %s confere com o hash do usuario", arquivo, chave).isTrue();
+                        }
                     }
                 }
             }

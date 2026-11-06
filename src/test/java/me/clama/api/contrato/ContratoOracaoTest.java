@@ -65,9 +65,10 @@ class ContratoOracaoTest {
     /** Gravados (os .json da pasta). */
     static final int GRAVADOS = 37;
     /** Grupos ligados, por prefixo do arquivo. Cada task move o seu prefixo de PENDENTES para LIGADOS. */
-    static final List<String> LIGADOS = List.of("job_gerar_", "job_enviar_", "job_alerta_");
+    static final List<String> LIGADOS = List.of("job_gerar_", "job_enviar_", "job_alerta_", "webhook_",
+            "job_boas_vindas_");
     /** Gravados mas ainda sem implementacao. */
-    static final List<String> PENDENTES = List.of("webhook_", "gratuito_", "job_boas_vindas_");
+    static final List<String> PENDENTES = List.of("gratuito_");
     static final List<String> TABELAS = List.of("users_user", "token_blacklist_outstandingtoken",
             "token_blacklist_blacklistedtoken", "plans_plan", "instituicoes_instituicao", "orders_pedido",
             "prompts_prompttemplate", "documents_documentocontexto", "instituicoes_repasse", "payments_webhookevento",
@@ -212,8 +213,8 @@ class ContratoOracaoTest {
             }
 
             @Override
-            public boolean senhaExiste(String chave) {
-                return senhas.ler(chave).isPresent();
+            public java.util.Optional<String> senha(String chave) {
+                return senhas.ler(chave);
             }
         };
     }

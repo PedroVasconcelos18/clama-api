@@ -1,0 +1,79 @@
+package me.clama.api.pagamento.webhook;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
+
+/**
+ * verificar_assinatura_webhook (payments/services/mercadopago_client.py:246-284). Vetores do Python do clama-backend:
+ *
+ * <pre>
+ * cd clama-backend && .venv/bin/python -c "
+ * import hmac,hashlib
+ * def s(sec,did,rid,ts): return hmac.new(sec.encode(), f'id:{did.lower()};request-id:{rid};ts:{ts};'.encode(),
+ *     hashlib.sha256).hexdigest()
+ * print(s('segredo-webhook-contrato','1325814423','req-contrato-1','1762434000'))  # 22493a9b...
+ * print(s('segredo-webhook-contrato','ABC123def','req-contrato-1','1762434000'))   # 37d1947b...
+ * print(s('segredo-webhook-contrato','1325814423','','1762434000'))                # 25c3ae0d...
+ * "
+ * </pre>
+ *
+ * Os casos de borda (espacos, maiusculas, query duplicada ou codificada, v1 nao-ASCII, segredo vazio) foram conferidos
+ * na funcao real do Django com RequestFactory (PYTHONPATH=. DJANGO_SETTINGS_MODULE=config.settings.test).
+ */
+class AssinaturaMercadoPagoTest {
+    static final String SEGREDO = "segredo-webhook-contrato";
+    static final String OK = "22493a9bb460d826f1fa62511c08c35fa6b1aa5699085cc1015e2c6afe23aceb";
+    static final String MAIUSCULAS = "37d1947b84124d13a7c35a5e5925b69cb68a03c0f24fdc8433924737ff0992ad";
+    static final String SEM_REQUEST_ID = "25c3ae0db2d721b1ab10603f97364519f2b0c0ea0ab329f28429c6bf72a822b2";
+
+    static boolean valida(String query, String requestId, String assinatura) {
+        return AssinaturaMercadoPago.valida(SEGREDO, query, requestId, assinatura);
+    }
+
+    @Test
+    void vetorGravado() {
+        assertThat(valida("data.id=1325814423&type=payment", "req-contrato-1", "ts=1762434000,v1=" + OK)).isTrue();
+    }
+
+    @Test
+    void dataIdEntraEmMinusculas() {
+        assertThat(valida("data.id=ABC123def", "req-contrato-1", "ts=1762434000,v1=" + MAIUSCULAS)).isTrue();
+    }
+
+    @Test
+    void semRequestIdEntraVazio() {
+        assertThat(valida("data.id=1325814423", null, "ts=1762434000,v1=" + SEM_REQUEST_ID)).isTrue();
+        assertThat(valida("data.id=1325814423", null, "ts=1762434000,v1=" + OK)).isFalse();
+    }
+
+    @Test
+    void partesComEspacosEUltimaChaveVence() {
+        assertThat(valida("data.id=1325814423", "req-contrato-1", " ts=1762434000 , v1=" + OK + " ")).isTrue();
+        assertThat(valida("data.id=1325814423", "req-contrato-1", "ts=1,ts=1762434000,v1=" + OK)).isTrue();
+    }
+
+    @Test
+    void queryComoODjango() {
+        // QueryDict.get: o ultimo valor; chave e valor decodificados
+        assertThat(valida("data.id=999&data.id=1325814423", "req-contrato-1", "ts=1762434000,v1=" + OK)).isTrue();
+        assertThat(valida("data%2Eid=13258%314423", "req-contrato-1", "ts=1762434000,v1=" + OK)).isTrue();
+    }
+
+    @Test
+    void recusa() {
+        assertThat(valida("data.id=1325814423", "req-contrato-1", "ts=1762434000,v1=" + OK.toUpperCase()))
+                .as("v1 comparado exato").isFalse();
+        assertThat(valida("data.id=1325814423", "req-contrato-1", "ts=1762434000,v1=é" + OK.substring(1)))
+                .as("v1 nao-ASCII").isFalse();
+        assertThat(valida("data.id=1325814423", "req-contrato-2", "ts=1762434000,v1=" + OK)).isFalse();
+        assertThat(valida("data.id=1325814423", "req-contrato-1", "ts=1762434001,v1=" + OK)).isFalse();
+        assertThat(valida("data.id=1325814423", "req-contrato-1", "ts=1762434000")).as("sem v1").isFalse();
+        assertThat(valida("data.id=1325814423", "req-contrato-1", "v1=" + OK)).as("sem ts").isFalse();
+        assertThat(valida("data.id=1325814423", "req-contrato-1", null)).as("sem header").isFalse();
+        assertThat(valida("type=payment", "req-contrato-1", "ts=1762434000,v1=" + OK)).as("sem data.id").isFalse();
+        assertThat(valida(null, "req-contrato-1", "ts=1762434000,v1=" + OK)).as("sem query").isFalse();
+        assertThat(AssinaturaMercadoPago.valida("", "data.id=1325814423", "req-contrato-1", "ts=1762434000,v1=" + OK))
+                .as("segredo vazio").isFalse();
+    }
+}

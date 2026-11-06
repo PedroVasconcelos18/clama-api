@@ -43,7 +43,8 @@ public class InterceptorDeTaxa implements HandlerInterceptor, WebMvcConfigurer {
     @Override
     public boolean preHandle(HttpServletRequest req, HttpServletResponse resp, Object handler) {
         // so o dispatch original: o /error de um 404 nao e view do DRF e nao pode gastar cota
-        if (req.getDispatcherType() != DispatcherType.REQUEST || !(handler instanceof HandlerMethod metodo)) {
+        if (req.getDispatcherType() != DispatcherType.REQUEST || !(handler instanceof HandlerMethod metodo)
+                || metodo.hasMethodAnnotation(LimiteDeTaxa.Nenhum.class)) {
             return true;
         }
         Usuario usuario = usuarioLogado();
