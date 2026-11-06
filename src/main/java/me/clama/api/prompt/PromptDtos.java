@@ -1,7 +1,7 @@
 package me.clama.api.prompt;
 
 import java.util.UUID;
-import me.clama.api.identidade.api.UsuarioDtos;
+import me.clama.api.comum.api.DatasDrf;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -16,7 +16,7 @@ public final class PromptDtos {
         static Admin de(PromptTemplate p) {
             return new Admin(p.getId(), p.getNome(), p.getVersao(), p.getSystemPrompt(),
                     JSON.readTree(p.getInstrucoesPorComplexidade()), p.isAtivo(),
-                    UsuarioDtos.dataHora(p.getCreatedAt()), UsuarioDtos.dataHora(p.getUpdatedAt()));
+                    DatasDrf.dataHora(p.getCreatedAt()), DatasDrf.dataHora(p.getUpdatedAt()));
         }
     }
 

@@ -1,7 +1,7 @@
 package me.clama.api.catalogo.instituicao;
 
 import java.util.UUID;
-import me.clama.api.identidade.api.UsuarioDtos;
+import me.clama.api.comum.api.DatasDrf;
 
 /** InstituicaoSerializer (publico) e AdminInstituicaoSerializer. */
 public final class InstituicaoDtos {
@@ -17,7 +17,7 @@ public final class InstituicaoDtos {
             String updated_at) {
         static Admin de(Instituicao i) {
             return new Admin(i.getId(), i.getNome(), i.getLogo(), i.isAtivo(), i.getOrdem(),
-                    UsuarioDtos.dataHora(i.getCreatedAt()), UsuarioDtos.dataHora(i.getUpdatedAt()));
+                    DatasDrf.dataHora(i.getCreatedAt()), DatasDrf.dataHora(i.getUpdatedAt()));
         }
     }
 

@@ -2,7 +2,7 @@ package me.clama.api.catalogo.plano;
 
 import java.util.UUID;
 import me.clama.api.comum.Dinheiro;
-import me.clama.api.identidade.api.UsuarioDtos;
+import me.clama.api.comum.api.DatasDrf;
 
 /** PlanSerializer (publico) e AdminPlanSerializer. */
 public final class PlanoDtos {
@@ -22,8 +22,8 @@ public final class PlanoDtos {
         static Admin de(Plano p) {
             return new Admin(p.getId(), p.getNome(), p.getValorCentavos(),
                     Dinheiro.centavosParaReaisStr(p.getValorCentavos()), p.getDescricao(), p.getComplexidade(),
-                    p.getOrdem(), p.isAtivo(), UsuarioDtos.dataHora(p.getCreatedAt()),
-                    UsuarioDtos.dataHora(p.getUpdatedAt()));
+                    p.getOrdem(), p.isAtivo(), DatasDrf.dataHora(p.getCreatedAt()),
+                    DatasDrf.dataHora(p.getUpdatedAt()));
         }
     }
 

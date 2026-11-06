@@ -5,7 +5,7 @@ import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.util.HexFormat;
 import java.util.UUID;
-import me.clama.api.identidade.api.UsuarioDtos;
+import me.clama.api.comum.api.DatasDrf;
 
 /** AdminDocumentoContextoSerializer (detalhe, com arquivo) e AdminDocumentoContextoListSerializer (lista). */
 public final class DocumentoDtos {
@@ -18,8 +18,8 @@ public final class DocumentoDtos {
         static Detalhe de(DocumentoContexto d, String base) {
             return new Detalhe(d.getId(), d.getNome(), d.getDescricao(), url(base, d.getArquivo()), d.getTipoMime(),
                     d.getTamanhoBytes(), tamanhoFormatado(d.getTamanhoBytes()), d.getAnthropicFileId(),
-                    UsuarioDtos.dataHora(d.getDataSincronizacao()), d.isAtivo(), d.sincronizado(),
-                    UsuarioDtos.dataHora(d.getCreatedAt()), UsuarioDtos.dataHora(d.getUpdatedAt()));
+                    DatasDrf.dataHora(d.getDataSincronizacao()), d.isAtivo(), d.sincronizado(),
+                    DatasDrf.dataHora(d.getCreatedAt()), DatasDrf.dataHora(d.getUpdatedAt()));
         }
     }
 
@@ -29,8 +29,8 @@ public final class DocumentoDtos {
         static Lista de(DocumentoContexto d) {
             return new Lista(d.getId(), d.getNome(), d.getDescricao(), d.getTipoMime(), d.getTamanhoBytes(),
                     tamanhoFormatado(d.getTamanhoBytes()), d.getAnthropicFileId(),
-                    UsuarioDtos.dataHora(d.getDataSincronizacao()), d.isAtivo(), d.sincronizado(),
-                    UsuarioDtos.dataHora(d.getCreatedAt()), UsuarioDtos.dataHora(d.getUpdatedAt()));
+                    DatasDrf.dataHora(d.getDataSincronizacao()), d.isAtivo(), d.sincronizado(),
+                    DatasDrf.dataHora(d.getCreatedAt()), DatasDrf.dataHora(d.getUpdatedAt()));
         }
     }
 

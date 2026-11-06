@@ -178,9 +178,9 @@ class AuthCustomerTest {
 
     @Test
     void dataHoraComoODateTimeFieldDoDrf() {
-        assertThat(UsuarioDtos.dataHora(OffsetDateTime.parse("2026-05-08T13:00:00Z")))
+        assertThat(me.clama.api.comum.api.DatasDrf.dataHora(OffsetDateTime.parse("2026-05-08T13:00:00Z")))
                 .isEqualTo("2026-05-08T10:00:00-03:00");
-        assertThat(UsuarioDtos.dataHora(OffsetDateTime.parse("2026-05-08T13:00:00.0405Z")))
+        assertThat(me.clama.api.comum.api.DatasDrf.dataHora(OffsetDateTime.parse("2026-05-08T13:00:00.0405Z")))
                 .isEqualTo("2026-05-08T10:00:00.040500-03:00");
     }
 

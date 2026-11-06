@@ -1,15 +1,11 @@
 package me.clama.api.identidade.api;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
+import static me.clama.api.comum.api.DatasDrf.dataHora;
+
 import me.clama.api.identidade.Usuario;
 
 /** Payloads dos serializers do Django (clama_backend/users/api/serializers.py). */
 public final class UsuarioDtos {
-    private static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo"); // TIME_ZONE do Django
-    private static final DateTimeFormatter SEGUNDOS = DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss");
-
     private UsuarioDtos() {}
 
     /** AdminUserSerializer. */
@@ -31,16 +27,6 @@ public final class UsuarioDtos {
     }
 
     public record Login<T>(T user) {}
-
-    /** DateTimeField do DRF: fuso local + isoformat() do Python (micro so se houver, "+00:00" vira "Z"). */
-    public static String dataHora(OffsetDateTime t) {
-        if (t == null) {
-            return null;
-        }
-        OffsetDateTime local = t.atZoneSameInstant(FUSO).toOffsetDateTime();
-        int micro = local.getNano() / 1000;
-        return local.format(SEGUNDOS) + (micro == 0 ? "" : String.format(".%06d", micro)) + local.getOffset().getId();
-    }
 
     private static String vazioSeNulo(String s) {
         return s == null ? "" : s;
