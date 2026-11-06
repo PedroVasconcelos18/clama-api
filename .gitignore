@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### uploads locais (clama.media-root, MEDIA_ROOT do Django) ###
+/media/
