@@ -5,6 +5,7 @@ import io.sentry.SentryLevel;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import me.clama.api.comum.fila.Fila;
 import me.clama.api.comum.ratelimit.LimiteDeTaxa;
@@ -44,6 +45,12 @@ import tools.jackson.databind.node.ObjectNode;
 class WebhookMercadoPagoController {
     private static final Logger LOG = LoggerFactory.getLogger(WebhookMercadoPagoController.class);
     private static final ObjectMapper JSON = new ObjectMapper();
+    /**
+     * 4xx do GET do pagamento tratados como 5xx (decisao do controlador, fix 1 da tarefa 5): 408 e 429 passam, e
+     * 401/403 (token errado ou trocado) se corrigem com config. Ignorar descartaria para sempre um pagamento aprovado.
+     * O Django retenta 429 no SDK e acaba em 500; 401/403 la descartam o pagamento em silencio, aqui nao.
+     */
+    static final Set<Integer> TRANSIENTES = Set.of(401, 403, 408, 429);
 
     private final WebhookEventoRepository eventos;
     private final MercadoPago mercadoPago;
@@ -106,8 +113,8 @@ class WebhookMercadoPagoController {
             pagamento = mercadoPago.buscarPagamento(dataId);
         } catch (ErroDoProvedor e) {
             Integer upstream = e.upstreamStatus();
-            if (upstream != null && upstream >= 400 && upstream < 500) {
-                // 4xx nao e transiente (token errado, pagamento inexistente): 200, sem loop de reenvio
+            if (upstream != null && upstream >= 400 && upstream < 500 && !TRANSIENTES.contains(upstream)) {
+                // 4xx (pagamento inexistente, requisicao recusada) nao e transiente: 200, sem loop de reenvio
                 eventos.marcarIgnorado(evento.id(), "fetch 4xx do Mercado Pago: " + upstream);
                 Sentry.captureMessage("Mercado Pago webhook: fetch 4xx (config/credencial ou pagamento inexistente)",
                         SentryLevel.ERROR);
@@ -115,7 +122,7 @@ class WebhookMercadoPagoController {
                         + "external_event_id={}, upstream_status={})", externalId, upstream);
                 return status("ignored");
             }
-            // 5xx/rede: linha reprocessavel e 500 (o MP reenvia)
+            // 5xx/rede e os 4xx de TRANSIENTES: linha reprocessavel e 500 (o MP reenvia)
             eventos.marcarErro(evento.id(), ate2000(mensagem(e)));
             Sentry.captureException(e);
             LOG.warn("Mercado Pago webhook: payment fetch failed (event=mercadopago_webhook_fetch_failed, "
@@ -166,7 +173,11 @@ class WebhookMercadoPagoController {
         p.marcarComoPago();
         repasse.registrar(p);
         ProvisionamentoDeConta.Conta conta = provisionamento.provisionarOuVincular(p);
-        eventos.marcarProcessado(evento.id(), p.getId());
+        if (!eventos.marcarProcessado(evento.id(), p.getId())) {
+            LOG.warn("Mercado Pago webhook: evento ja terminal ao marcar processado (copia paralela) "
+                    + "(event=mercadopago_webhook_mark_processed_skipped, webhook_evento_id={}, pedido_id={})",
+                    evento.id(), p.getId());
+        }
         fila.enfileirar(gerar, JobGerarOracao.instancia(p.getId()), p.getId());
         // credenciais so quando a conta nasceu aqui; no vinculo o recibo e a propria oracao
         if (conta.criada()) {

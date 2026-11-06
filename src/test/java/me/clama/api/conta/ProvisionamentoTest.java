@@ -172,4 +172,13 @@ class ProvisionamentoTest {
         assertThat(dono(a)).isEqualTo(id);
         assertThat(dono(b)).isEqualTo(id);
     }
+
+    /** Sem transacao o vinculo nunca seria gravado e a senha ficaria sem dono: recusa, como o Fila.enfileirar. */
+    @Test
+    void exigeTransacao() {
+        Pedido p = pedidos.findById(pedido("sem-tx@exemplo.com")).orElseThrow();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> provisionamento.provisionarOuVincular(p))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("transacao");
+        assertThat(usuarios.count()).isZero();
+    }
 }

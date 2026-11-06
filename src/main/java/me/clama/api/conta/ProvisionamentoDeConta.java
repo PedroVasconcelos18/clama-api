@@ -50,6 +50,9 @@ public class ProvisionamentoDeConta {
 
     /** Exige transacao ativa e o pedido gerenciado (o vinculo vai no flush do commit). */
     public Conta provisionarOuVincular(Pedido p) {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
+            throw new IllegalStateException("ProvisionamentoDeConta exige transacao ativa (pedido " + p.getId() + ")");
+        }
         if (p.getUser() != null) {
             LOG.info("Provisionamento de doador ignorado — pedido já vinculado "
                     + "(event=doador_provisionamento_ja_vinculado, pedido_id={})", p.getId());

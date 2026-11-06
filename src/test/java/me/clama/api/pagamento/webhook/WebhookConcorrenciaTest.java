@@ -48,6 +48,8 @@ class WebhookConcorrenciaTest {
     static final String PAGAMENTO = "1325814423";
     static final ObjectMapper JSON = new ObjectMapper();
     static volatile UUID pedidoDoPagamento;
+    /** Status de erro das proximas respostas do GET (uma por chamada); vazia = aprovado. */
+    static final java.util.Queue<Integer> FALHAS = new java.util.concurrent.ConcurrentLinkedQueue<>();
     static final HttpServer MP;
 
     static {
@@ -59,6 +61,16 @@ class WebhookConcorrenciaTest {
                     Thread.sleep(300); // as notificacoes chegam ao lock do pedido juntas
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                }
+                Integer falha = FALHAS.poll();
+                if (falha != null) {
+                    byte[] erro = ("{\"message\": \"erro " + falha + "\", \"status\": " + falha + ", \"cause\": []}")
+                            .getBytes(StandardCharsets.UTF_8);
+                    ex.getResponseHeaders().add("Content-Type", "application/json");
+                    ex.sendResponseHeaders(falha, erro.length);
+                    ex.getResponseBody().write(erro);
+                    ex.close();
+                    return;
                 }
                 byte[] corpo = ("{\"id\": " + PAGAMENTO + ", \"status\": \"approved\", \"external_reference\": \""
                         + pedidoDoPagamento + "\"}").getBytes(StandardCharsets.UTF_8);
@@ -100,6 +112,7 @@ class WebhookConcorrenciaTest {
         jdbc.execute("TRUNCATE users_user, plans_plan, instituicoes_instituicao, orders_pedido, instituicoes_repasse, "
                 + "payments_webhookevento, scheduled_tasks RESTART IDENTITY CASCADE");
         senhas.limpar();
+        FALHAS.clear();
         UUID plano = UUID.randomUUID();
         UUID instituicao = UUID.randomUUID();
         pedidoDoPagamento = UUID.randomUUID();
@@ -234,5 +247,40 @@ class WebhookConcorrenciaTest {
             assertThat(r.statusCode()).as("notificacao %d: %s", i, r.body()).isEqualTo(200);
             assertThat(r.body()).isEqualTo("{\"status\":\"ignored\"}");
         }
+    }
+
+    /**
+     * GET do pagamento com 429 (limite), 401/403 (token errado ou trocado) ou 408: transiente, nao "pagamento
+     * inexistente". ERRO reprocessavel e 500 fetch_failed, para o MP reenviar; o reenvio depois da recuperacao processa.
+     * (Decisao do controlador: o Django retenta 429 no SDK e termina em 500; 401/403 la descartam o pagamento.)
+     */
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {429, 401, 403, 408})
+    void fetchTransienteMarcaErroEOReenvioProcessa(int status) throws Exception {
+        FALHAS.add(status);
+        HttpResponse<String> r = notificar(1);
+        assertThat(r.statusCode()).as(r.body()).isEqualTo(500);
+        assertThat(r.body()).isEqualTo("{\"error\":{\"code\":\"fetch_failed\",\"message\":\"Payment fetch failed\"}}");
+        assertThat(jdbc.queryForObject("select status from payments_webhookevento", String.class)).isEqualTo("ERRO");
+        assertThat(jdbc.queryForObject("select status from orders_pedido", String.class))
+                .isEqualTo("aguardando_pagamento");
+
+        assertThat(notificar(1).body()).isEqualTo("{\"status\":\"ok\"}");
+        assertThat(jdbc.queryForObject("select status from payments_webhookevento", String.class))
+                .isEqualTo("PROCESSADO");
+        assertThat(jdbc.queryForObject("select status from orders_pedido", String.class)).isEqualTo("pago");
+        assertThat(contar("select count(*) from instituicoes_repasse")).isEqualTo(1);
+    }
+
+    /** 404 (pagamento inexistente) e outros 4xx seguem terminais: IGNORADO e 200, o reenvio nao reprocessa. */
+    @Test
+    void fetch404Ignora() throws Exception {
+        FALHAS.add(404);
+        assertThat(notificar(1).body()).isEqualTo("{\"status\":\"ignored\"}");
+        assertThat(jdbc.queryForObject("select error_message from payments_webhookevento", String.class))
+                .isEqualTo("fetch 4xx do Mercado Pago: 404");
+        assertThat(notificar(1).body()).isEqualTo("{\"status\":\"already_processed\"}");
+        assertThat(jdbc.queryForObject("select status from orders_pedido", String.class))
+                .isEqualTo("aguardando_pagamento");
     }
 }
