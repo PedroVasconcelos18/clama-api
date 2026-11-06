@@ -36,8 +36,12 @@ public class SistemaController {
 			LOG.warn("Health: SELECT 1 falhou", e);
 			banco = "error";
 		}
-		return Map.of("status", "ok", "version", "0.1.0", "database", banco,
-				"timestamp", Instant.now().toString());
+		var corpo = new java.util.LinkedHashMap<String, String>();
+		corpo.put("status", "ok");
+		corpo.put("version", "0.1.0");
+		corpo.put("timestamp", Instant.now().toString());
+		corpo.put("database", banco);
+		return corpo;
 	}
 
 	/**

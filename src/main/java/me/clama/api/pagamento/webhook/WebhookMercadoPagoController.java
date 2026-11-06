@@ -84,7 +84,7 @@ class WebhookMercadoPagoController {
         if (idNotificacao == null || idNotificacao.isNull()) {
             LOG.warn("Mercado Pago webhook: missing notification id (event=mercadopago_webhook_invalid, "
                     + "reason=missing_id)");
-            return ResponseEntity.badRequest().body(Map.of("error", Map.of("code", "invalid_payload", "message",
+            return ResponseEntity.badRequest().body(Map.of("error", erroOrdenado("invalid_payload",
                     "Missing notification id")));
         }
         String externalId = texto(idNotificacao);
@@ -232,6 +232,14 @@ class WebhookMercadoPagoController {
     }
 
     private static ResponseEntity<Map<String, Object>> erro500(String code, String message) {
-        return ResponseEntity.internalServerError().body(Map.of("error", Map.of("code", code, "message", message)));
+        return ResponseEntity.internalServerError().body(Map.of("error", erroOrdenado(code, message)));
+    }
+
+    /** Map.of tem ordem salgada por JVM; o Django emite code antes de message. */
+    private static Map<String, String> erroOrdenado(String code, String message) {
+        var m = new java.util.LinkedHashMap<String, String>();
+        m.put("code", code);
+        m.put("message", message);
+        return m;
     }
 }
