@@ -104,7 +104,7 @@
       "response": {
         "status": 200,
         "body": {
-          "id": "<uuid>",
+          "id": "33333333-3333-4333-8333-000000000001",
           "nome": "pastoral",
           "versao": 1,
           "system_prompt": "Você é o Clama.",

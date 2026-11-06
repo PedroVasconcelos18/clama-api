@@ -60,6 +60,31 @@ class ContratoIdentidadeTest {
                 .executar(json, URI.create("http://localhost:" + porta));
     }
 
+    /** O gravador so troca por <uuid> o UUID gerado; o fixo do cenario (dados e requests) e comparado de verdade. */
+    @Test
+    void uuidFixoDoCenarioFicaEGeradoVira() {
+        ObjectMapper m = new ObjectMapper();
+        String p1 = "11111111-1111-4111-8111-000000000001";
+        String p2 = "11111111-1111-4111-8111-000000000002";
+        String gerado = "abcdef01-2345-4678-89ab-cdef01234567";
+        var cenario = m.readTree("""
+                {"dados": {"plans_plan": [{"id": "%s"}]},
+                 "passos": [{"request": {"method": "GET", "path": "/api/admin/planos/%s/"}, "response": {}}]}"""
+                .formatted(p1, p2));
+        var fixos = ReplayDeContrato.uuidsFixos(cenario);
+        assertThat(fixos).containsExactlyInAnyOrder(p1, p2);
+
+        var gravado = m.readTree("""
+                {"id": "%s", "novo": "<uuid>", "arquivo": "documents/<uuid>/a.pdf"}""".formatted(p1));
+        var javaCerto = m.readTree("""
+                {"id": "%s", "novo": "%s", "arquivo": "documents/%s/a.pdf"}""".formatted(p1, gerado, gerado));
+        assertThat(ReplayDeContrato.normalizar(javaCerto, null, fixos)).isEqualTo(gravado);
+        // Java devolvendo outro id fixo (ex.: o do request no lugar do da linha) tem que falhar
+        var javaComIdErrado = m.readTree("""
+                {"id": "%s", "novo": "%s", "arquivo": "documents/%s/a.pdf"}""".formatted(p2, gerado, gerado));
+        assertThat(ReplayDeContrato.normalizar(javaComIdErrado, null, fixos)).isNotEqualTo(gravado);
+    }
+
     @Test
     void normalizacaoIgualAoNormalizarPy() {
         ObjectMapper m = new ObjectMapper();

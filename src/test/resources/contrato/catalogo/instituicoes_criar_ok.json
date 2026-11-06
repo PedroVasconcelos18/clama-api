@@ -150,17 +150,17 @@
         "status": 200,
         "body": [
           {
-            "id": "<uuid>",
+            "id": "22222222-2222-4222-8222-000000000004",
             "nome": "Abrigo São José",
             "logo": ""
           },
           {
-            "id": "<uuid>",
+            "id": "22222222-2222-4222-8222-000000000002",
             "nome": "Associação Renal",
             "logo": ""
           },
           {
-            "id": "<uuid>",
+            "id": "22222222-2222-4222-8222-000000000001",
             "nome": "Lar Esperança",
             "logo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
           }

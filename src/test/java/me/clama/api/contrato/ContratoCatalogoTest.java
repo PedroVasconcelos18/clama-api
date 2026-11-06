@@ -12,6 +12,7 @@ import me.clama.api.comum.ratelimit.RateLimiter;
 import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.identidade.token.ServicoDeTokens;
 import org.junit.jupiter.api.Named;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,8 +30,10 @@ import org.springframework.web.bind.annotation.RestController;
 @ActiveProfiles("test")
 class ContratoCatalogoTest {
     static final Path CENARIOS = Path.of("src/test/resources/contrato/catalogo");
-    /** Grupos ligados, por prefixo do arquivo. Cada task acrescenta o seu: planos_, instituicoes_, prompts_, documentos_. */
+    /** Grupos ligados, por prefixo do arquivo. Cada task move o seu prefixo de PENDENTES para LIGADOS. */
     static final List<String> LIGADOS = List.of("admin_");
+    /** Gravados mas ainda sem implementacao. Fica vazio na Task 5. */
+    static final List<String> PENDENTES = List.of("planos_", "instituicoes_", "prompts_", "documentos_");
     static final List<String> TABELAS = List.of("users_user", "token_blacklist_outstandingtoken",
             "token_blacklist_blacklistedtoken", "plans_plan", "instituicoes_instituicao", "prompts_prompttemplate",
             "documents_documentocontexto");
@@ -65,9 +68,20 @@ class ContratoCatalogoTest {
     static Stream<Named<Path>> cenarios() throws Exception {
         try (Stream<Path> s = Files.list(CENARIOS)) {
             List<Path> lista = s.filter(p -> p.toString().endsWith(".json")).sorted().toList();
-            assertThat(lista).hasSize(35);
-            return lista.stream().filter(p -> LIGADOS.stream().anyMatch(p.getFileName().toString()::startsWith))
-                    .map(p -> Named.of(p.getFileName().toString(), p));
+            return lista.stream().filter(p -> grupo(p, LIGADOS)).map(p -> Named.of(p.getFileName().toString(), p));
+        }
+    }
+
+    static boolean grupo(Path p, List<String> prefixos) {
+        return prefixos.stream().anyMatch(p.getFileName().toString()::startsWith);
+    }
+
+    /** Cenario gravado nao pode sumir sem aviso: ou esta ligado, ou esta pendente (em um so). */
+    @Test
+    void todoCenarioLigadoOuPendente() throws Exception {
+        try (Stream<Path> s = Files.list(CENARIOS)) {
+            assertThat(s.filter(p -> p.toString().endsWith(".json")).toList()).isNotEmpty()
+                    .allSatisfy(p -> assertThat(grupo(p, LIGADOS)).as("%s", p).isNotEqualTo(grupo(p, PENDENTES)));
         }
     }
 

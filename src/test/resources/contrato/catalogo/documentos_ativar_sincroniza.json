@@ -126,10 +126,10 @@
       "response": {
         "status": 200,
         "body": {
-          "id": "<uuid>",
+          "id": "44444444-4444-4444-8444-000000000001",
           "nome": "Catecismo",
           "descricao": "Base doutrinária.",
-          "arquivo": "http://testserver/media/documents/<uuid>/catecismo.pdf",
+          "arquivo": "http://testserver/media/documents/44444444-4444-4444-8444-000000000001/catecismo.pdf",
           "tipo_mime": "application/pdf",
           "tamanho_bytes": 2048,
           "tamanho_formatado": "2.0 KB",

@@ -18,6 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -72,6 +73,7 @@ public class ReplayDeContrato {
 
     public void executar(Path cenarioJson, URI base) throws Exception {
         JsonNode cenario = JSON.readTree(cenarioJson.toFile());
+        Set<String> fixos = uuidsFixos(cenario);
         BancoDeTeste.exigirContainer(jdbc); // o TRUNCATE ... CASCADE apagaria pedidos, blog e tokens de um banco real
         jdbc.execute("TRUNCATE " + String.join(", ", tabelas) + " RESTART IDENTITY CASCADE");
         limiter.limpar(); // cache.clear() do gravador
@@ -143,7 +145,7 @@ public class ReplayDeContrato {
 
             ObjectNode obtido = NOS.objectNode();
             obtido.put("status", resp.statusCode());
-            obtido.set("body", normalizar(corpoResp, null));
+            obtido.set("body", normalizar(corpoResp, null, fixos));
             ArrayNode lista = obtido.putArray("cookies");
             recebidos.forEach((nome, a) -> lista.add(cookieNormalizado(nome, a)));
             assertThat(obtido).as("%s passo %d: %s %s", cenarioJson.getFileName(), i, metodo, req.get("path"))
@@ -265,18 +267,32 @@ public class ReplayDeContrato {
         return c;
     }
 
-    /** normalizar() do normalizar.py: o regex de timestamp casa prefixo (re.match), nao ISO estrito. */
+    /** uuids_fixos(dados, passos) do gravador: os UUIDs das linhas de dados e dos requests. */
+    static Set<String> uuidsFixos(JsonNode cenario) {
+        StringBuilder texto = new StringBuilder(cenario.path("dados").toString());
+        cenario.path("passos").forEach(p -> texto.append(p.path("request")));
+        return UUID.matcher(texto).results().map(r -> r.group()).collect(Collectors.toSet());
+    }
+
     static JsonNode normalizar(JsonNode valor, String chave) {
+        return normalizar(valor, chave, Set.of());
+    }
+
+    /**
+     * normalizar() do normalizar.py: o regex de timestamp casa prefixo (re.match), nao ISO estrito. UUID fixo do
+     * cenario fica como esta; so o gerado vira <uuid>.
+     */
+    static JsonNode normalizar(JsonNode valor, String chave, Set<String> fixos) {
         if (valor.isObject()) {
             ObjectNode o = NOS.objectNode();
             for (Map.Entry<String, JsonNode> e : valor.properties()) {
-                o.set(e.getKey(), normalizar(e.getValue(), e.getKey()));
+                o.set(e.getKey(), normalizar(e.getValue(), e.getKey(), fixos));
             }
             return o;
         }
         if (valor.isArray()) {
             ArrayNode a = NOS.arrayNode();
-            valor.forEach(v -> a.add(normalizar(v, null)));
+            valor.forEach(v -> a.add(normalizar(v, null, fixos)));
             return a;
         }
         if ("csrf_token".equals(chave) && valor.isString()) {
@@ -292,7 +308,8 @@ public class ReplayDeContrato {
             if (TS.matcher(valor.asString()).lookingAt()) {
                 return NOS.stringNode("<ts>");
             }
-            return NOS.stringNode(UUID.matcher(valor.asString()).replaceAll("<uuid>"));
+            return NOS.stringNode(UUID.matcher(valor.asString())
+                    .replaceAll(m -> fixos.contains(m.group()) ? m.group() : "<uuid>"));
         }
         return valor;
     }
