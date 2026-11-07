@@ -105,8 +105,8 @@ public class JobEnviarOracao implements TipoDeJob<UUID> {
             p.setStatus(StatusPedido.ENVIADA);
         });
         if (envio.chaveSenha() != null) senhas.apagar(envio.chaveSenha());
-        LOG.info("enviar_oracao_concluido (event=enviar_oracao_completed, pedido_id={}, attempt={})", id,
-                retentativa + 1);
+        LOG.info("enviar_oracao_concluido (event=enviar_oracao_completed, pedido_id={}, attempt={}, reenvio={})", id,
+                retentativa + 1, reenvio != null);
     }
 
     private Envio preparar(UUID id, UUID reenvio) {

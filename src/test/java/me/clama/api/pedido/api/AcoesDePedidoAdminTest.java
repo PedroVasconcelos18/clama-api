@@ -142,6 +142,18 @@ class AcoesDePedidoAdminTest {
         assertThat(pedidos.findById(id).orElseThrow().getStatus()).isEqualTo(StatusPedido.ORACAO_GERADA);
     }
 
+    /** Oracao ja gravada e o gerar-oracao ainda na fila: ele (e o enviar que vem depois) faz o envio. */
+    @Test
+    void reenviarComGerarPendenteNaoMexe() throws Exception {
+        UUID id = pedido(StatusPedido.GERANDO_ORACAO, "Senhor, acolhe a Maria.");
+        tx.executeWithoutResult(s -> fila.enfileirar(gerar, JobGerarOracao.instancia(id), id,
+                Instant.now().plusSeconds(60)));
+        assertThat(post(id, "reenviar")).isEqualTo("Reenvio disparado");
+        assertThat(linhas("reenviar-oracao/" + id)).isZero();
+        assertThat(linhas(JobGerarOracao.instancia(id))).isEqualTo(1);
+        assertThat(pedidos.findById(id).orElseThrow().getStatus()).isEqualTo(StatusPedido.GERANDO_ORACAO);
+    }
+
     /** aguardando_reenvio com o gerar-oracao em +300 s: marcar gratuito o traz para agora. */
     @Test
     void marcarGratuitoAntecipaGerarAgendado() throws Exception {

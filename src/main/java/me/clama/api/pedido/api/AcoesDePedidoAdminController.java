@@ -62,11 +62,13 @@ class AcoesDePedidoAdminController {
                 gerarOuAntecipar(id);
                 return new Resposta("ok", "Regeração disparada");
             }
-            // enviar-oracao do pipeline na fila ou em retentativa: ele faz o envio. Um reenvio junto mandaria a
-            // oracao duas vezes, com chaves diferentes.
+            // gerar-oracao ou enviar-oracao do pipeline na fila ou em retentativa: ele faz o envio. Um reenvio junto
+            // mandaria a oracao duas vezes, com chaves diferentes; o status tambem fica como esta.
             if (Boolean.TRUE.equals(jdbc.queryForObject(
-                    "select exists(select 1 from scheduled_tasks where task_name = ? and task_instance = ?)",
-                    Boolean.class, JobEnviarOracao.NOME, JobEnviarOracao.instancia(id)))) {
+                    "select exists(select 1 from scheduled_tasks where (task_name = ? and task_instance = ?)"
+                            + " or (task_name = ? and task_instance = ?))",
+                    Boolean.class, JobEnviarOracao.NOME, JobEnviarOracao.instancia(id), JobGerarOracao.NOME,
+                    JobGerarOracao.instancia(id)))) {
                 return new Resposta("ok", "Reenvio disparado");
             }
             // reenvio ja na fila (ou rodando): ele faz o envio, e o status fica como esta (nao volta enviada para
