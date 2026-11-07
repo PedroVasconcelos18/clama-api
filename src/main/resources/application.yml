@@ -27,6 +27,9 @@ clama:
     pedidos-presos:
       cron: "0 */10 * * * *"
       janela: PT20M
+    # Django: crontab(minute=17, hour="*/6"). Comeca em LISTAR; so EXECUTAR depois de contar os pendentes >48 h em prod
+    reconciliar-freemium:
+      cron: "0 17 */6 * * *"
   # MEDIA_ROOT do Django (FileSystemStorage): documents/<uuid>/<nome>
   media-root: ./media
   documentos:
