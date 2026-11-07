@@ -10,6 +10,18 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import jakarta.servlet.http.HttpServletRequest;
+import me.clama.api.catalogo.plano.PlanoRepository;
+import me.clama.api.comum.api.CamposDrf;
+import me.clama.api.comum.auditoria.RegistroDeAuditoria;
+import me.clama.api.comum.email.ValidadorDeEmail;
+import me.clama.api.identidade.Usuario;
+import me.clama.api.oracao.AlertaDeErro;
+import me.clama.api.pedido.CanalEntrega;
+import me.clama.api.pedido.StatusPedido;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import tools.jackson.databind.JsonNode;
 import me.clama.api.comum.Dinheiro;
 import me.clama.api.comum.api.DatasDrf;
 import me.clama.api.comum.api.PaginaLimitOffset;
@@ -41,11 +53,18 @@ class PedidosAdminController {
     private final PedidoRepository pedidos;
     private final JdbcTemplate jdbc;
     private final TransactionTemplate tx;
+    private final PlanoRepository planos;
+    private final RegistroDeAuditoria auditoria;
+    private final AlertaDeErro alerta;
 
-    PedidosAdminController(PedidoRepository pedidos, JdbcTemplate jdbc, TransactionTemplate tx) {
+    PedidosAdminController(PedidoRepository pedidos, JdbcTemplate jdbc, TransactionTemplate tx, PlanoRepository planos,
+            RegistroDeAuditoria auditoria, AlertaDeErro alerta) {
         this.pedidos = pedidos;
         this.jdbc = jdbc;
         this.tx = tx;
+        this.planos = planos;
+        this.auditoria = auditoria;
+        this.alerta = alerta;
     }
 
     /** AdminPedidoListSerializer. */
@@ -114,11 +133,22 @@ class PedidosAdminController {
         }
         String q = ParametrosDeQuery.ultimo(req, "q");
         if (q != null && !q.isEmpty()) {
-            // paridade com o bug do Django: o ILIKE roda no texto cifrado; a busca de verdade fica para a Etapa 7
-            onde.add("(nome ilike ? or email ilike ?)");
-            String like = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
-            args.add(like);
-            args.add(like);
+            // D1 (Etapa 7): o Django busca com ILIKE no texto cifrado e nunca acha nada. Aqui: conta (e-mail/nome),
+            // prefixo do id e, para pedido sem conta, nome/e-mail decifrados em memoria.
+            String escapado = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+            String contem = "%" + escapado + "%";
+            String agulha = q.toLowerCase(Locale.ROOT);
+            // ponytail: varre todos os pedidos sem conta a cada busca (O(n) decifrando); produção tem poucos. Se
+            // crescer, coluna de hash (HMAC do e-mail normalizado) em vez de decifrar.
+            String[] semConta = pedidos.semUsuario().stream()
+                    .filter(l -> contemTexto(l[1], agulha) || contemTexto(l[2], agulha)).map(l -> l[0].toString())
+                    .toArray(String[]::new);
+            onde.add("(user_id in (select id from users_user where email ilike ? or nome_completo ilike ?)"
+                    + " or id::text like ? or id::text = any(?))");
+            args.add(contem);
+            args.add(contem);
+            args.add(escapado.toLowerCase(Locale.ROOT) + "%");
+            args.add(semConta);
         }
         String ordem = ORDENACOES.getOrDefault(Objects.toString(ParametrosDeQuery.ultimo(req, "ordering"), ""),
                 "created_at desc");
@@ -139,6 +169,10 @@ class PedidosAdminController {
         });
     }
 
+    private static boolean contemTexto(Object valor, String agulhaMinuscula) {
+        return valor != null && valor.toString().toLowerCase(Locale.ROOT).contains(agulhaMinuscula);
+    }
+
     /** created_at__date no fuso America/Sao_Paulo; data invalida e 400. */
     private static void dia(HttpServletRequest req, String nome, String op, List<String> onde, List<Object> args) {
         String v = ParametrosDeQuery.ultimo(req, nome);
@@ -153,11 +187,131 @@ class PedidosAdminController {
         onde.add("(created_at at time zone 'America/Sao_Paulo')::date " + op + " ?");
     }
 
-    @GetMapping("/api/admin/pedidos/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/")
+    private static final String ITEM = "/api/admin/pedidos/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/";
+
+    private static PastoralException naoEncontrado() {
+        return new PastoralException(404, "not_found", "Pedido não encontrado",
+                "Esse pedido não foi encontrado. Pode ter sido removido?");
+    }
+
+    /**
+     * Edicao do PedidoAdmin (admin.py): nome, e-mail, telefone, idade, sexo, pedido, oracao, plano, valor, canal e
+     * status, este livre (sem maquina de estados, como o ModelForm). Nenhum job e enfileirado. Linha travada; auditoria
+     * com os rotulos do Django na ordem do formulario ([] quando nada mudou); status erro avisa o admin em QUALQUER
+     * save (o post_save do Django), com a trava de 1 h dentro do AlertaDeErro.
+     */
+    @PatchMapping(ITEM)
+    Detalhe alterar(@PathVariable UUID id, @RequestBody(required = false) JsonNode corpo,
+            @AuthenticationPrincipal Usuario eu) {
+        tx.executeWithoutResult(st -> {
+            Pedido p = pedidos.travar(id).orElseThrow(PedidosAdminController::naoEncontrado);
+            CamposDrf c = new CamposDrf(corpo);
+            String nome = c.texto("nome", false, CamposDrf.BRANCO, CamposDrf.maxLength(120));
+            String email = c.texto("email", false, CamposDrf.BRANCO, CamposDrf.maxLength(254),
+                    s -> ValidadorDeEmail.valido(s) ? List.of() : List.of("Informe um endereço de email válido."));
+            String telefone = c.texto("telefone", false, null, CamposDrf.maxLength(20));
+            JsonNode idadeJson = c.get("idade");
+            boolean idadeNula = idadeJson != null && idadeJson.isNull();
+            Integer idade = idadeNula ? null : c.inteiro("idade", false, 0, Short.MAX_VALUE);
+            String sexo = c.escolha("sexo", false, List.of("", "feminino", "masculino", "nao_informado"));
+            String pedidoOracao = c.textoEmBranco("pedido_oracao");
+            String oracaoGerada = c.textoEmBranco("oracao_gerada");
+            var plano = plano(c);
+            Integer valor = c.inteiro("valor_centavos", false, 0, Integer.MAX_VALUE);
+            String canal = c.escolha("canal_entrega", false, List.of("email", "whatsapp"));
+            String status = c.escolha("status", false, java.util.Arrays.stream(StatusPedido.values())
+                    .map(StatusPedido::valor).toList());
+            c.validar();
+
+            // ordem e rotulos do formulario do PedidoAdmin (verbose_name do model)
+            List<String> mudou = new ArrayList<>();
+            if (nome != null && !nome.equals(p.getNome())) {
+                p.setNome(nome);
+                mudou.add("Nome");
+            }
+            if (email != null && !email.equals(p.getEmail())) {
+                p.setEmail(email);
+                mudou.add("E-mail");
+            }
+            if (telefone != null && !telefone.equals(p.getTelefone())) {
+                p.setTelefone(telefone);
+                mudou.add("Telefone");
+            }
+            if ((idadeNula || idade != null) && !Objects.equals(idade, p.getIdade())) {
+                p.setIdade(idade);
+                mudou.add("Idade");
+            }
+            if (sexo != null && !sexo.equals(p.getSexo())) {
+                p.setSexo(sexo);
+                mudou.add("Sexo");
+            }
+            if (pedidoOracao != null && !pedidoOracao.equals(p.getPedidoOracao())) {
+                p.setPedidoOracao(pedidoOracao);
+                mudou.add("Pedido de oração");
+            }
+            if (oracaoGerada != null && !oracaoGerada.equals(p.getOracaoGerada())) {
+                p.setOracaoGerada(oracaoGerada);
+                mudou.add("Oração gerada");
+            }
+            if (plano != null && !plano.getId().equals(p.getPlano().getId())) {
+                p.setPlano(plano);
+                mudou.add("Plano");
+            }
+            if (valor != null && valor != p.getValorCentavos()) {
+                p.setValorCentavos(valor);
+                mudou.add("Valor (centavos)");
+            }
+            if (canal != null && !canal.equals(p.getCanalEntrega().valor())) {
+                p.setCanalEntrega("whatsapp".equals(canal) ? CanalEntrega.WHATSAPP : CanalEntrega.EMAIL);
+                mudou.add("Canal de entrega");
+            }
+            if (status != null && !status.equals(p.getStatus().valor())) {
+                p.setStatus(StatusPedido.de(status));
+                mudou.add("Status");
+            }
+            pedidos.flush();
+            auditoria.registrar(eu.getId(), "orders", "pedido", id.toString(), id.toString(),
+                    RegistroDeAuditoria.MUDANCA,
+                    mudou.isEmpty() ? List.of() : List.of(Map.of("changed", Map.of("fields", mudou))));
+            if (p.getStatus() == StatusPedido.ERRO) {
+                alerta.registrar(id);
+            }
+        });
+        return detalhe(id);
+    }
+
+    /** ModelChoiceField(Plan.objects.all()): qualquer plano, ativo ou nao; "" e null sao invalidos (campo obrigatorio). */
+    private me.clama.api.catalogo.plano.Plano plano(CamposDrf c) {
+        JsonNode v = c.get("plano");
+        if (v == null) {
+            return null;
+        }
+        if (v.isNull()) {
+            c.erro("plano", CamposDrf.NULO);
+            return null;
+        }
+        String s = v.isString() ? TextoPython.strip(v.asString()) : "";
+        if (s.isEmpty()) {
+            c.erro("plano", v.isString() ? CamposDrf.BRANCO : "Tipo incorreto. Esperava valor pk, recebeu "
+                    + CamposDrf.tipoPython(v) + ".");
+            return null;
+        }
+        if (!UUID_HEX.matcher(s).matches()) {
+            c.erro("plano", "O valor “" + s + "” não é um UUID válido");
+            return null;
+        }
+        var plano = planos.findById(UUID.fromString(s.length() == 32 ? s.replaceFirst(
+                "(.{8})(.{4})(.{4})(.{4})(.{12})", "$1-$2-$3-$4-$5") : s)).orElse(null);
+        if (plano == null) {
+            c.erro("plano", "Pk inválido \"" + s + "\" - objeto não existe.");
+        }
+        return plano;
+    }
+
+    @GetMapping(ITEM)
     Detalhe detalhe(@PathVariable UUID id) {
         return tx.execute(st -> {
-            Pedido p = pedidos.detalhe(id).orElseThrow(() -> new PastoralException(404, "not_found",
-                    "Pedido não encontrado", "Esse pedido não foi encontrado. Pode ter sido removido?"));
+            Pedido p = pedidos.detalhe(id).orElseThrow(PedidosAdminController::naoEncontrado);
             var i = p.getInstituicao();
             // WebhookEvento so mapeia id e status: o resto vem em SQL puro, por pedido_id e sem o payload
             List<Webhook> eventos = jdbc.query("""

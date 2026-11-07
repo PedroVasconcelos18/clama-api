@@ -34,6 +34,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -115,8 +116,43 @@ class ContratoAdminTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("cenarios")
-    void cenario(Path json) throws Exception {
-        replay().comRelogio(ctx.getBean(RelogioDeTeste.Fixavel.class)::fixar).executar(json, base());
+    void cenario(Path json, @TempDir Path dir) throws Exception {
+        replay().comRelogio(ctx.getBean(RelogioDeTeste.Fixavel.class)::fixar).executar(buscaCorrigida(json, dir), base());
+    }
+
+    static final String CENARIO_Q = "admin_pedidos_q.json";
+
+    /**
+     * Divergencia aceita (Etapa 7, D1): o Django busca o `q` com ILIKE no texto cifrado e nunca acha nada ("Maria" da 0)
+     * ou acha tudo ("gAAAA", o prefixo do token Fernet, da 5). O Java busca de verdade (nome/e-mail decifrados dos
+     * pedidos sem conta, conta do usuario, prefixo do id). So neste arquivo e so nestes dois passos o esperado e
+     * reescrito: "Maria" acha o unico pedido Maria Silva (o item gravado no passo "gAAAA"), "gAAAA" nao acha nenhum. A
+     * guarda exige o esperado gravado antes de trocar; qualquer outro passo e cenario compara exato.
+     */
+    static Path buscaCorrigida(Path json, Path dir) throws Exception {
+        if (!json.getFileName().toString().equals(CENARIO_Q)) {
+            return json;
+        }
+        ObjectNode c = (ObjectNode) JSON.readTree(Files.readString(json));
+        JsonNode passos = c.get("passos");
+        ObjectNode maria = passoDe(passos, "/api/admin/pedidos/?q=Maria");
+        ObjectNode cifrado = passoDe(passos, "/api/admin/pedidos/?q=gAAAA");
+        ObjectNode corpoMaria = (ObjectNode) maria.get("response").get("body");
+        ObjectNode corpoCifrado = (ObjectNode) cifrado.get("response").get("body");
+        assertThat(corpoMaria.get("count").asInt()).as("gravado: Django nao acha 'Maria'").isZero();
+        assertThat(corpoCifrado.get("count").asInt()).as("gravado: Django acha o texto cifrado").isEqualTo(5);
+        JsonNode mariaSilva = corpoCifrado.get("results").valueStream()
+                .filter(r -> r.get("nome").asString().equals("Maria Silva")).findFirst().orElseThrow();
+        corpoMaria.put("count", 1);
+        ((tools.jackson.databind.node.ArrayNode) corpoMaria.get("results")).add(mariaSilva);
+        corpoCifrado.put("count", 0);
+        ((tools.jackson.databind.node.ArrayNode) corpoCifrado.get("results")).removeAll();
+        return Files.writeString(dir.resolve(CENARIO_Q), c.toString());
+    }
+
+    private static ObjectNode passoDe(JsonNode passos, String caminho) {
+        return (ObjectNode) passos.valueStream().filter(p -> p.get("request").get("path").asString().equals(caminho))
+                .findFirst().orElseThrow();
     }
 
     /**

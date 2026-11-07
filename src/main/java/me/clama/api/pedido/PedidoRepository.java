@@ -36,6 +36,10 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID> {
             + " from Pedido p where p.ehGratuito = true and p.status = ?1")
     java.util.List<IdentificadoresPendentes> pendentesDoFreemium(StatusPedido status);
 
+    /** Busca q do admin: id, nome e e-mail (decifrados) dos pedidos sem conta. */
+    @Query("select p.id, p.nome, p.email from Pedido p where p.user is null")
+    java.util.List<Object[]> semUsuario();
+
     /** Detalhe admin: plano e instituicao junto. */
     @Query("select p from Pedido p join fetch p.plano left join fetch p.instituicao where p.id = ?1")
     Optional<Pedido> detalhe(UUID id);
