@@ -44,6 +44,7 @@ class ApiDePedidos {
     /** Os pedidos criados prendem usuario/instituicao por FK: as outras classes do contexto apagam esses. */
     static void apagarPedidos(JdbcTemplate jdbc) {
         BancoDeTeste.exigirContainer(jdbc);
+        jdbc.update("delete from freemium_freemiumconfirmationtoken"); // FK deferrable sem ON DELETE
         jdbc.update("delete from orders_pedido");
     }
 

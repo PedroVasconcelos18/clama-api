@@ -52,6 +52,8 @@ class ReconciliacaoFreemiumTest {
 
     @AfterEach
     void desligar() {
+        BancoDeTeste.exigirContainer(jdbc);
+        jdbc.execute("TRUNCATE scheduled_tasks, freemium_freemiumconfirmationtoken, orders_pedido, plans_plan CASCADE");
         Sentry.close();
         relogio.fixar(null);
     }
