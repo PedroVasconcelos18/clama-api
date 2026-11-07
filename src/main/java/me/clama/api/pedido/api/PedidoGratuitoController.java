@@ -1,11 +1,7 @@
 package me.clama.api.pedido.api;
 
-import io.sentry.Sentry;
-import io.sentry.SentryLevel;
 import jakarta.servlet.http.HttpServletRequest;
-import me.clama.api.catalogo.plano.Plano;
-import me.clama.api.catalogo.plano.PlanoRepository;
-import me.clama.api.comum.erro.PastoralException;
+import me.clama.api.catalogo.plano.PlanoGratuito;
 import me.clama.api.comum.fila.Fila;
 import me.clama.api.comum.ratelimit.LimiteDeTaxa;
 import me.clama.api.identidade.Usuario;
@@ -31,16 +27,16 @@ import tools.jackson.databind.JsonNode;
 class PedidoGratuitoController {
     private final ValidacaoDePedido validacao;
     private final PedidoRepository pedidos;
-    private final PlanoRepository planos;
+    private final PlanoGratuito planoGratuito;
     private final JobGerarOracao gerar;
     private final ObjectProvider<Fila> fila;
     private final TransactionTemplate tx;
 
-    PedidoGratuitoController(ValidacaoDePedido validacao, PedidoRepository pedidos, PlanoRepository planos,
+    PedidoGratuitoController(ValidacaoDePedido validacao, PedidoRepository pedidos, PlanoGratuito planoGratuito,
             JobGerarOracao gerar, ObjectProvider<Fila> fila, TransactionTemplate tx) {
         this.validacao = validacao;
         this.pedidos = pedidos;
-        this.planos = planos;
+        this.planoGratuito = planoGratuito;
         this.gerar = gerar;
         this.fila = fila;
         this.tx = tx;
@@ -57,7 +53,7 @@ class PedidoGratuitoController {
         ValidacaoDePedido.consentir(p, req);
         p.setUser(eu);
         // _get_plano_gratuito: so depois de validar (no Django, o create do serializer)
-        p.setPlano(planoGratuito());
+        p.setPlano(planoGratuito.obter());
         p.setEhGratuito(true);
         p.setStatus(StatusPedido.GERANDO_ORACAO);
         return tx.execute(st -> {
@@ -65,14 +61,5 @@ class PedidoGratuitoController {
             fila.getObject().enfileirar(gerar, JobGerarOracao.instancia(salvo.getId()), salvo.getId());
             return PedidoDtos.Criado.de(salvo);
         });
-    }
-
-    Plano planoGratuito() {
-        return planos.findFirstByComplexidadeAndVisivelFalseAndAtivoTrueOrderByOrdem("simples_gratuita")
-                .orElseThrow(() -> {
-                    Sentry.captureMessage("Plan freemium ausente do banco (SIMPLES_GRATUITA, visivel=False, ativo=True)", SentryLevel.ERROR);
-                    return new PastoralException(503, "freemium_indisponivel", "Plano freemium não configurado",
-                            "Estamos com problemas momentâneos. Tente em alguns minutos.");
-                });
     }
 }

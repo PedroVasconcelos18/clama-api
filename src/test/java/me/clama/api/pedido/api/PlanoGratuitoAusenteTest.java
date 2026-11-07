@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import io.sentry.Sentry;
 import io.sentry.SentryLevel;
 import java.util.Optional;
+import me.clama.api.catalogo.plano.PlanoGratuito;
 import me.clama.api.catalogo.plano.PlanoRepository;
 import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.comum.observabilidade.TransportEmMemoria;
@@ -37,8 +38,7 @@ class PlanoGratuitoAusenteTest {
         PlanoRepository planos = mock(PlanoRepository.class);
         when(planos.findFirstByComplexidadeAndVisivelFalseAndAtivoTrueOrderByOrdem("simples_gratuita"))
                 .thenReturn(Optional.empty());
-        var c = new PedidoGratuitoController(null, null, planos, null, null, null);
-        assertThatThrownBy(c::planoGratuito).isInstanceOfSatisfying(PastoralException.class,
+        assertThatThrownBy(new PlanoGratuito(planos)::obter).isInstanceOfSatisfying(PastoralException.class,
                 e -> assertThat(e.status()).isEqualTo(503));
         assertThat(sentry.eventos).hasSize(1);
         assertThat(sentry.eventos.get(0).getLevel()).isEqualTo(SentryLevel.ERROR);

@@ -19,6 +19,12 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     @Query("select u from Usuario u where lower(u.email) = lower(?1) or u.emailHash = ?2 order by u.id")
     List<Usuario> buscarPorEmailOuHash(String email, String emailHash);
 
+    /** Gate de conta do freemium: Q(email__iexact) | Q(email_hash) | Q(cpf_hash) | Q(telefone_hash). */
+    @Query("""
+            select count(u) > 0 from Usuario u where lower(u.email) = lower(?1) or u.emailHash = ?2 or u.cpfHash = ?3
+              or u.telefoneHash = ?4""")
+    boolean existeConta(String email, String emailHash, String cpfHash, String telefoneHash);
+
     /** select_for_update().get(pk=...). */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from Usuario u where u.id = ?1")
