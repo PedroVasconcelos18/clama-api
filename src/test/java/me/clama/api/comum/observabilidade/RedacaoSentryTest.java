@@ -77,6 +77,7 @@ class RedacaoSentryTest {
 		aninhado.put("lista_num", List.of(1, 2));
 		Map<String, Object> entrada = new LinkedHashMap<>();
 		entrada.put("email", "a@b.com");
+		entrada.put("cpf_cnpj", "123");
 		entrada.put("Senha", "x");
 		entrada.put("refresh", "tok");
 		entrada.put("Authorization", "Bearer abc");
@@ -90,6 +91,7 @@ class RedacaoSentryTest {
 
 		Map<String, Object> esperado = new LinkedHashMap<>();
 		esperado.put("email", "[REDACTED]");
+		esperado.put("cpf_cnpj", "[REDACTED]");
 		esperado.put("Senha", "[REDACTED]");
 		esperado.put("refresh", "[REDACTED]");
 		esperado.put("Authorization", "Bearer abc");

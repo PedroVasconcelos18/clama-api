@@ -274,7 +274,7 @@ class BloqueiosAdminTest {
         assertThat(mal.body()).isEqualTo("{\"detail\":\"Parâmetro pedido inválido.\"}");
 
         // sem delete (D12)
-        assertThat(chamar("DELETE", "tokens/" + novo + "/", null, cookie, true).statusCode()).isIn(404, 405);
+        assertThat(chamar("DELETE", "tokens/" + novo + "/", null, cookie, true).statusCode()).isEqualTo(404);
         assertThat(contar("select count(*) from freemium_freemiumconfirmationtoken")).isEqualTo(2);
     }
 
