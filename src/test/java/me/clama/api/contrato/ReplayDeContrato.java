@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.sql.PreparedStatement;
 import java.sql.Types;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -73,6 +74,8 @@ public class ReplayDeContrato {
     /** Token de confirmacao gerado (aleatorio) vira "<token>" no estado final; os semeados em "dados" ficam. */
     private static final String TOKENS = "freemium_freemiumconfirmationtoken";
     static final String TOKEN = "<token>";
+    /** secrets.token_urlsafe(48): 64 caracteres url-safe. So isso vira "<token>"; qualquer outra coisa falha. */
+    private static final Pattern TOKEN_GERADO = Pattern.compile("^[A-Za-z0-9_-]{64}$");
     /** As SQL do estado final, iguais as do gravador (TABELAS em test_gravar_pagamento_oracao.py e
      * TABELAS_FREEMIUM em test_gravar_freemium.py). */
     private static final Map<String, String> SQL_ESTADO = Map.of(
@@ -213,10 +216,11 @@ public class ReplayDeContrato {
         assertThat(tarefas == null && cenario.has("tarefa")).as("%s e cenario de tarefa agendada: use comTarefas",
                 arquivo).isFalse();
         JsonNode instante = cenario.path("configuracao").path(RELOGIO);
+        Instant agoraGravado = instante.isMissingNode() ? null : OffsetDateTime.parse(instante.asString()).toInstant();
         assertThat(!instante.isMissingNode() && relogio == null).as("%s congela o relogio: use comRelogio", arquivo)
                 .isFalse();
         if (relogio != null) {
-            relogio.accept(instante.isMissingNode() ? null : OffsetDateTime.parse(instante.asString()).toInstant());
+            relogio.accept(agoraGravado);
         }
         for (Map.Entry<String, JsonNode> c : cenario.path("configuracao").properties()) {
             if (c.getKey().equals(RELOGIO)) {
@@ -365,7 +369,7 @@ public class ReplayDeContrato {
         Set<String> tokensSemeados = new HashSet<>();
         cenario.path("dados").path(TOKENS).forEach(t -> tokensSemeados.add(t.get("token").asString()));
         for (Map.Entry<String, JsonNode> tabela : cenario.path("estado_final").properties()) {
-            conferirEstadoFinal(tabela.getKey(), tabela.getValue(), fixos, tokensSemeados, arquivo);
+            conferirEstadoFinal(tabela.getKey(), tabela.getValue(), fixos, tokensSemeados, agoraGravado, arquivo);
         }
     }
 
@@ -399,6 +403,8 @@ public class ReplayDeContrato {
 
     /** O resumo da tarefa e o dict da task do Django (numero compara por valor). */
     private void executarTarefa(String nome, JsonNode resumo, String arquivo) {
+        assertThat(resumo).as("%s: cenario de tarefa sem \"resumo\" (o dict que a task do Django devolveu)", arquivo)
+                .isNotNull();
         TarefaAgendada tarefa = tarefas.stream().filter(t -> t.nome().equals(nome)).findFirst()
                 .orElseThrow(() -> new AssertionError(arquivo + ": tarefa agendada " + nome + " nao registrada"));
         TarefaAgendada.ResultadoDaTarefa r = tarefa.executar(ModoDeExecucao.EXECUTAR);
@@ -533,16 +539,22 @@ public class ReplayDeContrato {
     /**
      * _estado_final do gravador: todas as linhas da tabela depois do ultimo passo, nas colunas que o JSON lista, com
      * as cifradas decifradas (CampoCriptografado), json como arvore, normalizadas como as respostas. Numero compara
-     * por valor. O token de confirmacao que nao veio de "dados" vira "<token>", como no gravador.
+     * por valor. O token de confirmacao que nao veio de "dados" vira "<token>", como no gravador. As colunas de
+     * "deslocadas_do_relogio" vao como {@link #deslocamento} do relogio gravado (o TTL de 24 h do token, used_at e
+     * created_at = agora), que o normalizar viraria "<ts>".
      */
     private void conferirEstadoFinal(String nome, JsonNode tabela, Set<String> fixos, Set<String> tokensSemeados,
-            String arquivo) {
+            Instant agoraGravado, String arquivo) {
         String sql = SQL_ESTADO.get(nome);
         assertThat(sql).as("%s: estado final de tabela desconhecida %s", arquivo, nome).isNotNull();
         List<String> colunas = new ArrayList<>();
         tabela.get("colunas").forEach(c -> colunas.add(c.asString()));
         Set<String> cifradas = new HashSet<>();
         tabela.get("cifradas_decifradas").forEach(c -> cifradas.add(c.asString()));
+        Set<String> deslocadas = new HashSet<>();
+        tabela.path("deslocadas_do_relogio").forEach(c -> deslocadas.add(c.asString()));
+        assertThat(!deslocadas.isEmpty() && agoraGravado == null)
+                .as("%s: %s tem datas deslocadas do relogio sem configuracao.relogio", arquivo, nome).isFalse();
         CampoCriptografado campo = new CampoCriptografado();
         ArrayNode linhas = NOS.arrayNode();
         jdbc.query(sql, (RowCallbackHandler) rs -> {
@@ -551,8 +563,10 @@ public class ReplayDeContrato {
                 Object v = rs.getObject(c);
                 if (v == null) {
                     l.putNull(c);
-                } else if (nome.equals(TOKENS) && c.equals("token") && !tokensSemeados.contains(rs.getString(c))) {
-                    l.put(c, TOKEN);
+                } else if (nome.equals(TOKENS) && c.equals("token")) {
+                    l.put(c, tokenNormalizado(rs.getString(c), tokensSemeados, arquivo));
+                } else if (deslocadas.contains(c)) {
+                    l.put(c, deslocamento(rs.getObject(c, OffsetDateTime.class).toInstant(), agoraGravado));
                 } else if (cifradas.contains(c)) {
                     l.put(c, campo.convertToEntityAttribute(rs.getString(c)));
                 } else if (v instanceof Boolean b) {
@@ -569,6 +583,26 @@ public class ReplayDeContrato {
         assertThat(StubDeIntegracoes.numerosPorValor(normalizar(linhas, null, fixos)))
                 .as("%s: estado final de %s", arquivo, nome)
                 .isEqualTo(StubDeIntegracoes.numerosPorValor(tabela.get("linhas")));
+    }
+
+    /** Token semeado fica; o gerado pelo app tem de ter o formato do token_urlsafe(48) e vira "<token>". */
+    static String tokenNormalizado(String valor, Set<String> semeados, String arquivo) {
+        if (semeados.contains(valor)) {
+            return valor;
+        }
+        assertThat(valor).as("%s: token gerado fora do formato token_urlsafe(48)", arquivo).matches(TOKEN_GERADO);
+        return TOKEN;
+    }
+
+    /** _deslocamento do gravador: "+24:00:00", "-48:00:01", "+00:00:00.500000" (micros so se houver). */
+    static String deslocamento(Instant valor, Instant agora) {
+        Duration d = Duration.between(agora, valor);
+        String sinal = d.isNegative() ? "-" : "+";
+        d = d.abs();
+        long s = d.getSeconds();
+        String txt = String.format(Locale.ROOT, "%s%02d:%02d:%02d", sinal, s / 3600, s % 3600 / 60, s % 60);
+        int micros = d.getNano() / 1000;
+        return micros == 0 ? txt : txt + String.format(Locale.ROOT, ".%06d", micros);
     }
 
     private static final class Contexto {
@@ -695,7 +729,9 @@ public class ReplayDeContrato {
         StringBuilder texto = new StringBuilder(cenario.path("dados").toString());
         cenario.path("passos").forEach(p -> texto.append(p.path("request")));
         INTEGRACOES.forEach(i -> texto.append(cenario.path(i))); // as respostas simuladas tambem sao do cenario
-        texto.append(cenario.path("job")); // o arg do job (ex.: o pedido inexistente)
+        // o arg do job (ex.: o pedido inexistente), como o uuids_fixos do freemium. Inofensivo para os da 4B: o arg
+        // deles e sempre um pedido ou usuario semeado, ja fixo pelos "dados", ou um id numerico, que nao e UUID
+        texto.append(cenario.path("job"));
         return UUID_TEXTO.matcher(texto).results().map(r -> r.group()).collect(Collectors.toSet());
     }
 

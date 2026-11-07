@@ -93,13 +93,13 @@
         "created_at": "2026-11-01T13:00:00+00:00",
         "updated_at": "2026-11-01T13:00:00+00:00",
         "id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000001",
-        "nome": "gAAAAABrAGBwZaB4eqFXmg1dd2IcpOuULCW1_CKCzMPpCQUI1kMLTbfHSA-wD1pMG4RDIbkKshc9XKxzL9yw0yma8EzIECNKTA==",
-        "email": "gAAAAABrAGBws4jkumKmCmlReQua9I_ckBPI8xzI1XcBQ3pkYLP5eauWNNEx_IRTg4hUZ-VKHnuYJAYqbch8GX7ot4mVASjERGwuk0nRFw1XUZ5qLcPDZ_I=",
-        "telefone": "gAAAAABrAGBwDgGRaK7RCfXZN9SQ3AyUE7Dk7qXQm_uSZ1PCxY5SIn42NwF_hkHPfVz120vO9bBC1YNtlZi5jJibyOJPndrzeQ==",
+        "nome": "gAAAAABrAGBwPe89EmIPd5ibDuF-MISacEO6FgjCXUvaCP0RxysFHmSvV6de3l2TyRj7gIoxispaZtC4koP8FU4NJPnDhiEs5Q==",
+        "email": "gAAAAABrAGBwny6_5cQYFzia4KXwfHXEEJaW4SUkWp2-sQ2r-STpQsuHu9UdABOu8wep6msaBlHtjHk3A5mi7JIU_u_2pPikEjNaWuSGlwDpLD3SyLKVyrE=",
+        "telefone": "gAAAAABrAGBwjVXuG7WexyJrxFi8uRa1PBGsrsXNMMWYCuVYUlrICEMRLKk77Se91z6g2ZCmbXhUNKCiMsf_Gau_YhjbmDDsSw==",
         "idade": 35,
         "sexo": "feminino",
-        "pedido_oracao": "gAAAAABrAGBwTWFKtdH1I4jORJns1BfIkJ95qRt92yzSoW0-Qga2kr-GTwNG4rKbqMzPdaTo-zbQ6T0vAVhG-PNbIrO9pN80nxHM7m_MCpf06CBdk8IZUg_Bs4JY2TnBJhJJ8S9KH6o6",
-        "oracao_gerada": "gAAAAABrAGBwwKqcpUjU0r_KLd7gMn2msX0GqriVaXak8-OF42ht3ScSbv3PEXE82bbuSKvM9ENcpa91OJYhjKhZGio5Km3EiA==",
+        "pedido_oracao": "gAAAAABrAGBw1rsodnlRm6NcVCG57o9K46Kmdtp3gS98SPGIieqZ7-5h_foQxcJa8veGbwELUNZ75RGqpiXdU0JC7yLaM8_JDUZoay-JsyKcC1wrcBOkmH4NexFIv3LyGiWLDz8HVdF_",
+        "oracao_gerada": "gAAAAABrAGBwo8lQzU35ofKooAWY_4LH_oPqXqaC6KISLQF9baaRMEqiK0w-0oBfzKpymKbtI-Swl5oAyz2pgmA0P56ZmHbV_w==",
         "valor_centavos": 0,
         "canal_entrega": "email",
         "status": "aguardando_confirmacao_email",
@@ -113,7 +113,7 @@
         "whatsapp_delivered_at": null,
         "whatsapp_message_id": "",
         "whatsapp_read_at": null,
-        "cpf_cnpj": "gAAAAABrAGBwZGZginaz3vaC6uMx3hRTDKBsGSGwUEaPCVF5mCmlYsXhgdnK6UVxwidc628lnMccwyPIE4vyTA-tHjqWJoKzAg==",
+        "cpf_cnpj": "gAAAAABrAGBw9pQL5HFAhKC3GDdQLpGqUT0QzzGF5kqjDqt_dJ123_frFWWunrXmEE3wpCip5tMx1a0X-nriorea40K1Gdd4ZA==",
         "user_id": null,
         "eh_gratuito": true,
         "device_hash": "fp-abc123",
@@ -269,7 +269,10 @@
         "cpf_cnpj",
         "telefone"
       ],
-      "linhas": []
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "freemium_used_at"
+      ]
     },
     "freemium_freemiumblacklist": {
       "colunas": [
@@ -282,7 +285,10 @@
         "created_at"
       ],
       "cifradas_decifradas": [],
-      "linhas": []
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "created_at"
+      ]
     },
     "freemium_freemiumconfirmationtoken": {
       "colunas": [
@@ -301,12 +307,16 @@
           "id": "c3c3c3c3-c3c3-4c3c-8c3c-000000000001",
           "pedido_id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000001",
           "token": "contrato-ok-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-          "expires_at": "<ts>",
+          "expires_at": "+23:00:00",
           "used_at": null,
           "ip_origem": "203.0.113.9",
           "device_hash": "fp-abc123",
           "created_at": "<ts>"
         }
+      ],
+      "deslocadas_do_relogio": [
+        "expires_at",
+        "used_at"
       ]
     }
   }

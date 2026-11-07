@@ -304,7 +304,10 @@
         "cpf_cnpj",
         "telefone"
       ],
-      "linhas": []
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "freemium_used_at"
+      ]
     },
     "freemium_freemiumblacklist": {
       "colunas": [
@@ -325,7 +328,7 @@
           "telefone_hash": null,
           "device_hash": null,
           "ip_hash": "553b55c8ea3731524a90df7e4940bb1570fc63fbcf597250b300fd86d816d387",
-          "created_at": "<ts>"
+          "created_at": "-01:00:01"
         },
         {
           "id": "b2b2b2b2-b2b2-4b2b-8b2b-000000000002",
@@ -334,7 +337,7 @@
           "telefone_hash": null,
           "device_hash": null,
           "ip_hash": "553b55c8ea3731524a90df7e4940bb1570fc63fbcf597250b300fd86d816d387",
-          "created_at": "<ts>"
+          "created_at": "-01:00:00"
         },
         {
           "id": "b2b2b2b2-b2b2-4b2b-8b2b-000000000001",
@@ -343,7 +346,7 @@
           "telefone_hash": null,
           "device_hash": null,
           "ip_hash": "553b55c8ea3731524a90df7e4940bb1570fc63fbcf597250b300fd86d816d387",
-          "created_at": "<ts>"
+          "created_at": "-00:30:00"
         },
         {
           "id": "b2b2b2b2-b2b2-4b2b-8b2b-000000000004",
@@ -352,8 +355,11 @@
           "telefone_hash": null,
           "device_hash": null,
           "ip_hash": "880486e88c073340f55c6a052ba973bf9ae2529ca0489d9207509d4db358c1d5",
-          "created_at": "<ts>"
+          "created_at": "-00:05:00"
         }
+      ],
+      "deslocadas_do_relogio": [
+        "created_at"
       ]
     },
     "freemium_freemiumconfirmationtoken": {
@@ -373,12 +379,16 @@
           "id": "<uuid>",
           "pedido_id": "<uuid>",
           "token": "<token>",
-          "expires_at": "<ts>",
+          "expires_at": "+24:00:00",
           "used_at": null,
           "ip_origem": "203.0.113.9",
           "device_hash": "",
           "created_at": "<ts>"
         }
+      ],
+      "deslocadas_do_relogio": [
+        "expires_at",
+        "used_at"
       ]
     }
   }

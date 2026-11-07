@@ -15,6 +15,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import me.clama.api.BancoDeTeste;
@@ -153,11 +154,11 @@ class ContratoFreemiumTest {
         ObjectNode gera = c.deepCopy();
         String pedido = c.get("dados").get("freemium_freemiumconfirmationtoken").get(0).get("pedido_id").asString();
         tabela(gera, "freemium_freemiumconfirmationtoken").addObject().put("id", "<uuid>").put("pedido_id", pedido)
-                .put("token", ReplayDeContrato.TOKEN).put("expires_at", "<ts>").putNull("used_at")
+                .put("token", ReplayDeContrato.TOKEN).put("expires_at", "+00:00:00").putNull("used_at")
                 .put("ip_origem", "203.0.113.9").put("device_hash", "").put("created_at", "<ts>");
         tabela(gera, "freemium_freemiumblacklist").addObject().put("id", "<uuid>").put("cpf_hash", "c".repeat(64))
                 .put("email_hash", "e".repeat(64)).putNull("telefone_hash").put("device_hash", "fp-abc123")
-                .put("ip_hash", "i".repeat(64)).put("created_at", "<ts>");
+                .put("ip_hash", "i".repeat(64)).put("created_at", "+00:00:00");
         TarefaSintetica.gerar = true;
         try {
             replay().executar(escrever(dir, "gera", gera), base());
@@ -166,6 +167,11 @@ class ContratoFreemiumTest {
             assertThatThrownBy(() -> replay().executar(escrever(dir, "literal", literal), base()))
                     .isInstanceOf(AssertionError.class)
                     .hasMessageContaining("estado final de freemium_freemiumconfirmationtoken");
+            // a data deslocada compara de verdade: um TTL de 24 h no esperado nao bate com o expires_at = agora
+            ObjectNode ttl = gera.deepCopy();
+            ((ObjectNode) tabela(ttl, "freemium_freemiumconfirmationtoken").get(1)).put("expires_at", "+24:00:00");
+            assertThatThrownBy(() -> replay().executar(escrever(dir, "ttl", ttl), base()))
+                    .isInstanceOf(AssertionError.class).hasMessageContaining("+24:00:00");
         } finally {
             TarefaSintetica.gerar = false;
         }
@@ -174,6 +180,10 @@ class ContratoFreemiumTest {
         ((ObjectNode) resumo.get("resumo")).put("n_reconciliados", 1);
         assertThatThrownBy(() -> replay().executar(escrever(dir, "resumo", resumo), base()))
                 .isInstanceOf(AssertionError.class).hasMessageContaining("resumo da tarefa");
+        ObjectNode semResumo = c.deepCopy();
+        semResumo.remove("resumo");
+        assertThatThrownBy(() -> replay().executar(escrever(dir, "sem-resumo", semResumo), base()))
+                .isInstanceOf(AssertionError.class).hasMessageContaining("sem \"resumo\"");
         ObjectNode semRegistro = c.deepCopy().put("tarefa", "nao-existe");
         assertThatThrownBy(() -> replay().executar(escrever(dir, "sem-registro", semRegistro), base()))
                 .isInstanceOf(AssertionError.class).hasMessageContaining("nao registrada");
@@ -198,6 +208,27 @@ class ContratoFreemiumTest {
         assertThat(ReplayDeContrato.argsDoJava(outros)).isEqualTo(outros);
         assertThatThrownBy(() -> ReplayDeContrato.argDoJava("confirmacao-freemium", JSON.readTree("\"so-o-id\"")))
                 .isInstanceOf(AssertionError.class).hasMessageContaining("[pedido_id, token]");
+    }
+
+    /**
+     * Token gerado so vira "<token>" no formato do token_urlsafe(48); o semeado fica. Deslocamento do relogio no
+     * formato do gravador (sinal, horas sem teto, micros so se houver).
+     */
+    @Test
+    void tokenGeradoEDeslocamentoDoRelogio() {
+        String gerado = "aZ09_-".repeat(10) + "abcd";
+        assertThat(ReplayDeContrato.tokenNormalizado(gerado, Set.of(), "x")).isEqualTo(ReplayDeContrato.TOKEN);
+        assertThat(ReplayDeContrato.tokenNormalizado("semeado", Set.of("semeado"), "x")).isEqualTo("semeado");
+        for (String ruim : List.of("", gerado.substring(1), gerado + "a", gerado.substring(1) + "=")) {
+            assertThatThrownBy(() -> ReplayDeContrato.tokenNormalizado(ruim, Set.of(), "x"))
+                    .isInstanceOf(AssertionError.class).hasMessageContaining("token_urlsafe(48)");
+        }
+        Instant agora = Instant.parse("2026-11-20T15:00:00Z");
+        assertThat(ReplayDeContrato.deslocamento(agora.plusSeconds(86400), agora)).isEqualTo("+24:00:00");
+        assertThat(ReplayDeContrato.deslocamento(agora, agora)).isEqualTo("+00:00:00");
+        assertThat(ReplayDeContrato.deslocamento(agora.minusSeconds(48 * 3600 + 1), agora)).isEqualTo("-48:00:01");
+        assertThat(ReplayDeContrato.deslocamento(agora.minusSeconds(10 * 86400), agora)).isEqualTo("-240:00:00");
+        assertThat(ReplayDeContrato.deslocamento(agora.plusMillis(500), agora)).isEqualTo("+00:00:00.500000");
     }
 
     /** Falha de rede gravada ({"falha": "conexao"}): o stub fecha a conexao e a requisicao entra na comparacao. */

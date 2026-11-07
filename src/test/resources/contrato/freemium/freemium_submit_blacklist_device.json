@@ -328,7 +328,10 @@
         "cpf_cnpj",
         "telefone"
       ],
-      "linhas": []
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "freemium_used_at"
+      ]
     },
     "freemium_freemiumblacklist": {
       "colunas": [
@@ -349,8 +352,11 @@
           "telefone_hash": null,
           "device_hash": "fp-abc123",
           "ip_hash": null,
-          "created_at": "<ts>"
+          "created_at": "-720:00:00"
         }
+      ],
+      "deslocadas_do_relogio": [
+        "created_at"
       ]
     },
     "freemium_freemiumconfirmationtoken": {
@@ -370,12 +376,16 @@
           "id": "<uuid>",
           "pedido_id": "<uuid>",
           "token": "<token>",
-          "expires_at": "<ts>",
+          "expires_at": "+24:00:00",
           "used_at": null,
           "ip_origem": "203.0.113.9",
           "device_hash": "fp-outro",
           "created_at": "<ts>"
         }
+      ],
+      "deslocadas_do_relogio": [
+        "expires_at",
+        "used_at"
       ]
     }
   }

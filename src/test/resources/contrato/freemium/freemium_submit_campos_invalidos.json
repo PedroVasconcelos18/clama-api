@@ -131,6 +131,66 @@
           "X-Forwarded-For": "198.51.100.2, 10.0.0.1"
         },
         "body": {
+          "nome": "   ",
+          "email": "maria@exemplo.com",
+          "telefone": "+5511999998888",
+          "cpf_cnpj": "529.982.247-25",
+          "idade": 35,
+          "sexo": "feminino",
+          "pedido_oracao": "Peço oração pela minha família.",
+          "consent_aceito": true,
+          "turnstile_token": "XXXX.DUMMY.TOKEN.XXXX",
+          "device_hash": "fp-abc123"
+        }
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "nome": [
+            "Este campo pode não estar em branco."
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/freemium/pedidos/",
+        "headers": {
+          "X-Forwarded-For": "198.51.100.3, 10.0.0.1"
+        },
+        "body": {
+          "nome": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "email": "maria@exemplo.com",
+          "telefone": "+5511999998888",
+          "cpf_cnpj": "529.982.247-25",
+          "idade": 35,
+          "sexo": "feminino",
+          "pedido_oracao": "Peço oração pela minha família.",
+          "consent_aceito": true,
+          "turnstile_token": "XXXX.DUMMY.TOKEN.XXXX",
+          "device_hash": "fp-abc123"
+        }
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "nome": [
+            "Certifique-se de que este campo não tenha mais de 120 caracteres."
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/freemium/pedidos/",
+        "headers": {
+          "X-Forwarded-For": "198.51.100.4, 10.0.0.1"
+        },
+        "body": {
           "nome": "Maria Silva",
           "email": "nao-e-email",
           "telefone": "+5511999998888",
@@ -158,7 +218,7 @@
         "method": "POST",
         "path": "/api/freemium/pedidos/",
         "headers": {
-          "X-Forwarded-For": "198.51.100.3, 10.0.0.1"
+          "X-Forwarded-For": "198.51.100.5, 10.0.0.1"
         },
         "body": {
           "nome": "Maria Silva",
@@ -188,7 +248,37 @@
         "method": "POST",
         "path": "/api/freemium/pedidos/",
         "headers": {
-          "X-Forwarded-For": "198.51.100.4, 10.0.0.1"
+          "X-Forwarded-For": "198.51.100.6, 10.0.0.1"
+        },
+        "body": {
+          "nome": "Maria Silva",
+          "email": "maria@exemplo.com",
+          "telefone": "+55119999988887777666",
+          "cpf_cnpj": "529.982.247-25",
+          "idade": 35,
+          "sexo": "feminino",
+          "pedido_oracao": "Peço oração pela minha família.",
+          "consent_aceito": true,
+          "turnstile_token": "XXXX.DUMMY.TOKEN.XXXX",
+          "device_hash": "fp-abc123"
+        }
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "telefone": [
+            "Certifique-se de que este campo não tenha mais de 20 caracteres."
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/freemium/pedidos/",
+        "headers": {
+          "X-Forwarded-For": "198.51.100.7, 10.0.0.1"
         },
         "body": {
           "nome": "Maria Silva",
@@ -218,7 +308,37 @@
         "method": "POST",
         "path": "/api/freemium/pedidos/",
         "headers": {
-          "X-Forwarded-For": "198.51.100.5, 10.0.0.1"
+          "X-Forwarded-For": "198.51.100.8, 10.0.0.1"
+        },
+        "body": {
+          "nome": "Maria Silva",
+          "email": "maria@exemplo.com",
+          "telefone": "+5511999998888",
+          "cpf_cnpj": "123",
+          "idade": 35,
+          "sexo": "feminino",
+          "pedido_oracao": "Peço oração pela minha família.",
+          "consent_aceito": true,
+          "turnstile_token": "XXXX.DUMMY.TOKEN.XXXX",
+          "device_hash": "fp-abc123"
+        }
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "cpf_cnpj": [
+            "CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos."
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/freemium/pedidos/",
+        "headers": {
+          "X-Forwarded-For": "198.51.100.9, 10.0.0.1"
         },
         "body": {
           "nome": "Maria Silva",
@@ -248,7 +368,67 @@
         "method": "POST",
         "path": "/api/freemium/pedidos/",
         "headers": {
-          "X-Forwarded-For": "198.51.100.6, 10.0.0.1"
+          "X-Forwarded-For": "198.51.100.10, 10.0.0.1"
+        },
+        "body": {
+          "nome": "Maria Silva",
+          "email": "maria@exemplo.com",
+          "telefone": "+5511999998888",
+          "cpf_cnpj": "529.982.247-25",
+          "idade": 121,
+          "sexo": "feminino",
+          "pedido_oracao": "Peço oração pela minha família.",
+          "consent_aceito": true,
+          "turnstile_token": "XXXX.DUMMY.TOKEN.XXXX",
+          "device_hash": "fp-abc123"
+        }
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "idade": [
+            "Certifique-se de que este valor seja inferior ou igual a 120."
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/freemium/pedidos/",
+        "headers": {
+          "X-Forwarded-For": "198.51.100.11, 10.0.0.1"
+        },
+        "body": {
+          "nome": "Maria Silva",
+          "email": "maria@exemplo.com",
+          "telefone": "+5511999998888",
+          "cpf_cnpj": "529.982.247-25",
+          "idade": "abc",
+          "sexo": "feminino",
+          "pedido_oracao": "Peço oração pela minha família.",
+          "consent_aceito": true,
+          "turnstile_token": "XXXX.DUMMY.TOKEN.XXXX",
+          "device_hash": "fp-abc123"
+        }
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "idade": [
+            "Um número inteiro válido é exigido."
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/freemium/pedidos/",
+        "headers": {
+          "X-Forwarded-For": "198.51.100.12, 10.0.0.1"
         },
         "body": {
           "nome": "Maria Silva",
@@ -278,7 +458,37 @@
         "method": "POST",
         "path": "/api/freemium/pedidos/",
         "headers": {
-          "X-Forwarded-For": "198.51.100.7, 10.0.0.1"
+          "X-Forwarded-For": "198.51.100.13, 10.0.0.1"
+        },
+        "body": {
+          "nome": "Maria Silva",
+          "email": "maria@exemplo.com",
+          "telefone": "+5511999998888",
+          "cpf_cnpj": "529.982.247-25",
+          "idade": 35,
+          "sexo": null,
+          "pedido_oracao": "Peço oração pela minha família.",
+          "consent_aceito": true,
+          "turnstile_token": "XXXX.DUMMY.TOKEN.XXXX",
+          "device_hash": "fp-abc123"
+        }
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "sexo": [
+            "Este campo pode não ser nulo."
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/freemium/pedidos/",
+        "headers": {
+          "X-Forwarded-For": "198.51.100.14, 10.0.0.1"
         },
         "body": {
           "nome": "Maria Silva",
@@ -308,7 +518,7 @@
         "method": "POST",
         "path": "/api/freemium/pedidos/",
         "headers": {
-          "X-Forwarded-For": "198.51.100.8, 10.0.0.1"
+          "X-Forwarded-For": "198.51.100.15, 10.0.0.1"
         },
         "body": {
           "nome": "Maria Silva",
@@ -338,7 +548,37 @@
         "method": "POST",
         "path": "/api/freemium/pedidos/",
         "headers": {
-          "X-Forwarded-For": "198.51.100.9, 10.0.0.1"
+          "X-Forwarded-For": "198.51.100.16, 10.0.0.1"
+        },
+        "body": {
+          "nome": "Maria Silva",
+          "email": "maria@exemplo.com",
+          "telefone": "+5511999998888",
+          "cpf_cnpj": "529.982.247-25",
+          "idade": 35,
+          "sexo": "feminino",
+          "pedido_oracao": "Peço oração pela minha família.",
+          "consent_aceito": "talvez",
+          "turnstile_token": "XXXX.DUMMY.TOKEN.XXXX",
+          "device_hash": "fp-abc123"
+        }
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "consent_aceito": [
+            "Deve ser um valor booleano válido."
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/freemium/pedidos/",
+        "headers": {
+          "X-Forwarded-For": "198.51.100.17, 10.0.0.1"
         },
         "body": {
           "nome": "Maria Silva",
@@ -368,7 +608,7 @@
         "method": "POST",
         "path": "/api/freemium/pedidos/",
         "headers": {
-          "X-Forwarded-For": "198.51.100.10, 10.0.0.1"
+          "X-Forwarded-For": "198.51.100.18, 10.0.0.1"
         },
         "body": {
           "nome": "Maria Silva",
@@ -398,7 +638,37 @@
         "method": "POST",
         "path": "/api/freemium/pedidos/",
         "headers": {
-          "X-Forwarded-For": "198.51.100.11, 10.0.0.1"
+          "X-Forwarded-For": "198.51.100.19, 10.0.0.1"
+        },
+        "body": {
+          "nome": "Maria Silva",
+          "email": "maria@exemplo.com",
+          "telefone": "+5511999998888",
+          "cpf_cnpj": "529.982.247-25",
+          "idade": 35,
+          "sexo": "feminino",
+          "pedido_oracao": "Peço oração pela minha família.",
+          "consent_aceito": true,
+          "turnstile_token": "XXXX.DUMMY.TOKEN.XXXX",
+          "device_hash": null
+        }
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "device_hash": [
+            "Este campo pode não ser nulo."
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/freemium/pedidos/",
+        "headers": {
+          "X-Forwarded-For": "198.51.100.20, 10.0.0.1"
         },
         "body": {}
       },
@@ -505,7 +775,10 @@
         "cpf_cnpj",
         "telefone"
       ],
-      "linhas": []
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "freemium_used_at"
+      ]
     },
     "freemium_freemiumblacklist": {
       "colunas": [
@@ -518,7 +791,10 @@
         "created_at"
       ],
       "cifradas_decifradas": [],
-      "linhas": []
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "created_at"
+      ]
     },
     "freemium_freemiumconfirmationtoken": {
       "colunas": [
@@ -532,7 +808,11 @@
         "created_at"
       ],
       "cifradas_decifradas": [],
-      "linhas": []
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "expires_at",
+        "used_at"
+      ]
     }
   }
 }

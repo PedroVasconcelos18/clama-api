@@ -237,7 +237,10 @@
         "cpf_cnpj",
         "telefone"
       ],
-      "linhas": []
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "freemium_used_at"
+      ]
     },
     "freemium_freemiumblacklist": {
       "colunas": [
@@ -258,8 +261,11 @@
           "telefone_hash": "5432e463eaa1d87049c75d4b70c9db479902fb77c067ad1de9adbd706cc132c9",
           "device_hash": null,
           "ip_hash": null,
-          "created_at": "<ts>"
+          "created_at": "-720:00:00"
         }
+      ],
+      "deslocadas_do_relogio": [
+        "created_at"
       ]
     },
     "freemium_freemiumconfirmationtoken": {
@@ -274,7 +280,11 @@
         "created_at"
       ],
       "cifradas_decifradas": [],
-      "linhas": []
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "expires_at",
+        "used_at"
+      ]
     }
   }
 }
