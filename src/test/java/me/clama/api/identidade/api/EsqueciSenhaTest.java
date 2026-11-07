@@ -78,6 +78,34 @@ class EsqueciSenhaTest {
     }
 
     @Test
+    void forgotAdminPeloFallbackCanonicoNaoTroca() throws Exception {
+        String local = "ad" + sufixo;
+        Usuario u = conta(local + "@gmail.com");
+        u.setClamaAdmin(true);
+        usuarios.saveAndFlush(u);
+        semTroca(u, local);
+    }
+
+    @Test
+    void forgotInativoPeloFallbackCanonicoNaoTroca() throws Exception {
+        String local = "in" + sufixo;
+        Usuario u = conta(local + "@gmail.com");
+        u.setActive(false);
+        usuarios.saveAndFlush(u);
+        semTroca(u, local);
+    }
+
+    private void semTroca(Usuario u, String local) throws Exception {
+        HttpResponse<String> r = pedir(local.charAt(0) + "." + local.substring(1) + "+x@gmail.com");
+        assertThat(r.statusCode()).isEqualTo(200);
+        assertThat(r.body()).contains("Se este e-mail estiver cadastrado");
+        Mockito.verifyNoInteractions(enviador);
+        Usuario depois = usuarios.findById(u.getId()).orElseThrow();
+        assertThat(depois.getPassword()).isEqualTo("antiga");
+        assertThat(depois.isForceChangePassword()).isFalse();
+    }
+
+    @Test
     void forgotFalhaDeEmailAindaResponde200() throws Exception {
         Usuario u = conta("falha-" + sufixo + "@x.com");
         doThrow(new IllegalStateException("resend fora")).when(enviador).enviar(any());

@@ -76,16 +76,16 @@ class EsqueciSenhaController {
     }
 
     private Troca trocarSenha(String email) {
-        List<Usuario> achados = usuarios.buscarPorEmailIgnorandoCaixa(email);
+        List<Long> achados = usuarios.idsPorEmailIgnorandoCaixa(email);
         if (achados.isEmpty()) {
-            achados = usuarios.buscarPorEmailIgnorandoCaixa(HashIdentificador.normalizarEmail(email));
+            achados = usuarios.idsPorEmailIgnorandoCaixa(HashIdentificador.normalizarEmail(email));
         }
         if (achados.size() != 1) { // nenhum, ou ambiguo (o get() do Django estoura e cai no generico)
             LOG.info("Forgot-password sem conta unica para o e-mail (dominio {})",
                     email.contains("@") ? email.substring(email.lastIndexOf('@') + 1) : "?");
             return null;
         }
-        Usuario u = usuarios.travar(achados.get(0).getId()).orElse(null);
+        Usuario u = usuarios.travar(achados.get(0)).orElse(null);
         if (u == null || u.isClamaAdmin() || !u.isActive()) {
             LOG.info("Forgot-password ignorado (admin/inativo)");
             return null;
