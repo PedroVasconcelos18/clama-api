@@ -18,6 +18,7 @@ import me.clama.api.catalogo.instituicao.Instituicao;
 import me.clama.api.catalogo.plano.Plano;
 import me.clama.api.comum.Dinheiro;
 import me.clama.api.comum.cripto.CampoCriptografado;
+import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.identidade.Usuario;
 import org.hibernate.annotations.ColumnTransformer;
 
@@ -154,6 +155,22 @@ public class Pedido {
             throw new TransicaoInvalida("Pedido nao esta aguardando pagamento");
         }
         status = StatusPedido.PAGO;
+    }
+
+    /** Pedido.marcar_como_gratuito (fluxo admin). false: ja gratuito e gerando, no-op (nao re-disparar). */
+    public boolean marcarComoGratuito() {
+        if (status == StatusPedido.ENVIADA) {
+            throw new PastoralException(409, "invalid_state_transition",
+                    "Pedido já enviado não pode ser marcado como gratuito",
+                    "Esse pedido já foi enviado — não dá para marcá-lo como gratuito.");
+        }
+        if (ehGratuito && status == StatusPedido.GERANDO_ORACAO) {
+            return false;
+        }
+        ehGratuito = true;
+        valorCentavos = 0;
+        status = StatusPedido.GERANDO_ORACAO;
+        return true;
     }
 
     public String valorReaisStr() {

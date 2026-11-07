@@ -52,6 +52,8 @@ O Django ignora essas tabelas, entao voltar para ele e seguro. Mas jobs pendente
 
 - **Instancia deterministica** (`Fila.enfileirar(tipo, instancia, payload)`): instancia ja existente = no-op, retorna `false`, e isso inclui o job *em execucao* (a linha so some quando ele termina). Para reagendar a mesma instancia depois de esgotar as retentativas, faca isso de dentro de `esgotou` (a linha ja foi removida), numa transacao propria (`TransactionTemplate`); nunca de dentro de `executar`. Enfileiramentos concorrentes da mesma instancia sao serializados por advisory lock (o db-scheduler faz SELECT + INSERT, sem ON CONFLICT).
 
+- **Antecipar** (`Fila.antecipar(tipo, instancia)`, exige transacao): traz para agora uma instancia ja agendada (o `gerar-oracao` de `aguardando_reenvio`, em +300 s); `false` se ela nao existe ou ja esta em execucao. O reschedule zera as falhas consecutivas da instancia.
+
 - **Testes com o scheduler ligado** usam `@SchedulerLigado` (liga `clama.fila.scheduler-ativo` e poe `@DirtiesContext`): um contexto em cache segue fazendo polling e executaria os jobs (gerar/enviar/alerta) enfileirados por outros testes. Esperas dos jobs de oracao em teste: `clama.oracao.gerar-espera`, `clama.oracao.enviar-espera`, `clama.oracao.reagendamento` (defaults 60 s, 30 s, 300 s).
 
 ## Regras para jobs que enviam e-mail (Etapa 4+)

@@ -1,7 +1,10 @@
 package me.clama.api.comum.fila;
 
 import com.github.kagkarlsson.scheduler.SchedulerClient;
+import com.github.kagkarlsson.scheduler.exceptions.TaskInstanceCurrentlyExecutingException;
+import com.github.kagkarlsson.scheduler.exceptions.TaskInstanceNotFoundException;
 import com.github.kagkarlsson.scheduler.task.TaskInstance;
+import com.github.kagkarlsson.scheduler.task.TaskInstanceId;
 import com.github.kagkarlsson.scheduler.task.helper.OneTimeTask;
 import java.time.Instant;
 import java.util.UUID;
@@ -52,15 +55,32 @@ public class Fila {
 		return client.scheduleIfNotExists(ti, quando);
 	}
 
-	private <P> TaskInstance<P> instancia(TipoDeJob<P> tipo, String id, P payload) {
-		if (!TransactionSynchronizationManager.isActualTransactionActive()) {
-			throw new IllegalStateException("Fila.enfileirar exige transacao ativa: " + tipo.nome());
+	/**
+	 * Traz para agora uma instancia ja agendada (ex.: o gerar-oracao de aguardando_reenvio, em +300 s), na transacao do
+	 * chamador. false se ela nao existe ou ja esta em execucao. O reschedule zera as falhas consecutivas da instancia.
+	 */
+	public boolean antecipar(TipoDeJob<?> tipo, String instancia) {
+		exigirTransacao("Fila.antecipar", tipo);
+		try {
+			return client.reschedule(TaskInstanceId.of(tipo.nome(), instancia), Instant.now());
+		} catch (TaskInstanceNotFoundException | TaskInstanceCurrentlyExecutingException e) {
+			return false;
 		}
+	}
+
+	private <P> TaskInstance<P> instancia(TipoDeJob<P> tipo, String id, P payload) {
+		exigirTransacao("Fila.enfileirar", tipo);
 		@SuppressWarnings("unchecked")
 		OneTimeTask<P> tarefa = (OneTimeTask<P>) tarefas.porNome().get(tipo.nome());
 		if (tarefa == null) {
 			throw new IllegalStateException("TipoDeJob nao registrado como bean: " + tipo.nome());
 		}
 		return tarefa.instance(id, payload);
+	}
+
+	private static void exigirTransacao(String metodo, TipoDeJob<?> tipo) {
+		if (!TransactionSynchronizationManager.isActualTransactionActive()) {
+			throw new IllegalStateException(metodo + " exige transacao ativa: " + tipo.nome());
+		}
 	}
 }

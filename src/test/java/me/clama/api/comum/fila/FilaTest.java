@@ -217,6 +217,39 @@ class FilaTest {
 		assertThat(job.recebidos).containsExactly("a", "a", "a", "a", "de-novo");
 	}
 
+	@Test
+	void anteciparTrazParaAgora() {
+		tx.executeWithoutResult(s -> fila.enfileirar(job, "ant/1", new JobDeTeste("a"), Instant.now().plusSeconds(300)));
+		assertThat(tx.<Boolean>execute(s -> fila.antecipar(job, "ant/1"))).isTrue();
+		await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> assertThat(job.recebidos).containsExactly("a"));
+	}
+
+	@Test
+	void anteciparInexistenteRetornaFalse() {
+		assertThat(tx.<Boolean>execute(s -> fila.antecipar(job, "ant/nada"))).isFalse();
+	}
+
+	@Test
+	void anteciparEmExecucaoRetornaFalse() throws Exception {
+		var rodando = new java.util.concurrent.CountDownLatch(1);
+		var libera = new java.util.concurrent.CountDownLatch(1);
+		job.aoExecutar = p -> {
+			rodando.countDown();
+			aguardar(libera);
+		};
+		tx.executeWithoutResult(s -> fila.enfileirar(job, "ant/exec", new JobDeTeste("a")));
+		assertThat(rodando.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+		assertThat(tx.<Boolean>execute(s -> fila.antecipar(job, "ant/exec"))).isFalse();
+		libera.countDown();
+		await().atMost(Duration.ofSeconds(5)).until(() -> linhas() == 0);
+		assertThat(job.recebidos).containsExactly("a");
+	}
+
+	@Test
+	void anteciparSemTransacaoFalha() {
+		assertThatThrownBy(() -> fila.antecipar(job, "ant/1")).isInstanceOf(IllegalStateException.class);
+	}
+
 	private static void aguardar(java.util.concurrent.CountDownLatch l) {
 		try {
 			if (!l.await(10, java.util.concurrent.TimeUnit.SECONDS)) throw new IllegalStateException("latch");

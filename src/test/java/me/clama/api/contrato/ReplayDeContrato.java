@@ -42,6 +42,7 @@ import me.clama.api.identidade.Usuario;
 import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.identidade.senha.SenhaDjango;
 import me.clama.api.identidade.token.ServicoDeTokens;
+import me.clama.api.oracao.JobReenviarOracao;
 import org.postgresql.util.PGobject;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -434,20 +435,28 @@ public class ReplayDeContrato {
 
     /**
      * on_commit/.delay do gravador = linhas de scheduled_tasks (o scheduler fica desligado no perfil test). O payload
-     * (task_data) so pode levar IDs: o arg e o ID (JSON string/numero, ou o 1o campo de um objeto cujos campos sao
-     * todos IDs, como o {pedido, envio} do reenviar-oracao), e a instancia tem de ser exatamente "<tipo>/<arg>".
-     * Ordenado por (tipo, arg) antes de normalizar, como o gravador.
+     * (task_data) so pode levar o ID (JSON string/numero, ou objeto de um campo so), e a instancia tem de ser
+     * exatamente "<tipo>/<arg>". Excecao unica: o reenviar-oracao leva {pedido, envio}; o arg e o pedido e o envio,
+     * aleatorio (a chave nova do e-mail), so precisa ser um UUID. Ordenado por (tipo, arg) antes de normalizar, como o
+     * gravador.
      */
     private void conferirJobs(JsonNode esperados, Set<String> fixos, String arquivo) {
         List<String[]> linhas = new ArrayList<>(jdbc.query(
                 "SELECT task_name, task_instance, task_data FROM scheduled_tasks", (rs, n) -> {
                     String tipo = rs.getString(1);
                     JsonNode dado = JSON.readTree(rs.getBytes(3));
-                    List<JsonNode> ids = dado.isObject()
-                            ? dado.properties().stream().map(Map.Entry::getValue).toList() : List.of(dado);
-                    assertThat(ids).as("%s: payload de %s so com IDs: %s", arquivo, tipo, dado).isNotEmpty()
-                            .allMatch(id -> id.isString() || id.isIntegralNumber());
-                    String arg = ids.getFirst().asString();
+                    JsonNode id = dado.isObject() && dado.size() == 1 ? dado.properties().iterator().next().getValue()
+                            : dado;
+                    if (tipo.equals(JobReenviarOracao.NOME)) {
+                        assertThat(dado.properties()).as("%s: payload de %s: %s", arquivo, tipo, dado)
+                                .extracting(Map.Entry::getKey).containsExactlyInAnyOrder("pedido", "envio");
+                        String envio = dado.get("envio").asString();
+                        assertThat(UUID.fromString(envio)).as("%s: envio de %s", arquivo, tipo).hasToString(envio);
+                        id = dado.get("pedido");
+                    }
+                    assertThat(id.isString() || id.isIntegralNumber())
+                            .as("%s: payload de %s so com o ID: %s", arquivo, tipo, dado).isTrue();
+                    String arg = id.asString();
                     assertThat(rs.getString(2)).as("%s: instancia do job %s", arquivo, tipo).isEqualTo(tipo + "/" + arg);
                     return new String[] {tipo, arg};
                 }));

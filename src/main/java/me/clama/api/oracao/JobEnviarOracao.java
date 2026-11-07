@@ -83,7 +83,16 @@ public class JobEnviarOracao implements TipoDeJob<UUID> {
 
     @Override
     public void executar(UUID id, int retentativa) {
-        Envio envio = tx.execute(s -> preparar(id));
+        enviar(id, null, retentativa);
+    }
+
+    /**
+     * Preparar, enviar e marcar, dividido com o {@link JobReenviarOracao}. {@code reenvio} nulo = o envio do pipeline;
+     * senao, o reenvio do admin: chave {@code <chave>/reenvio/<reenvio>} e o freemium envia mesmo com
+     * {@code oracao_email_sent_at} preenchido.
+     */
+    void enviar(UUID id, UUID reenvio, int retentativa) {
+        Envio envio = tx.execute(s -> preparar(id, reenvio));
         if (envio == null) return;
         if (envio.email() != null && enviador.enviar(envio.email()) == ResultadoEnvio.JA_ENVIADO) {
             LOG.warn("E-mail ja enviado antes (idempotencia da Resend) (event=email_already_sent, pedido_id={})", id);
@@ -100,7 +109,7 @@ public class JobEnviarOracao implements TipoDeJob<UUID> {
                 retentativa + 1);
     }
 
-    private Envio preparar(UUID id) {
+    private Envio preparar(UUID id, UUID reenvio) {
         Pedido p = pedidos.findById(id).orElse(null);
         if (p == null) {
             LOG.warn("enviar_oracao_pedido_nao_encontrado (pedido_id={})", id);
@@ -119,11 +128,12 @@ public class JobEnviarOracao implements TipoDeJob<UUID> {
         if (p.getCanalEntrega() != CanalEntrega.EMAIL) {
             LOG.warn("Canal {} fora de escopo: enviando por e-mail (pedido_id={})", p.getCanalEntrega().valor(), id);
         }
+        String sufixo = reenvio == null ? "" : "/reenvio/" + reenvio;
         if (!p.isEhGratuito()) {
-            return new Envio(modelos.oracao(p.getEmail(), p.getNome(), p.getOracaoGerada()).comChave("oracao/" + id),
-                    false, null);
+            return new Envio(modelos.oracao(p.getEmail(), p.getNome(), p.getOracaoGerada())
+                    .comChave("oracao/" + id + sufixo), false, null);
         }
-        if (p.getOracaoEmailSentAt() != null) {
+        if (reenvio == null && p.getOracaoEmailSentAt() != null) {
             LOG.info("enviar_oracao_email_freemium_idempotente (event=freemium_email_oracao_already_sent, pedido_id={})",
                     id);
             return new Envio(null, true, null);
@@ -136,14 +146,15 @@ public class JobEnviarOracao implements TipoDeJob<UUID> {
             chave = PREFIXO_SENHA_FREEMIUM + u.getId();
             senha = senhas.ler(chave).orElse("");
             if (u.getEmail() != null && !u.getEmail().isEmpty()) login = u.getEmail();
-            if (senha.isEmpty()) {
+            // reenvio de freemium ja enviado: a senha saiu do cache no 1o envio, nao e alerta
+            if (senha.isEmpty() && p.getOracaoEmailSentAt() == null) {
                 LOG.warn("Senha temporária do freemium não encontrada no cache (event=freemium_senha_temp_expirada, "
                         + "pedido_id={}, user_id={})", id, u.getId());
                 Sentry.captureMessage("Freemium senha temp expirou para pedido " + id, SentryLevel.WARNING);
             }
         }
         Email email = modelos.oracaoFreemium(p.getEmail(), p.getNome(), p.getOracaoGerada(), login, senha)
-                .comChave("oracao-freemium/" + id);
+                .comChave("oracao-freemium/" + id + sufixo);
         return new Envio(email, true, senha.isEmpty() ? null : chave);
     }
 
