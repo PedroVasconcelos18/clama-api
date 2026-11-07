@@ -63,6 +63,8 @@ public class FiltroJwtCookie extends OncePerRequestFilter {
             || COMENTARIOS_ABERTOS.matches(req);
     /** IsClamaAdmin. */
     static final String ADMIN = "ADMIN";
+    /** is_superuser: gestao de usuarios (D3). Vem alem de ADMIN, nunca no lugar. */
+    static final String SUPERUSER = "SUPERUSER";
     private static final Set<String> METODOS_SEGUROS = Set.of("GET", "HEAD", "OPTIONS", "TRACE");
 
     private final ServicoDeTokens tokens;
@@ -111,9 +113,15 @@ public class FiltroJwtCookie extends OncePerRequestFilter {
             PastoralExceptionHandler.escrever(resp, PastoralException.csrfInvalido());
             return;
         }
+        List<SimpleGrantedAuthority> autoridades = new java.util.ArrayList<>();
+        if (usuario.isClamaAdmin()) {
+            autoridades.add(new SimpleGrantedAuthority(ADMIN));
+        }
+        if (usuario.isSuperuser()) {
+            autoridades.add(new SimpleGrantedAuthority(SUPERUSER));
+        }
         SecurityContext ctx = SecurityContextHolder.createEmptyContext();
-        ctx.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(usuario, null,
-                usuario.isClamaAdmin() ? List.of(new SimpleGrantedAuthority(ADMIN)) : List.of()));
+        ctx.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(usuario, null, autoridades));
         SecurityContextHolder.setContext(ctx);
         chain.doFilter(req, resp);
     }

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import me.clama.api.comum.api.CamposDrf;
 import me.clama.api.comum.api.FormularioDjango;
+import me.clama.api.comum.api.ParametroInvalido;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -35,6 +36,11 @@ public class PastoralExceptionHandler {
         e.getBindingResult().getFieldErrors()
                 .forEach(f -> corpo.computeIfAbsent(f.getField(), k -> new ArrayList<>()).add(f.getDefaultMessage()));
         return ResponseEntity.badRequest().body(corpo);
+    }
+
+    @ExceptionHandler(ParametroInvalido.class)
+    ResponseEntity<Map<String, String>> parametroInvalido(ParametroInvalido e) {
+        return ResponseEntity.badRequest().body(Map.of("detail", e.getMessage()));
     }
 
     @ExceptionHandler(NaoEncontrado.class)

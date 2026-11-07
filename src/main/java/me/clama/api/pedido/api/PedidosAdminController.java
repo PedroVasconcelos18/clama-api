@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import me.clama.api.comum.Dinheiro;
 import me.clama.api.comum.api.DatasDrf;
 import me.clama.api.comum.api.PaginaLimitOffset;
+import me.clama.api.comum.api.ParametroInvalido;
 import me.clama.api.comum.api.ParametrosDeQuery;
 import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.comum.texto.TextoPython;
@@ -20,7 +21,6 @@ import me.clama.api.pedido.Pedido;
 import me.clama.api.pedido.PedidoRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,17 +46,6 @@ class PedidosAdminController {
         this.pedidos = pedidos;
         this.jdbc = jdbc;
         this.tx = tx;
-    }
-
-    static class ParametroInvalido extends RuntimeException {
-        ParametroInvalido(String nome) {
-            super("Parâmetro " + nome + " inválido.", null, false, false);
-        }
-    }
-
-    @ExceptionHandler(ParametroInvalido.class)
-    org.springframework.http.ResponseEntity<Map<String, String>> invalido(ParametroInvalido e) {
-        return org.springframework.http.ResponseEntity.badRequest().body(Map.of("detail", e.getMessage()));
     }
 
     /** AdminPedidoListSerializer. */
