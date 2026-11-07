@@ -49,6 +49,8 @@ class InstituicaoAdminTest {
     @BeforeEach
     void preparar() throws Exception {
         BancoDeTeste.exigirContainer(jdbc);
+        jdbc.update("delete from freemium_freemiumconfirmationtoken");
+        jdbc.update("delete from orders_pedido"); // prendem users_user por FK (sobra de outras classes)
         jdbc.update("delete from instituicoes_instituicao");
         jdbc.update("delete from token_blacklist_blacklistedtoken");
         jdbc.update("delete from token_blacklist_outstandingtoken");
