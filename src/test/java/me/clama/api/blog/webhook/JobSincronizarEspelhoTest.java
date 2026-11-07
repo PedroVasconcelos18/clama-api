@@ -3,6 +3,7 @@ package me.clama.api.blog.webhook;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.sentry.Sentry;
 import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
@@ -10,6 +11,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 import me.clama.api.BancoDeTeste;
 import me.clama.api.RelogioDeTeste;
+import me.clama.api.comum.observabilidade.TransportEmMemoria;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -94,6 +96,33 @@ class JobSincronizarEspelhoTest {
         job.esgotou(feito, null); // terminal nao volta
         assertThat(status(feito)).isEqualTo("PROCESSADO/");
         job.esgotou(UUID.randomUUID(), null); // evento inexistente: nada
+    }
+
+    /**
+     * O que pode lancar (data, wp_post_id fora do integer) vem antes da traducao do status: o alerta de status
+     * desconhecido sai uma vez, na tentativa que aplica, e nao a cada retentativa que falha.
+     */
+    @Test
+    void statusDesconhecidoNaoAlertaEmTentativaQueFalha() throws Exception {
+        TransportEmMemoria sentry = new TransportEmMemoria();
+        Sentry.init(o -> {
+            o.setDsn("https://chave@localhost/1");
+            o.setTransportFactory(sentry.fabrica());
+        });
+        try {
+            UUID data = evento("RECEBIDO", "post_publicado", "{\"wp_post_id\": 8, \"status\": \"rascunhinho\","
+                    + " \"published_at\": \"2026-13-40T10:00:00\"}");
+            assertThatThrownBy(() -> job.executar(data, 0)).isInstanceOf(DateTimeException.class);
+            UUID enorme = evento("RECEBIDO", "post_publicado", "{\"wp_post_id\": 99999999999, \"status\": \"x\"}");
+            assertThatThrownBy(() -> job.executar(enorme, 0)).isInstanceOf(ArithmeticException.class);
+            assertThat(sentry.eventos).isEmpty();
+
+            job.executar(evento("RECEBIDO", "post_publicado", "{\"wp_post_id\": 8, \"status\": \"rascunhinho\"}"), 0);
+            assertThat(sentry.eventos).extracting(e -> e.getMessage().getFormatted())
+                    .containsExactly("Status desconhecido do WordPress: 'rascunhinho'");
+        } finally {
+            Sentry.close();
+        }
     }
 
     /** int() do Python: JSON 12.7 vira 12, "12.0" falha (ERRO e return), espacos, sinal, "_" e bool passam. */

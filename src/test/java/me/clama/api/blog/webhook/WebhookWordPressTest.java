@@ -13,6 +13,7 @@ import java.util.Map;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import me.clama.api.BancoDeTeste;
+import me.clama.api.comum.api.FormularioDjango;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -185,6 +186,31 @@ class WebhookWordPressTest {
                 StandardCharsets.UTF_8)), null);
         assertThat(quebrado.statusCode()).isEqualTo(400);
         assertThat(quebrado.body()).contains("JSON parse error");
+    }
+
+    /**
+     * RequestDataTooBig: corpo acima de DATA_UPLOAD_MAX_MEMORY_SIZE e o 400 HTML padrao do Django, antes do HMAC e sem
+     * ir inteiro para a memoria, com Content-Length e chunked. No limite exato segue para o HMAC (401).
+     */
+    @Test
+    void corpoAcimaDoLimiteE400() throws Exception {
+        byte[] grande = new byte[FormularioDjango.MAX_CAMPO + 1];
+        java.util.Arrays.fill(grande, (byte) 'a');
+        URI uri = URI.create("http://localhost:" + porta + CAMINHO);
+        for (HttpRequest.BodyPublisher corpo : List.of(HttpRequest.BodyPublishers.ofByteArray(grande),
+                HttpRequest.BodyPublishers.ofInputStream(() -> new java.io.ByteArrayInputStream(grande)))) {
+            HttpResponse<String> r = http.send(HttpRequest.newBuilder(uri).POST(corpo)
+                    .header("Content-Type", "application/x-www-form-urlencoded").header("X-Clama-Signature",
+                            assinar(grande)).build(), HttpResponse.BodyHandlers.ofString());
+            assertThat(r.statusCode()).as("Content-Length %s", corpo.contentLength()).isEqualTo(400);
+            // o Django manda "text/html; charset=utf-8"; o Tomcat sempre remonta o header sem o espaco
+            assertThat(r.headers().firstValue("Content-Type")).hasValue("text/html;charset=utf-8");
+            assertThat(r.body()).isEqualTo("\n<!doctype html>\n<html lang=\"en\">\n<head>\n  <title>Bad Request (400)"
+                    + "</title>\n</head>\n<body>\n  <h1>Bad Request (400)</h1><p></p>\n</body>\n</html>\n");
+        }
+        assertThat(post(CAMINHO, "application/x-www-form-urlencoded", "a".repeat(FormularioDjango.MAX_CAMPO), "0",
+                null).statusCode()).as("no limite").isEqualTo(401);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM payments_webhookevento", Integer.class)).isZero();
     }
 
     /** O filtro roda antes do cookie (o middleware do Django vem antes da autenticacao do DRF). */

@@ -1,22 +1,17 @@
 package me.clama.api.blog.webhook;
 
 import jakarta.servlet.FilterChain;
-import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import me.clama.api.comum.api.FormularioDjango;
 import me.clama.api.comum.cripto.CriptoConfig;
 import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.comum.erro.PastoralExceptionHandler;
@@ -33,8 +28,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * WordPressWebhookAuthMiddleware (blog/middleware.py:49-86) com verificar_assinatura_webhook
  * (services/wordpress_webhook.py:86-137): so no caminho exato, qualquer metodo. HMAC-SHA256 do corpo cru com
  * WORDPRESS_WEBHOOK_SECRET, prefixo "sha256=" opcional, hex minusculo comparado em tempo constante; segredo vazio
- * recusa tudo. Le os bytes do corpo antes de qualquer getParameter (que consumiria um form) e passa adiante um request
- * que os rele: o controller interpreta o mesmo corpo como form ou JSON.
+ * recusa tudo. Le os bytes do corpo (ate DATA_UPLOAD_MAX_MEMORY_SIZE) antes de qualquer getParameter, que consumiria um
+ * form, e os deixa no atributo {@link #CORPO}: o controller interpreta o mesmo corpo como form ou JSON.
  *
  * <p>Fica dentro da cadeia do Spring Security, antes do FiltroJwtCookie (SegurancaConfig): o middleware do Django vem
  * antes da autenticacao do DRF (assinatura invalida + cookie invalido = este 401), e depois do CORS e dos headers.
@@ -44,6 +39,12 @@ public class AssinaturaWordPress extends OncePerRequestFilter {
     private static final Logger LOG = LoggerFactory.getLogger(AssinaturaWordPress.class);
     public static final String CAMINHO = "/api/webhooks/wordpress/";
     private static final String PREFIXO = "sha256=";
+    /** Atributo do request com os bytes do corpo ja lidos e conferidos: o controller le daqui, sem copiar de novo. */
+    public static final String CORPO = "me.clama.api.blog.webhook.AssinaturaWordPress.corpo";
+    /** A pagina 400 padrao do Django (sem 400.html no projeto). */
+    private static final String BAD_REQUEST = "\n<!doctype html>\n<html lang=\"en\">\n<head>\n"
+            + "  <title>Bad Request (400)</title>\n</head>\n<body>\n  <h1>Bad Request (400)</h1><p></p>\n</body>\n"
+            + "</html>\n";
 
     private final String segredo;
 
@@ -66,7 +67,18 @@ public class AssinaturaWordPress extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse resp, FilterChain chain)
             throws ServletException, IOException {
-        byte[] corpo = req.getInputStream().readAllBytes();
+        // RequestDataTooBig: o request.body do Django recusa acima de DATA_UPLOAD_MAX_MEMORY_SIZE (400 HTML padrao).
+        // Pelo Content-Length antes de ler; o chunked e lido ate um byte a mais que o limite, nunca inteiro.
+        byte[] corpo = req.getContentLengthLong() > FormularioDjango.MAX_CAMPO ? null
+                : req.getInputStream().readNBytes(FormularioDjango.MAX_CAMPO + 1);
+        if (corpo == null || corpo.length > FormularioDjango.MAX_CAMPO) {
+            LOG.warn("Request body exceeded settings.DATA_UPLOAD_MAX_MEMORY_SIZE. (event=wordpress_webhook_auth, "
+                    + "ok=false)");
+            resp.setStatus(400);
+            resp.setContentType("text/html; charset=utf-8");
+            resp.getWriter().write(BAD_REQUEST);
+            return;
+        }
         if (!valida(segredo, corpo, req.getHeader("X-Clama-Signature"))) {
             String xff = req.getHeader("X-Forwarded-For");
             LOG.warn("wordpress_webhook_auth_failed (event=wordpress_webhook_auth, ok=false, ip={})",
@@ -75,7 +87,8 @@ public class AssinaturaWordPress extends OncePerRequestFilter {
                     "Authentication required", "Não pudemos confirmar quem enviou essa requisição."));
             return;
         }
-        chain.doFilter(new CorpoCru(req, corpo), resp);
+        req.setAttribute(CORPO, corpo);
+        chain.doFilter(req, resp);
     }
 
     /** assinatura: o header X-Clama-Signature, null se ausente. */
@@ -104,51 +117,5 @@ public class AssinaturaWordPress extends OncePerRequestFilter {
                 assinatura.getBytes(StandardCharsets.UTF_8));
         LOG.info("wordpress_webhook_auth (event=wordpress_webhook_auth, ok={})", ok);
         return ok;
-    }
-
-    /** O request com o corpo ja lido: getInputStream e getReader devolvem os mesmos bytes, quantas vezes for. */
-    static final class CorpoCru extends HttpServletRequestWrapper {
-        private final byte[] corpo;
-
-        CorpoCru(HttpServletRequest req, byte[] corpo) {
-            super(req);
-            this.corpo = corpo;
-        }
-
-        @Override
-        public ServletInputStream getInputStream() {
-            ByteArrayInputStream in = new ByteArrayInputStream(corpo);
-            return new ServletInputStream() {
-                @Override
-                public int read() {
-                    return in.read();
-                }
-
-                @Override
-                public int read(byte[] b, int off, int len) {
-                    return in.read(b, off, len);
-                }
-
-                @Override
-                public boolean isFinished() {
-                    return in.available() == 0;
-                }
-
-                @Override
-                public boolean isReady() {
-                    return true;
-                }
-
-                @Override
-                public void setReadListener(ReadListener l) {
-                    throw new UnsupportedOperationException();
-                }
-            };
-        }
-
-        @Override
-        public BufferedReader getReader() {
-            return new BufferedReader(new InputStreamReader(getInputStream(), StandardCharsets.UTF_8));
-        }
     }
 }

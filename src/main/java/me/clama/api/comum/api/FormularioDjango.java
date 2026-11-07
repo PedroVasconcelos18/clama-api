@@ -36,7 +36,7 @@ public record FormularioDjango(Map<String, String> campos, Map<String, Arquivo> 
     }
 
     /** DATA_UPLOAD_MAX_MEMORY_SIZE: campo de texto maior que isso o Django recusa (RequestDataTooBig, 400). */
-    private static final long MAX_CAMPO = 2_621_440;
+    public static final int MAX_CAMPO = 2_621_440;
     private static final Pattern ENTIDADE = Pattern.compile("&(#[0-9]+|#[xX][0-9a-fA-F]+|amp|lt|gt|quot|apos);");
 
     /** Corpo vazio vale {} (DRF); multipart ou urlencoded viram campos; outro tipo e 415. */

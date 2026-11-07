@@ -110,12 +110,14 @@ public class JobSincronizarEspelho implements TipoDeJob<UUID> {
                     + "webhook_evento_id={})", id);
             return;
         }
-        String status = evento.tipo().equals("post_removido") ? "lixeira"
-                : StatusWordPress.efetivo(TextoPython.strOuVazio(payload.get("status")),
-                        comoBool(payload.get("protegido_por_senha")));
+        // o que pode lancar vem antes da traducao do status: o alerta de status desconhecido sai so na tentativa que
+        // aplica, nao a cada retentativa (o Django traduz antes, mas nunca retenta)
         OffsetDateTime publicadoEm = publicadoEm(TextoPython.strOuVazio(payload.get("published_at")));
         // fora do integer (ou negativo, pelo CHECK) o Django falha no banco; aqui tambem falha, e a fila retenta
         int wp = wpPostId.intValueExact();
+        String status = evento.tipo().equals("post_removido") ? "lixeira"
+                : StatusWordPress.efetivo(TextoPython.strOuVazio(payload.get("status")),
+                        comoBool(payload.get("protegido_por_senha")));
 
         boolean criado = Boolean.TRUE.equals(tx.execute(s -> {
             PostEspelho e = espelhos.findByWpPostId(wp).orElse(null);

@@ -1,7 +1,6 @@
 package me.clama.api.blog.webhook;
 
 import jakarta.servlet.http.HttpServletRequest;
-import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -18,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -26,8 +26,9 @@ import tools.jackson.databind.node.ObjectNode;
 
 /**
  * WordPressWebhookView (blog/api/webhooks.py), com as respostas do mapa §4.3. A assinatura ja foi conferida pelo
- * {@link AssinaturaWordPress}, que deixou o corpo cru relegivel. Registro, IGNORADO e o job sincronizar-espelho numa
- * transacao so (o job so fica visivel na fila com o commit, o on_commit do Django).
+ * {@link AssinaturaWordPress}, que deixou o corpo cru no atributo do request (sem ele o binding falha fechado, sem
+ * ler corpo nao conferido). Registro, IGNORADO e o job sincronizar-espelho numa transacao so (o job so fica visivel
+ * na fila com o commit, o on_commit do Django).
  *
  * <p>Divergencias de proposito: reentrega com o evento ainda RECEBIDO nao enfileira um 2o job (instancia
  * deterministica); evento_id &gt; 120 ou tipo &gt; 80 caracteres e JSON que nao e objeto dao 400 invalid_payload (o
@@ -55,8 +56,9 @@ class WebhookWordPressController {
 
     @PostMapping(AssinaturaWordPress.CAMINHO)
     @LimiteDeTaxa.Nenhum
-    ResponseEntity<Map<String, String>> receber(HttpServletRequest req) throws IOException {
-        ObjectNode dados = dados(req.getContentType(), req.getInputStream().readAllBytes());
+    ResponseEntity<Map<String, String>> receber(HttpServletRequest req,
+            @RequestAttribute(AssinaturaWordPress.CORPO) byte[] corpo) {
+        ObjectNode dados = dados(req.getContentType(), corpo);
         String eventoId = dados == null ? "" : TextoPython.strip(TextoPython.strOuVazio(dados.get("evento_id")));
         String tipo = dados == null ? "" : TextoPython.strip(TextoPython.strOuVazio(dados.get("tipo")));
         // varchar(120) e varchar(80): o Django estoura DataError (500); aqui e payload invalido
