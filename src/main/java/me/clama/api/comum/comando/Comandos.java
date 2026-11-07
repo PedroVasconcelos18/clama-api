@@ -10,6 +10,7 @@ import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -24,6 +25,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.Banner;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
+import org.springframework.boot.web.server.context.WebServerApplicationContext;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.MapPropertySource;
@@ -97,18 +100,37 @@ public final class Comandos {
     }
 
     /**
+     * Travas do modo comando (D6, R3, R6, R7). O railway run injeta toda variavel do servico, e variavel de ambiente,
+     * SPRING_APPLICATION_JSON e -D venceriam o application-comando.yml: por isso vao na 1a fonte de propriedades.
+     */
+    static final Map<String, Object> TRAVAS = Map.of("spring.flyway.enabled", "false",
+            "clama.fila.scheduler-ativo", "false", "clama.agenda.ativa", "false",
+            "spring.main.web-application-type", "none");
+
+    /**
      * O contexto do modo comando. Sem os args (R5: o Spring faria de --x=y uma propriedade). sobrescritas: so para o
-     * ComandoBootTest (o banco do container), com precedencia sobre tudo.
+     * ComandoBootTest (o banco do container); acima de tudo menos das {@link #TRAVAS}. A fonte entra quando o
+     * ambiente fica pronto, antes do bind de spring.main.*, entao nem o tipo de aplicacao escapa.
      */
     public static ConfigurableApplicationContext abrir(Map<String, Object> sobrescritas) {
-        return new SpringApplicationBuilder(ClamaApiApplication.class)
+        Map<String, Object> fonte = new HashMap<>(sobrescritas);
+        fonte.putAll(TRAVAS);
+        ConfigurableApplicationContext ctx = new SpringApplicationBuilder(ClamaApiApplication.class)
                 .profiles("comando")
                 .web(WebApplicationType.NONE)
                 .bannerMode(Banner.Mode.OFF)
                 .logStartupInfo(false)
-                .initializers(c -> c.getEnvironment().getPropertySources()
-                        .addFirst(new MapPropertySource("comando-sobrescritas", sobrescritas)))
+                .listeners(e -> {
+                    if (e instanceof ApplicationEnvironmentPreparedEvent p) {
+                        p.getEnvironment().getPropertySources().addFirst(new MapPropertySource("comando-travas", fonte));
+                    }
+                })
                 .run();
+        if (ctx instanceof WebServerApplicationContext) { // nunca deveria: as travas acima; se escapar, nao segue
+            ctx.close();
+            throw new IllegalStateException("Modo comando subiu um servidor web; abortado");
+        }
+        return ctx;
     }
 
     /** ctx null: abre o contexto do modo comando e fecha no fim (o jar); senao usa o dado (testes, em processo). */
@@ -146,7 +168,7 @@ public final class Comandos {
             err.println("CommandError: " + e.getMessage());
         } catch (PastoralException e) {
             err.println("CommandError: " + e.pastoralMessage());
-        } catch (Exception e) {
+        } catch (Throwable e) { // Error tambem: traceback, Sentry e exit 1
             e.printStackTrace(err);
             SentryConfig.capturar("comando", d.nome(), e);
         } finally {

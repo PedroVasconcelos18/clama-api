@@ -15,12 +15,17 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Fumaca do jar empacotado (mapa §9.8; failsafe, depois do package): java -jar ... instituicoes num processo novo, sem
- * o perfil test, sem LANG e com locale C (stdout ASCII), contra um Postgres do Testcontainers so com o schema de producao. Pega o
- * main, o logback e o encoding: o stdout tem so as linhas, com acento, e o Flyway nao criou nada.
+ * o perfil test, sem LANG e com locale C (stdout ASCII), contra um Postgres do Testcontainers so com o schema de
+ * producao. Pega o main, o logback e o encoding: o stdout tem so as linhas, com acento, o poller nao sobe e o Flyway
+ * nao cria nada. Roda duas vezes: ambiente limpo e ambiente hostil (o railway run injeta toda variavel do servico).
  */
 class FumacaDoJarIT {
+    /** Variaveis que, sem as travas do Comandos.abrir, venceriam o application-comando.yml (D6, R3, R6, R7). */
+    static final Map<String, String> HOSTIL = Map.of("SPRING_FLYWAY_ENABLED", "true", "CLAMA_FILA_SCHEDULER_ATIVO",
+            "true", "CLAMA_AGENDA_ATIVA", "true", "SPRING_MAIN_WEB_APPLICATION_TYPE", "servlet");
+
     @Test
-    void instituicoesPeloJarSoAsLinhasEmUtf8SemLogNoStdoutESemMigrar() throws Exception {
+    void instituicoesPeloJarSoAsLinhasEmUtf8SemLogNoStdoutSemPollerESemMigrar() throws Exception {
         var banco = BancoDeTeste.container();
         try (Connection c = DriverManager.getConnection(banco.getJdbcUrl(), banco.getUsername(), banco.getPassword())) {
             c.createStatement().execute("""
@@ -29,14 +34,20 @@ class FumacaDoJarIT {
                     ('a1a1a1a1-a1a1-4a1a-8a1a-000000000001', now(), now(), 'Associação Renal de Mar de Espanha', '', false, 1)
                     """);
         }
+        rodarEConferir("fumaca-jar", Map.of());
+        rodarEConferir("fumaca-jar-hostil", HOSTIL);
+    }
+
+    private static void rodarEConferir(String nome, Map<String, String> extra) throws Exception {
+        var banco = BancoDeTeste.container();
         Path alvo = Path.of(System.getProperty("clama.jar")).getParent();
-        Path out = alvo.resolve("fumaca-jar.stdout");
-        Path err = alvo.resolve("fumaca-jar.stderr");
+        Path out = alvo.resolve(nome + ".stdout");
+        Path err = alvo.resolve(nome + ".stderr");
         ProcessBuilder pb = new ProcessBuilder(ProcessHandle.current().info().command().orElseThrow(), "-jar",
                 System.getProperty("clama.jar"), "instituicoes").redirectOutput(out.toFile()).redirectError(err.toFile());
         Map<String, String> env = pb.environment();
         env.keySet().removeIf(k -> k.equals("LANG") || k.startsWith("LC_") || k.startsWith("JAVA_TOOL_OPTIONS")
-                || k.startsWith("JDK_JAVA_OPTIONS") || k.startsWith("SPRING_"));
+                || k.startsWith("JDK_JAVA_OPTIONS") || k.startsWith("SPRING_") || k.startsWith("CLAMA_"));
         // launchd nao poe LANG (no JDK 27 do Mac isso ja da UTF-8); o locale C da US-ASCII no stdout.encoding: o pior
         // caso, em que so o PrintStream UTF-8 do Comandos.rodar salva o acento (R2)
         env.put("LC_ALL", "C");
@@ -48,25 +59,28 @@ class FumacaDoJarIT {
         env.put("MERCADOPAGO_WEBHOOK_SECRET", "fumaca");
         env.put("WORDPRESS_WEBHOOK_SECRET", "fumaca");
         env.put("SENTRY_DSN", "");
+        env.putAll(extra);
 
         Process p = pb.start();
-        assertThat(p.waitFor(120, TimeUnit.SECONDS)).as("o jar terminou").isTrue();
+        assertThat(p.waitFor(120, TimeUnit.SECONDS)).as("%s: o jar terminou", nome).isTrue();
         String stderr = Files.readString(err, UTF_8);
-        assertThat(p.exitValue()).as(stderr).isZero();
-        assertThat(Files.readAllBytes(out)).as("stdout: so as linhas, em UTF-8, nada de log").isEqualTo(("""
-                a1a1a1a1-a1a1-4a1a-8a1a-000000000001\tAssociação Renal de Mar de Espanha
-                a1a1a1a1-a1a1-4a1a-8a1a-000000000002\tKM’s Pela Vida | NÃO DESISTA
-                """).getBytes(UTF_8));
-        // o log existe, e foi para o stderr
-        assertThat(stderr).contains("Comando instituicoes: inicio").contains("Comando instituicoes: fim, exit 0")
-                .contains("Agenda desligada (clama.agenda.ativa=false)").doesNotContain("Tomcat started");
+        assertThat(p.exitValue()).as("%s: %s", nome, stderr).isZero();
+        assertThat(Files.readAllBytes(out)).as("%s: stdout so com as linhas, em UTF-8, nada de log", nome)
+                .isEqualTo(("""
+                        a1a1a1a1-a1a1-4a1a-8a1a-000000000001\tAssociação Renal de Mar de Espanha
+                        a1a1a1a1-a1a1-4a1a-8a1a-000000000002\tKM’s Pela Vida | NÃO DESISTA
+                        """).getBytes(UTF_8));
+        // o log existe, e foi para o stderr; o poller do db-scheduler loga "Starting scheduler." ao subir
+        assertThat(stderr).as(nome).contains("Comando instituicoes: inicio")
+                .contains("Comando instituicoes: fim, exit 0").contains("Agenda desligada (clama.agenda.ativa=false)")
+                .doesNotContain("Starting scheduler").doesNotContain("Tomcat").doesNotContain("Migrating schema");
 
         try (Connection c = DriverManager.getConnection(banco.getJdbcUrl(), banco.getUsername(), banco.getPassword());
                 ResultSet r = c.createStatement().executeQuery(
                         "SELECT to_regclass('flyway_schema_history') IS NULL, to_regclass('scheduled_tasks') IS NULL")) {
             r.next();
-            assertThat(r.getBoolean(1)).as("Flyway nao rodou (R3)").isTrue();
-            assertThat(r.getBoolean(2)).as("nem criou a fila").isTrue();
+            assertThat(r.getBoolean(1)).as("%s: Flyway nao rodou (R3)", nome).isTrue();
+            assertThat(r.getBoolean(2)).as("%s: nem criou a fila", nome).isTrue();
         }
     }
 }

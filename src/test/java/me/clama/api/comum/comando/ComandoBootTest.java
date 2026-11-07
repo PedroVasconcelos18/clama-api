@@ -25,17 +25,25 @@ import org.springframework.security.web.SecurityFilterChain;
  * O contexto do modo comando, aberto pelo mesmo Comandos.abrir do jar, contra o Testcontainers (mapa §9.8): sem
  * servidor web, sem poller do db-scheduler, sem nada agendado, sem Flyway. O surefire ativa o perfil test, que desliga
  * cada tarefa (modo DESLIGADA); aqui elas voltam para EXECUTAR, para so a chave global clama.agenda.ativa segurar.
+ * Ambiente hostil: as travas pedidas de volta como sobrescritas e como -D (o railway run injeta toda variavel do
+ * servico; -D e acima de variavel de ambiente) nao podem vencer as travas do Comandos.abrir.
  */
 class ComandoBootTest {
     static final List<String> TAREFAS = List.of("pedidos-presos", "reconciliar-freemium", "reconciliar-espelho",
             "monitorar-seo", "verificar-urls", "alerta-comentarios", "purgar-ips");
 
+    /** O que um ambiente hostil tentaria religar (SPRING_FLYWAY_ENABLED, CLAMA_FILA_SCHEDULER_ATIVO etc.). */
+    static final Map<String, String> RELIGAR = Map.of("spring.flyway.enabled", "true", "clama.fila.scheduler-ativo",
+            "true", "clama.agenda.ativa", "true", "spring.main.web-application-type", "servlet");
+
     @Test
-    void sobeSemWebSemFilaSemAgendaSemFlyway() {
+    void sobeSemWebSemFilaSemAgendaSemFlywayMesmoComAmbientePedindo() {
         var banco = BancoDeTeste.container();
         Map<String, Object> props = new HashMap<>(Map.of("spring.datasource.url", banco.getJdbcUrl(),
                 "spring.datasource.username", banco.getUsername(), "spring.datasource.password", banco.getPassword()));
         TAREFAS.forEach(t -> props.put("clama.agenda." + t + ".modo", "EXECUTAR"));
+        props.putAll(RELIGAR);
+        RELIGAR.forEach(System::setProperty);
         // com contextos de teste ja abertos nesta JVM o logback ja esta configurado (perfil test) e o Boot nao
         // reconfigura; desmarcado, o contexto do comando carrega o logback-spring.xml como no processo do jar
         LoggingSystem.get(ComandoBootTest.class.getClassLoader()).cleanUp();
@@ -62,6 +70,15 @@ class ComandoBootTest {
             int exit = Comandos.executar(new String[] {"instituicoes"}, new PrintStream(out, true, UTF_8),
                     new PrintStream(err, true, UTF_8), ComandosTest.stdin(null), Path.of("."), ctx);
             assertThat(exit).as(err.toString(UTF_8)).isZero();
+
+            // tarefa num contexto de comando de verdade: LISTAR (o default) e o resumo numa linha de JSON
+            out.reset();
+            exit = Comandos.executar(new String[] {"tarefa", "purgar-ips"}, new PrintStream(out, true, UTF_8),
+                    new PrintStream(err, true, UTF_8), ComandosTest.stdin(null), Path.of("."), ctx);
+            assertThat(exit).as(err.toString(UTF_8)).isZero();
+            assertThat(out.toString(UTF_8)).startsWith("{").endsWith("}\n").containsOnlyOnce("\n");
+        } finally {
+            RELIGAR.keySet().forEach(System::clearProperty); // o resto da suite nao herda
         }
     }
 }
