@@ -19,7 +19,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * reconciliar_pedidos_freemium_orfaos do Django: pedido freemium em aguardando_confirmacao_email ha mais de 48 h vai
  * para erro e perde os tokens. Sem AlertaDeErro (o QuerySet.update do Django nao dispara o signal; um alerta por pedido
- * mandaria N e-mails com PII no backlog): so warning e um evento agregado no Sentry. LISTAR so loga os ids e devolve
+ * mandaria N e-mails com PII no backlog): so warning e um evento agregado no Sentry. LISTAR so loga a contagem e os 20 primeiros ids e devolve
  * quantos seriam reconciliados, com 0 tokens apagados.
  */
 @Component
@@ -56,8 +56,13 @@ public class ReconciliacaoFreemium implements TarefaAgendada {
         int reconciliados = 0;
         int tokens = 0;
         if (modo == ModoDeExecucao.EXECUTAR) {
-            // UPDATE e DELETE na mesma transacao (no Django sao dois autocommits)
+            // tudo na mesma transacao (no Django sao autocommits). Ordem de locks igual a da saga de confirmacao
+            // (token, depois pedido): trava os tokens dos candidatos, reconfere o status no UPDATE e so entao apaga.
             int[] n = tx.execute(s -> {
+                jdbc.queryForList("""
+                        select t.id from freemium_freemiumconfirmationtoken t join orders_pedido p on p.id = t.pedido_id
+                        where p.eh_gratuito and p.status = 'aguardando_confirmacao_email' and p.created_at < ?
+                        order by t.id for update of t""", UUID.class, corte);
                 List<UUID> ids = jdbc.queryForList("""
                         update orders_pedido set status = 'erro', last_error = ?, updated_at = ?
                         where eh_gratuito and status = 'aguardando_confirmacao_email' and created_at < ?
@@ -83,7 +88,8 @@ public class ReconciliacaoFreemium implements TarefaAgendada {
                     where eh_gratuito and status = 'aguardando_confirmacao_email' and created_at < ?
                     order by created_at""", UUID.class, corte);
             reconciliados = ids.size();
-            LOG.info("Pedidos freemium orfaos (modo LISTAR, nada alterado): {}", ids);
+            LOG.info("Pedidos freemium orfaos (modo LISTAR, nada alterado): n={} primeiros_ids={}", ids.size(),
+                    ids.subList(0, Math.min(ids.size(), 20)));
         }
         var resumo = new LinkedHashMap<String, Object>();
         resumo.put("n_reconciliados", reconciliados);
