@@ -94,6 +94,10 @@ public class SegurancaConfig {
                         new CacheControlHeadersWriter()))
                         .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(leituraDeComentarios,
                                 new StaticHeadersWriter("Cache-Control", "public, max-age=10")))
+                        // o 401 de cookie vencido varia com o Cookie: sem Vary, cache compartilhado serviria esse 401 a todos.
+                        // Valor do Django em producao; addHeader (nao set) pra nao apagar o Vary: Origin do CORS.
+                        .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(leituraDeComentarios,
+                                (req, resp) -> resp.addHeader("Vary", "Accept, Accept-Language, Cookie, origin")))
                         .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.SAME_ORIGIN)))
                 .cors(c -> c.configurationSource(cors(lista(cors))))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

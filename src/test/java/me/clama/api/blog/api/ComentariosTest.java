@@ -149,6 +149,9 @@ class ComentariosTest {
         HttpResponse<String> cookieRuim = api.enviar("GET", ROTA, null, null, "Cookie", "clama_access=lixo");
         assertThat(cookieRuim.statusCode()).isEqualTo(401);
         assertThat(cookieRuim.headers().firstValue("Cache-Control")).hasValue(publico);
+        // o 401 depende do Cookie: o Vary impede o cache compartilhado de servi-lo a todos (valor do Django)
+        assertThat(cookieRuim.headers().allValues("Vary")).contains("Accept, Accept-Language, Cookie, origin");
+        assertThat(api.enviar("GET", ROTA, null, null).headers().allValues("Vary")).anyMatch(v -> v.contains("Cookie"));
         assertThat(api.enviar("GET", ROTA + "?page=9", null, null).headers().firstValue("Cache-Control"))
                 .hasValue(publico);
         // a escrita continua com o no-store padrao
