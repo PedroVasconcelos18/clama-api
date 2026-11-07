@@ -1,0 +1,436 @@
+{
+  "cenario": "admin_customer_404",
+  "configuracao": {
+    "ANTHROPIC_API_KEY": "sk-ant-contrato",
+    "FRONTEND_URL": "https://clama.me",
+    "FRONTEND_BASE_URL": "https://clama.me"
+  },
+  "usuarios": [
+    {
+      "email": "admin@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Admin",
+      "is_clama_admin": true,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    },
+    {
+      "email": "Ana@Exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Ana Souza",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    },
+    {
+      "email": "beto@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Beto Lima",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": null,
+      "telefone": null,
+      "freemium_used_at": "2026-11-02T12:00:00+00:00"
+    },
+    {
+      "email": "carla@outro.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Carla Dias",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    },
+    {
+      "email": "duda@outro.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Duda Santana",
+      "is_clama_admin": false,
+      "is_active": false,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    }
+  ],
+  "dados": {
+    "plans_plan": [
+      {
+        "id": "55555555-5555-4555-8555-000000000001",
+        "nome": "Pedido de Oração",
+        "valor_centavos": 2000,
+        "descricao": "Descrição de Pedido de Oração.",
+        "complexidade": "simples",
+        "ordem": 1,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000002",
+        "nome": "Oração + Versículo",
+        "valor_centavos": 5000,
+        "descricao": "Descrição de Oração + Versículo.",
+        "complexidade": "com_versiculo",
+        "ordem": 2,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000003",
+        "nome": "Oração + Profecia + Versículos",
+        "valor_centavos": 10000,
+        "descricao": "Descrição de Oração + Profecia + Versículos.",
+        "complexidade": "com_profecia_e_versiculos",
+        "ordem": 3,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000004",
+        "nome": "Plano Antigo",
+        "valor_centavos": 1500,
+        "descricao": "Descrição de Plano Antigo.",
+        "complexidade": "simples",
+        "ordem": 0,
+        "ativo": false,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000005",
+        "nome": "Gratuito",
+        "valor_centavos": 0,
+        "descricao": "Descrição de Gratuito.",
+        "complexidade": "simples_gratuita",
+        "ordem": 9,
+        "ativo": true,
+        "visivel": false
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000006",
+        "nome": "Livre",
+        "valor_centavos": 1,
+        "descricao": "Descrição de Livre.",
+        "complexidade": "simples",
+        "ordem": 10,
+        "ativo": true,
+        "visivel": false
+      }
+    ],
+    "instituicoes_instituicao": [
+      {
+        "id": "66666666-6666-4666-8666-000000000001",
+        "nome": "Lar Esperança",
+        "logo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+        "ativo": true,
+        "ordem": 1
+      },
+      {
+        "id": "66666666-6666-4666-8666-000000000002",
+        "nome": "Casa Fechada",
+        "logo": "",
+        "ativo": false,
+        "ordem": 2
+      }
+    ],
+    "orders_pedido": [
+      {
+        "created_at": "2026-11-01T13:00:00+00:00",
+        "updated_at": "2026-11-01T13:00:00+00:00",
+        "id": "56565656-5656-4565-8565-000000000001",
+        "nome": "gAAAAABq7oizVhKX3NZvk-fdPOe4Ko4hTvtrAKMGzD4o8LzMiUDyhAT-XmVy60ib00cLVfG6r0aJqnyx18s5yUQjNheUlEC3TA==",
+        "email": "gAAAAABq7oizICJfNT_7Vrpt84SbhNCw-P_Q1yj13aD6gHxBVO8XVaMjIWm4OBZwkcn1VWkVSsEny7tbFzrgWIoYrVZ2gxoDquXi9mmnqjX_C7ZKH9JfCew=",
+        "telefone": "gAAAAABq7oizccT_LGZfAS2_0gHWHPsRZ0jtXmJuvc7I07Ug3s7ANuekCY5pf-NMhAs0zxb3zVWZXiAKm5mRApVel7JCEiaxtg==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq7oizh7H_AakwmP_fgOjNsvnk0jFcSrke_7vzfo-S8V-1MIVjnvWXHtXgG_zUowU9S-_EseKVDabnmTxHJULrtZp0jB5XFoOWB3mlMNo6EuwGiAYPsmPCyivg8IrnI3D2U4Jg",
+        "oracao_gerada": "gAAAAABq7oizDey0bMgMUHPDunGaQ7bsKDdcHo8MhODncz7iUTU4v4HPIDpzoP6jW7T8bea7L9M4kgBrqp8R8BlJ9MQFXAbdG4LaTezo5G4Kku5sBGHgLgIBxMZCHz_o0j2HSgNyFV9c-1BO26GbvPL3vXU39LZR2g==",
+        "valor_centavos": 0,
+        "canal_entrega": "email",
+        "status": "enviada",
+        "plano_id": "55555555-5555-4555-8555-000000000005",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq7oizhl6_7k3bZvQB92Qde6LzTqEU88Sd9s4JsbPuoB8CAKQcxUCCDgwfH-HiuJ-NWus6ExTYe6qz9cgWgZOGsyvFbA==",
+        "user_id": 2,
+        "eh_gratuito": true,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      },
+      {
+        "created_at": "2026-11-01T13:00:00+00:00",
+        "updated_at": "2026-11-01T13:00:00+00:00",
+        "id": "56565656-5656-4565-8565-000000000002",
+        "nome": "gAAAAABq7oizY1GbRwFbSMv8GKRkdxcVHf8eXNHJoyKkX6zbS3VEwDyUpacRgtYfzeHA4m7_V1hw8ZefWecqM8WrfTpzR4jeVw==",
+        "email": "gAAAAABq7oizRocXM4XUC6Z_eQdbYGANzMp2AG919LNA2BQjXzfHbQpU8Yg1cvHB6UaSUBRiby67n9xsmZd7U7S3FYadaI7mSwrCo9Fz-PdJAr4xrIL7rUs=",
+        "telefone": "gAAAAABq7oizZZpK4MxeGDx8hVg7Gnp6GYTzg2p2L5FDcopG1LFrMUyTvMha4nMCssYwDFgknle7cZo-1ZQ6ZEYFcfstWiDUQg==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq7oizd6ZamG70tG_NcbK8RvubkPFZYfwgHd6AO2B48yUrJwDm1DiooT7qwcqI4lLqrQTROVJCUfiNSoouijeenv7kq9j86TgHQX3_GOXWXGOYa4oD0CRROjcp3OTXVAA1VqV6",
+        "oracao_gerada": "gAAAAABq7oizjI-7GwbmnvrJPzMiNUzEaHzKIwhmf8-psCcHiasu0g0xOCqhpx1-5itLzINYu4KXDLbJDsj8sKOdABRPhLfPcw==",
+        "valor_centavos": 3000,
+        "canal_entrega": "email",
+        "status": "aguardando_pagamento",
+        "plano_id": "55555555-5555-4555-8555-000000000001",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq7oizSTseA0K5N29nKdOKVvbmjsOPGrhp6hUq4AbNbJ0ou-y9EztyJX7MszUzkZULCzy2KpvF36Q_9wbBODh1BnhqDA==",
+        "user_id": 2,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      },
+      {
+        "created_at": "2026-11-01T13:00:00+00:00",
+        "updated_at": "2026-11-01T13:00:00+00:00",
+        "id": "56565656-5656-4565-8565-000000000003",
+        "nome": "gAAAAABq7oiz9fOs_ab8mTj-KHo-oD5LOSPFZBtZVuD4LkDoP90YNk5AXxb53Hk_Mter5ddeIa0Ed9THok_EDqbP-M99kogEpg==",
+        "email": "gAAAAABq7oizFyE96OhPHx5mSqASJcBzLypI58ei8X7fpxtPckTg8kSURrUUFGjBOHURqTpioy24W_sA92PhQ70YtNyYbrzlEytmNjZ3U2pGMu3zm97NBE8=",
+        "telefone": "gAAAAABq7oizRK0ByRv7MRNqyD_rzgqgSOPKqCj4ct5ww7gJeh-VTouFS7irniDrB4a99xfeZULGasHsgwPbfH4YtakhWTx70A==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq7oizXuCIOjEz2LrJdm9VqTajh7wSFtnw9ByrJpYTzYeZA-2nUhYs2AGvZaEidT3EBQrQMahzVssG-tcR3pFMVtvlBMq87v5xjMiVOMMXf2AjzOx8hXFv3bjTWoXfJm9ziki7",
+        "oracao_gerada": "gAAAAABq7oizC9mJko599Lw-pFUt8P64PSlDfz_w_HZr2VMz9_ajQf3_28dz-WMU0PwMH7SgFlVR6pz-DaXbFOnGBvatrKp9Wg==",
+        "valor_centavos": 3000,
+        "canal_entrega": "email",
+        "status": "pago",
+        "plano_id": "55555555-5555-4555-8555-000000000001",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq7oizSpO_rHkqRgncnbR8YobRFlskr4v9Q9ZnseQQFWQd777zjGWdlp5hXg_6cy5UKV761iHgbGHbwYfUvBw5F4zxFg==",
+        "user_id": 2,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      },
+      {
+        "created_at": "2026-11-01T13:00:00+00:00",
+        "updated_at": "2026-11-01T13:00:00+00:00",
+        "id": "56565656-5656-4565-8565-000000000004",
+        "nome": "gAAAAABq7oizDq1gt00bnYBUQ3V6Rw5K7QN3kLUIyAFuJ5Y6hQEYPVwHjtlxW2OAv5gL3bi1JXCWQdvTL48TSt2KOZaISIZpeg==",
+        "email": "gAAAAABq7oiz2U0c92LGht8oXp0tX-OboA8a5bvWIqHUvpjdvjW8kwGJGd8oBuI17HjytUJp5EieUA0nRi-ccCP1eAmFATBe-3Jc4dbbqvSzwqdHqoPw0yg=",
+        "telefone": "gAAAAABq7oiz8eqgmGLKeFN3gonU50Lw8ue41uJChm0ORvs_HfRQoundFf_i5GNaDJkZqZ0BMJ7PsmoJS7Dg2j6x6XaqpKPt7g==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq7oiztLKeTKSJpB3wg2XH2c88d9JSW7HW38e9z4eqmiEriId4wjTfV6pmSlpZcCyngF6PLfLNFmElFauwekEFXT3_UaKJm8qY1SpeaLrd1nMUK4YGqnxoerbE2ZVXl-LShRoE",
+        "oracao_gerada": "gAAAAABq7oizAm7r2jF5hNKFxiBqhpmiTGMv81ix07va6NUX2NEKcH9sgp6HuBK_guL5HXra9xWAAcSzOpNeDoR15dA2HHcyl8n28mj0oblXgwlk5i6MnSVDz1delyhOYPk1FNjW7reVAklOqOuHR3oB9vWHfylnaQ==",
+        "valor_centavos": 0,
+        "canal_entrega": "email",
+        "status": "enviada",
+        "plano_id": "55555555-5555-4555-8555-000000000005",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq7oizYq1D_Lp7GLKyGw0mf6TYvVJQPukta0rVKX49RVv2WbycQePOqEyK2C_r-MGREx8AfvkZu5wJ9YL0T4MvOWiqOA==",
+        "user_id": 3,
+        "eh_gratuito": true,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      }
+    ],
+    "blog_postespelho": [
+      {
+        "id": "22222222-2222-4222-8222-000000000001",
+        "wp_post_id": 101,
+        "slug": "salmo-23",
+        "titulo": "Salmo 23",
+        "status": "publicado",
+        "url": "https://clama.me/blog/salmo-23"
+      }
+    ],
+    "blog_comentario": [
+      {
+        "id": "67676767-6767-4676-8676-000000000001",
+        "customer_id": 2,
+        "post_espelho_id": "22222222-2222-4222-8222-000000000001",
+        "conteudo": "Amém, irmã!",
+        "ip_address": "",
+        "is_suspeito": false
+      },
+      {
+        "id": "67676767-6767-4676-8676-000000000002",
+        "customer_id": 2,
+        "post_espelho_id": "22222222-2222-4222-8222-000000000001",
+        "conteudo": "Amém, irmã!",
+        "ip_address": "",
+        "is_suspeito": false
+      },
+      {
+        "id": "67676767-6767-4676-8676-000000000003",
+        "customer_id": 4,
+        "post_espelho_id": "22222222-2222-4222-8222-000000000001",
+        "conteudo": "Amém, irmã!",
+        "ip_address": "",
+        "is_suspeito": false
+      }
+    ],
+    "blog_customerbanido": [
+      {
+        "id": "11111111-1111-4111-8111-000000000001",
+        "customer_id": 4,
+        "motivo": "Ofensa",
+        "banido_em": "2026-10-01T12:00:00+00:00",
+        "banido_por_id": 1,
+        "revogado_em": "2026-10-05T12:00:00+00:00",
+        "revogado_por_id": 1
+      },
+      {
+        "id": "11111111-1111-4111-8111-000000000002",
+        "customer_id": 4,
+        "motivo": "Spam nos comentários",
+        "banido_em": "2026-11-02T12:00:00+00:00",
+        "banido_por_id": 1,
+        "revogado_em": null,
+        "revogado_por_id": null
+      },
+      {
+        "id": "11111111-1111-4111-8111-000000000003",
+        "customer_id": 5,
+        "motivo": "Engano",
+        "banido_em": "2026-10-10T12:00:00+00:00",
+        "banido_por_id": 1,
+        "revogado_em": "2026-10-11T12:00:00+00:00",
+        "revogado_por_id": 1
+      },
+      {
+        "id": "11111111-1111-4111-8111-000000000004",
+        "customer_id": 4,
+        "motivo": "Links suspeitos",
+        "banido_em": "2026-10-20T12:00:00+00:00",
+        "banido_por_id": 1,
+        "revogado_em": null,
+        "revogado_por_id": null
+      }
+    ]
+  },
+  "passos": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login/",
+        "body": {
+          "email": "admin@exemplo.com",
+          "password": "Clama-forte-2026"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "user": {
+            "id": "<id>",
+            "email": "admin@exemplo.com",
+            "nome_completo": "Admin"
+          }
+        },
+        "cookies": [
+          {
+            "name": "clama_access",
+            "value": "<jwt>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 900
+          },
+          {
+            "name": "clama_refresh",
+            "value": "<jwt>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 604800
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/csrf/"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "csrf_token": "<csrf>"
+        },
+        "cookies": [
+          {
+            "name": "csrftoken",
+            "value": "<csrf>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 31449600
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/customers/999/"
+      },
+      "response": {
+        "status": 404,
+        "body": {
+          "error": {
+            "code": "not_found",
+            "message": "Customer nao encontrado",
+            "pastoral_message": "Esse customer nao foi encontrado."
+          }
+        },
+        "cookies": []
+      }
+    }
+  ]
+}

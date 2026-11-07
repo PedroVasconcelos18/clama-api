@@ -1,0 +1,297 @@
+{
+  "cenario": "prompt_preview_body_invalido_400",
+  "configuracao": {
+    "ANTHROPIC_API_KEY": "sk-ant-contrato",
+    "FRONTEND_URL": "https://clama.me",
+    "FRONTEND_BASE_URL": "https://clama.me"
+  },
+  "usuarios": [
+    {
+      "email": "admin@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Admin",
+      "is_clama_admin": true,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    }
+  ],
+  "dados": {
+    "plans_plan": [
+      {
+        "id": "55555555-5555-4555-8555-000000000001",
+        "nome": "Pedido de Oração",
+        "valor_centavos": 2000,
+        "descricao": "Descrição de Pedido de Oração.",
+        "complexidade": "simples",
+        "ordem": 1,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000002",
+        "nome": "Oração + Versículo",
+        "valor_centavos": 5000,
+        "descricao": "Descrição de Oração + Versículo.",
+        "complexidade": "com_versiculo",
+        "ordem": 2,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000003",
+        "nome": "Oração + Profecia + Versículos",
+        "valor_centavos": 10000,
+        "descricao": "Descrição de Oração + Profecia + Versículos.",
+        "complexidade": "com_profecia_e_versiculos",
+        "ordem": 3,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000004",
+        "nome": "Plano Antigo",
+        "valor_centavos": 1500,
+        "descricao": "Descrição de Plano Antigo.",
+        "complexidade": "simples",
+        "ordem": 0,
+        "ativo": false,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000005",
+        "nome": "Gratuito",
+        "valor_centavos": 0,
+        "descricao": "Descrição de Gratuito.",
+        "complexidade": "simples_gratuita",
+        "ordem": 9,
+        "ativo": true,
+        "visivel": false
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000006",
+        "nome": "Livre",
+        "valor_centavos": 1,
+        "descricao": "Descrição de Livre.",
+        "complexidade": "simples",
+        "ordem": 10,
+        "ativo": true,
+        "visivel": false
+      }
+    ],
+    "instituicoes_instituicao": [
+      {
+        "id": "66666666-6666-4666-8666-000000000001",
+        "nome": "Lar Esperança",
+        "logo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+        "ativo": true,
+        "ordem": 1
+      },
+      {
+        "id": "66666666-6666-4666-8666-000000000002",
+        "nome": "Casa Fechada",
+        "logo": "",
+        "ativo": false,
+        "ordem": 2
+      }
+    ],
+    "prompts_prompttemplate": [
+      {
+        "id": "88888888-8888-4888-8888-000000000002",
+        "nome": "pastoral-antigo",
+        "versao": 1,
+        "system_prompt": "Você é o Clama (antigo).",
+        "instrucoes_por_complexidade": {},
+        "ativo": false
+      },
+      {
+        "id": "88888888-8888-4888-8888-000000000001",
+        "nome": "pastoral",
+        "versao": 3,
+        "system_prompt": "Você é o Clama, um intercessor cristão.",
+        "instrucoes_por_complexidade": {
+          "simples": "Escreva uma oração curta e acolhedora.",
+          "com_versiculo": "Escreva uma oração e inclua um versículo bíblico.",
+          "com_profecia_e_versiculos": "Escreva uma oração com uma palavra profética e dois versículos.",
+          "simples_gratuita": "Escreva uma oração breve."
+        },
+        "ativo": true
+      }
+    ],
+    "orders_pedido": [],
+    "documents_documentocontexto": [
+      {
+        "id": "99999999-9999-4999-8999-000000000001",
+        "nome": "Catecismo",
+        "descricao": "",
+        "arquivo": "documents/99999999-9999-4999-8999-000000000001/catecismo.pdf",
+        "tipo_mime": "application/pdf",
+        "tamanho_bytes": 1024,
+        "anthropic_file_id": "file-catecismo",
+        "data_sincronizacao": "2026-11-01T12:00:00+00:00",
+        "ativo": true
+      },
+      {
+        "id": "99999999-9999-4999-8999-000000000002",
+        "nome": "Salmos",
+        "descricao": "",
+        "arquivo": "documents/99999999-9999-4999-8999-000000000002/salmos.pdf",
+        "tipo_mime": "application/pdf",
+        "tamanho_bytes": 1024,
+        "anthropic_file_id": "file-salmos",
+        "data_sincronizacao": "2026-11-01T12:00:00+00:00",
+        "ativo": true
+      },
+      {
+        "id": "99999999-9999-4999-8999-000000000003",
+        "nome": "Inativo",
+        "descricao": "",
+        "arquivo": "documents/99999999-9999-4999-8999-000000000003/inativo.pdf",
+        "tipo_mime": "application/pdf",
+        "tamanho_bytes": 1024,
+        "anthropic_file_id": "file-inativo",
+        "data_sincronizacao": "2026-11-01T12:00:00+00:00",
+        "ativo": false
+      },
+      {
+        "id": "99999999-9999-4999-8999-000000000004",
+        "nome": "Pendente",
+        "descricao": "",
+        "arquivo": "documents/99999999-9999-4999-8999-000000000004/pendente.pdf",
+        "tipo_mime": "application/pdf",
+        "tamanho_bytes": 1024,
+        "anthropic_file_id": null,
+        "data_sincronizacao": null,
+        "ativo": true
+      }
+    ]
+  },
+  "passos": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login/",
+        "body": {
+          "email": "admin@exemplo.com",
+          "password": "Clama-forte-2026"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "user": {
+            "id": "<id>",
+            "email": "admin@exemplo.com",
+            "nome_completo": "Admin"
+          }
+        },
+        "cookies": [
+          {
+            "name": "clama_access",
+            "value": "<jwt>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 900
+          },
+          {
+            "name": "clama_refresh",
+            "value": "<jwt>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 604800
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/csrf/"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "csrf_token": "<csrf>"
+        },
+        "cookies": [
+          {
+            "name": "csrftoken",
+            "value": "<csrf>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 31449600
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/prompts/88888888-8888-4888-8888-000000000001/preview/",
+        "headers": {
+          "X-CSRFToken": "{csrf}"
+        },
+        "body": {}
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "pedido_exemplo": [
+            "Este campo é obrigatório."
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/prompts/88888888-8888-4888-8888-000000000001/preview/",
+        "headers": {
+          "X-CSRFToken": "{csrf}"
+        },
+        "body": {
+          "pedido_exemplo": "texto"
+        }
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "pedido_exemplo": [
+            "Esperava um dicionário de itens, mas recebeu tipo \"str\"."
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/prompts/88888888-8888-4888-8888-000000000001/preview/",
+        "headers": {
+          "X-CSRFToken": "{csrf}"
+        },
+        "body": {
+          "pedido_exemplo": {
+            "nome": null
+          }
+        }
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "pedido_exemplo": {
+            "nome": [
+              "Este campo pode não ser nulo."
+            ]
+          }
+        },
+        "cookies": []
+      }
+    }
+  ]
+}

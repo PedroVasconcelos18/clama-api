@@ -1,0 +1,373 @@
+{
+  "cenario": "admin_pedido_detalhe",
+  "configuracao": {
+    "ANTHROPIC_API_KEY": "sk-ant-contrato",
+    "FRONTEND_URL": "https://clama.me",
+    "FRONTEND_BASE_URL": "https://clama.me"
+  },
+  "usuarios": [
+    {
+      "email": "admin@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Admin",
+      "is_clama_admin": true,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    }
+  ],
+  "dados": {
+    "plans_plan": [
+      {
+        "id": "55555555-5555-4555-8555-000000000001",
+        "nome": "Pedido de Oração",
+        "valor_centavos": 2000,
+        "descricao": "Descrição de Pedido de Oração.",
+        "complexidade": "simples",
+        "ordem": 1,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000002",
+        "nome": "Oração + Versículo",
+        "valor_centavos": 5000,
+        "descricao": "Descrição de Oração + Versículo.",
+        "complexidade": "com_versiculo",
+        "ordem": 2,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000003",
+        "nome": "Oração + Profecia + Versículos",
+        "valor_centavos": 10000,
+        "descricao": "Descrição de Oração + Profecia + Versículos.",
+        "complexidade": "com_profecia_e_versiculos",
+        "ordem": 3,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000004",
+        "nome": "Plano Antigo",
+        "valor_centavos": 1500,
+        "descricao": "Descrição de Plano Antigo.",
+        "complexidade": "simples",
+        "ordem": 0,
+        "ativo": false,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000005",
+        "nome": "Gratuito",
+        "valor_centavos": 0,
+        "descricao": "Descrição de Gratuito.",
+        "complexidade": "simples_gratuita",
+        "ordem": 9,
+        "ativo": true,
+        "visivel": false
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000006",
+        "nome": "Livre",
+        "valor_centavos": 1,
+        "descricao": "Descrição de Livre.",
+        "complexidade": "simples",
+        "ordem": 10,
+        "ativo": true,
+        "visivel": false
+      }
+    ],
+    "instituicoes_instituicao": [
+      {
+        "id": "66666666-6666-4666-8666-000000000001",
+        "nome": "Lar Esperança",
+        "logo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+        "ativo": true,
+        "ordem": 1
+      },
+      {
+        "id": "66666666-6666-4666-8666-000000000002",
+        "nome": "Casa Fechada",
+        "logo": "",
+        "ativo": false,
+        "ordem": 2
+      }
+    ],
+    "orders_pedido": [
+      {
+        "created_at": "2026-11-01T13:00:00+00:00",
+        "updated_at": "2026-11-01T13:00:00+00:00",
+        "id": "44444444-4444-4444-8444-000000000001",
+        "nome": "gAAAAABq7oixu0st6pJtNNgvCj4BvlfbqZOiIfKUVY78wM4WPWXLTOqzr8AMHaDlnwSVehbZWeYv-votqGutCChX5X_TqOuSKw==",
+        "email": "gAAAAABq7oix18WSRsN8XjX0aW_jXL2wQkqQlq35QGPGFnz2iRmaSosadfwpg-WJfQsUcsWbbdgh1La-nrnjq9J5IOnUTigUN9uqsdCUoTxGt6fIHiIHy3s=",
+        "telefone": "gAAAAABq7oixfkG1zMAtp64xuucwa892dYl4X8z-n1t6RIwm03CS3JCeGKKHS0Igbm7uNyovze8oP1huI4ASzq5IKyQfWs9qog==",
+        "idade": null,
+        "sexo": "",
+        "pedido_oracao": "gAAAAABq7oixkPSkK0SIU80XonqpOaphDa2Qzybafi7rJ8aMG0ftjvYJ9Fb2FDm14x6auBCIQFM8AK5RYoMYdCQ4bMmbuELe-3TY8s48gMGiMbnUUKONP7Cy7xudQzlNkRLg7nyd6bRa",
+        "oracao_gerada": "gAAAAABq7oixQnWb8hK56sYipKFIEr0fz6Tosmz3jrUuDuTlv7jN0Uzv-RyQDeUFAqdSE8iDUoDBEXbr2VFGSV2HM71dtKIHgACGklqqFCEYHhbilrWlte36IxUwkMrh_V2W9-GI2P_ibK92RpxueM8cTaum03yCEQ==",
+        "valor_centavos": 3000,
+        "canal_entrega": "whatsapp",
+        "status": "enviada",
+        "plano_id": "55555555-5555-4555-8555-000000000001",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "timeout",
+        "retry_count": 1,
+        "whatsapp_delivered_at": "2026-11-01T13:05:00+00:00",
+        "whatsapp_message_id": "wamid.ABC123",
+        "whatsapp_read_at": "2026-11-01T13:10:00+00:00",
+        "cpf_cnpj": "gAAAAABq7oixw_lFp0Cl-2jwbp7tZq0c7g29uRDZFSBUQC4TpWrxsO1y1w0llCRXRaKbtWqiqSr7Sg7USN7xMyOV_cgi6Mtu3A==",
+        "user_id": null,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": "1325814423",
+        "provider_checkout_url": "https://www.mercadopago.com.br/payments/1325814423/ticket",
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": "66666666-6666-4666-8666-000000000001"
+      },
+      {
+        "created_at": "2026-11-01T13:00:00+00:00",
+        "updated_at": "2026-11-01T13:00:00+00:00",
+        "id": "44444444-4444-4444-8444-000000000002",
+        "nome": "gAAAAABq7oixkMdDVx5urszGXLfTeomzVo5cACcbTOsGdjgTBZyhnPqGEK8bfS2M6_zXSNkNT2TG5IfdSo3r5fcOaLrTJZddKg==",
+        "email": "gAAAAABq7oixbmpBAeckTDp596ZY-wOWID8KSK4xhK-8S2LEgWZRWtRoEFsgu8h1xn5L-Ug5Lh0p62gbmWScPEgT_jF0ddHtPhpswj_R4Fy_oXgJvT3S2UQ=",
+        "telefone": "gAAAAABq7oixRCu0QeK-Ak_uC_BzJrD-AshRYJWx9HcAFfriVQhdizHzSx_wYpHeNCMJoi_-_TsX5jOYc0iwKuhZTZYCM_6JhA==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq7oixPU_fAbrDoKLhL13YMzf_6YinoLb6GTcS2m2ol0IQ3Zx0uh4tDWgYIL9ojZymJC9gH8j_Nu2_qNDZZWYw8NV5_ZyiltIBkXgcAJkjHgYa07iTLAkQN5sqdHD1rkxbYJf7",
+        "oracao_gerada": "gAAAAABq7oixfuktpyTE_isL6ELERIxFuAP8rHBqYF0n0TQOA6gFmIhgDmoiuRr8zCRQvnShZKPocI5KlIb8aKw7pXzBZ7z21Q==",
+        "valor_centavos": 3000,
+        "canal_entrega": "email",
+        "status": "aguardando_pagamento",
+        "plano_id": "55555555-5555-4555-8555-000000000001",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq7oixtWSz2Hpc_u2Qb5A3y9w4tiI9Gbt0G0FCVvfHTyo2mE0dYhE80hMMHHbGHPPbIrimMWeWSbzaXaf_2yeYclc7Yg==",
+        "user_id": null,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      }
+    ],
+    "payments_webhookevento": [
+      {
+        "id": "33333333-3333-4333-8333-000000000001",
+        "provider": "MERCADO_PAGO",
+        "external_event_id": "117000000001",
+        "event_type": "payment",
+        "payload": {
+          "id": 117000000001,
+          "type": "payment",
+          "data": {
+            "id": "1325814423"
+          }
+        },
+        "status": "ERRO",
+        "error_message": "fetch_failed",
+        "pedido_id": "44444444-4444-4444-8444-000000000001"
+      },
+      {
+        "id": "33333333-3333-4333-8333-000000000002",
+        "provider": "MERCADO_PAGO",
+        "external_event_id": "117000000002",
+        "event_type": "payment",
+        "payload": {
+          "id": 117000000002,
+          "type": "payment",
+          "data": {
+            "id": "1325814423"
+          }
+        },
+        "status": "PROCESSADO",
+        "error_message": "",
+        "pedido_id": "44444444-4444-4444-8444-000000000001"
+      }
+    ]
+  },
+  "passos": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login/",
+        "body": {
+          "email": "admin@exemplo.com",
+          "password": "Clama-forte-2026"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "user": {
+            "id": "<id>",
+            "email": "admin@exemplo.com",
+            "nome_completo": "Admin"
+          }
+        },
+        "cookies": [
+          {
+            "name": "clama_access",
+            "value": "<jwt>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 900
+          },
+          {
+            "name": "clama_refresh",
+            "value": "<jwt>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 604800
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/csrf/"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "csrf_token": "<csrf>"
+        },
+        "cookies": [
+          {
+            "name": "csrftoken",
+            "value": "<csrf>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 31449600
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/pedidos/44444444-4444-4444-8444-000000000001/"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "44444444-4444-4444-8444-000000000001",
+          "created_at": "<ts>",
+          "updated_at": "<ts>",
+          "nome": "Maria Silva",
+          "email": "maria@exemplo.com",
+          "telefone": "(11) 99999-8888",
+          "idade": null,
+          "sexo": "",
+          "pedido_oracao": "Peço oração pela minha família.",
+          "oracao_gerada": "Senhor, acolhe a família da Maria e dá-lhe paz.\n\nAmém.",
+          "plano": {
+            "id": "55555555-5555-4555-8555-000000000001",
+            "nome": "Pedido de Oração",
+            "valor_reais_str": "R$ 20,00"
+          },
+          "instituicao": {
+            "id": "66666666-6666-4666-8666-000000000001",
+            "nome": "Lar Esperança",
+            "logo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+          },
+          "valor_centavos": 3000,
+          "valor_reais_str": "R$ 30,00",
+          "eh_gratuito": false,
+          "status": "enviada",
+          "canal_entrega": "whatsapp",
+          "provider_payment_id": "1325814423",
+          "provider_checkout_url": "https://www.mercadopago.com.br/payments/1325814423/ticket",
+          "whatsapp_message_id": "wamid.ABC123",
+          "whatsapp_delivered_at": "<ts>",
+          "whatsapp_read_at": "<ts>",
+          "retry_count": 1,
+          "last_error": "timeout",
+          "webhook_events": [
+            {
+              "id": "33333333-3333-4333-8333-000000000002",
+              "provider": "MERCADO_PAGO",
+              "external_event_id": "117000000002",
+              "event_type": "payment",
+              "status": "PROCESSADO",
+              "error_message": "",
+              "created_at": "<ts>"
+            },
+            {
+              "id": "33333333-3333-4333-8333-000000000001",
+              "provider": "MERCADO_PAGO",
+              "external_event_id": "117000000001",
+              "event_type": "payment",
+              "status": "ERRO",
+              "error_message": "fetch_failed",
+              "created_at": "<ts>"
+            }
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/pedidos/44444444-4444-4444-8444-000000000002/"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "44444444-4444-4444-8444-000000000002",
+          "created_at": "<ts>",
+          "updated_at": "<ts>",
+          "nome": "Maria Silva",
+          "email": "maria@exemplo.com",
+          "telefone": "(11) 99999-8888",
+          "idade": 35,
+          "sexo": "feminino",
+          "pedido_oracao": "Peço oração pela minha família.",
+          "oracao_gerada": "",
+          "plano": {
+            "id": "55555555-5555-4555-8555-000000000001",
+            "nome": "Pedido de Oração",
+            "valor_reais_str": "R$ 20,00"
+          },
+          "instituicao": null,
+          "valor_centavos": 3000,
+          "valor_reais_str": "R$ 30,00",
+          "eh_gratuito": false,
+          "status": "aguardando_pagamento",
+          "canal_entrega": "email",
+          "provider_payment_id": null,
+          "provider_checkout_url": null,
+          "whatsapp_message_id": "",
+          "whatsapp_delivered_at": null,
+          "whatsapp_read_at": null,
+          "retry_count": 0,
+          "last_error": "",
+          "webhook_events": []
+        },
+        "cookies": []
+      }
+    }
+  ]
+}

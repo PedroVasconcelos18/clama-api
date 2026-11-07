@@ -193,11 +193,11 @@ class ContratoOracaoTest {
         return new ReplayDeContrato(ctx.getBean(JdbcTemplate.class), ctx.getBean(UsuarioRepository.class),
                 ctx.getBean(ServicoDeTokens.class), ctx.getBean(RateLimiter.class), TABELAS)
                 .comStubs(Map.of("mercadopago", MERCADO_PAGO, "anthropic", ANTHROPIC), ctx.getEnvironment())
-                .comOracao(caixa, jobs, ganchos());
+                .comOracao(caixa, jobs, ganchos(ctx));
     }
 
     /** O cache de senhas temporarias e o dedup do alerta-admin do app (o cache.clear() do gravador). */
-    private ReplayDeContrato.GanchosDeOracao ganchos() {
+    static ReplayDeContrato.GanchosDeOracao ganchos(ApplicationContext ctx) {
         SenhasTemporarias senhas = ctx.getBean(SenhasTemporarias.class);
         AlertaDeErro alerta = ctx.getBean(AlertaDeErro.class);
         return new ReplayDeContrato.GanchosDeOracao() {

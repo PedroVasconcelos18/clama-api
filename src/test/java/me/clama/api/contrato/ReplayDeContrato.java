@@ -11,6 +11,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.sql.PreparedStatement;
 import java.sql.Types;
+import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
@@ -25,6 +27,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -77,6 +80,20 @@ public class ReplayDeContrato {
             "senhas_temporarias", "senhas_temporarias_final");
     private static final String FRONTEIRA = "ContratoClamaFronteira";
     private static final Pattern SET_COOKIE = Pattern.compile("\\{set_cookie:(\\d+):(.+)\\}", COMO_PYTHON);
+    /** "configuracao.relogio": o instante que o gravador congelou (freezegun); nao e variavel de ambiente. */
+    private static final String RELOGIO = "relogio";
+    /** A senha temporaria (aleatoria) do esqueci minha senha, como o gravador a grava no e-mail. */
+    static final String SENHA_TEMPORARIA = "<senha_temporaria>";
+    /** gerar_senha_temporaria do Django: 14 caracteres sem os ambiguos (I, O, l, o, 0, 1). */
+    private static final Pattern CANDIDATA_A_SENHA = Pattern.compile(
+            "(?<![A-Za-z0-9])[A-HJ-NP-Za-km-np-z2-9]{14}(?![A-Za-z0-9])");
+    /**
+     * Divergencias de proposito nos jobs, por cenario: tipo gravado no Django -> tipo do Java. O reenviar do admin no
+     * Django enfileira o mesmo enviar-oracao do pipeline, cuja chave de e-mail fixa faria a Resend devolver o envio
+     * anterior em cache; o Java usa o reenviar-oracao, com chave nova a cada reenvio (contexto-global da 4C).
+     */
+    private static final Map<String, Map<String, String>> JOBS_DIVERGENTES = Map.of(
+            "admin_reenviar_reenvia.json", Map.of("enviar-oracao", "reenviar-oracao"));
 
     private final JdbcTemplate jdbc;
     private final UsuarioRepository usuarios;
@@ -90,6 +107,7 @@ public class ReplayDeContrato {
     private CaixaDeSaidaEmMemoria caixa;
     private Collection<? extends TipoDeJob<?>> jobs;
     private GanchosDeOracao ganchos;
+    private Consumer<Instant> relogio;
 
     /**
      * O que o harness precisa do app fora do banco: o cache de senhas temporarias (SenhasTemporarias) e o dedup em
@@ -144,6 +162,15 @@ public class ReplayDeContrato {
         return this;
     }
 
+    /**
+     * Cenario com "configuracao.relogio" (o freezegun do gravador) fixa o relogio do app nesse instante; os outros o
+     * soltam (null = relogio do sistema). Sem o gancho, cenario com relogio falha.
+     */
+    public ReplayDeContrato comRelogio(Consumer<Instant> relogio) {
+        this.relogio = relogio;
+        return this;
+    }
+
     public void executar(Path cenarioJson, URI base) throws Exception {
         JsonNode cenario = JSON.readTree(cenarioJson.toFile());
         Set<String> fixos = uuidsFixos(cenario);
@@ -156,7 +183,16 @@ public class ReplayDeContrato {
                 .isFalse();
         assertThat(caixa == null && CHAVES_DE_ORACAO.stream().anyMatch(cenario::has))
                 .as("%s e cenario da 4B: use comOracao", arquivo).isFalse();
+        JsonNode instante = cenario.path("configuracao").path(RELOGIO);
+        assertThat(!instante.isMissingNode() && relogio == null).as("%s congela o relogio: use comRelogio", arquivo)
+                .isFalse();
+        if (relogio != null) {
+            relogio.accept(instante.isMissingNode() ? null : OffsetDateTime.parse(instante.asString()).toInstant());
+        }
         for (Map.Entry<String, JsonNode> c : cenario.path("configuracao").properties()) {
+            if (c.getKey().equals(RELOGIO)) {
+                continue;
+            }
             assertThat(ambiente.getProperty(c.getKey())).as("%s: rode num contexto com %s=%s", arquivo, c.getKey(),
                     c.getValue().asString()).isEqualTo(c.getValue().asString());
         }
@@ -249,6 +285,19 @@ public class ReplayDeContrato {
             obtido.set("body", normalizar(corpoResp, null, fixos));
             ArrayNode lista = obtido.putArray("cookies");
             recebidos.forEach((nome, a) -> lista.add(cookieNormalizado(nome, a)));
+            // "headers_resposta" do gravador: so os headers gravados, ausente = null, Expires (data HTTP) = <ts>
+            JsonNode headers = passo.get("response").get("headers");
+            if (headers != null) {
+                ObjectNode h = obtido.putObject("headers");
+                for (Map.Entry<String, JsonNode> e : headers.properties()) {
+                    Optional<String> v = resp.headers().firstValue(e.getKey());
+                    if (v.isEmpty()) {
+                        h.putNull(e.getKey());
+                    } else {
+                        h.put(e.getKey(), e.getKey().equals("Expires") ? "<ts>" : v.get());
+                    }
+                }
+            }
             assertThat(obtido).as("%s passo %d: %s %s", cenarioJson.getFileName(), i, metodo, req.get("path"))
                     .isEqualTo(passo.get("response"));
             i++;
@@ -258,7 +307,7 @@ public class ReplayDeContrato {
             conferirEmails(cenario.get("emails"), fixos, arquivo);
         }
         if (cenario.has("jobs_enfileirados")) {
-            conferirJobs(cenario.get("jobs_enfileirados"), fixos, arquivo);
+            conferirJobs(divergentes(cenario.get("jobs_enfileirados"), arquivo), fixos, arquivo);
         }
         if (cenario.has("senhas_temporarias_final")) {
             ArrayNode obtidas = NOS.arrayNode();
@@ -324,13 +373,16 @@ public class ReplayDeContrato {
     private void conferirEmails(JsonNode esperados, Set<String> fixos, String arquivo) {
         esperados.forEach(e -> assertThat(e.get("reply_to")).as("%s: reply_to gravado", arquivo)
                 .isEqualTo(NOS.arrayNode().add(ResendEnviador.REPLY_TO)));
+        boolean senhaTemporaria = esperados.toString().contains(SENHA_TEMPORARIA);
         ArrayNode obtidos = NOS.arrayNode();
         for (Email e : caixa.enviados()) {
+            String hash = senhaTemporaria ? jdbc.queryForList("SELECT password FROM users_user WHERE email = ?",
+                    String.class, e.para()).stream().findFirst().orElse(null) : null;
             ObjectNode o = obtidos.addObject();
             o.put("para", e.para());
             o.put("assunto", e.assunto());
-            o.put("texto", e.texto());
-            o.put("html", e.html());
+            o.put("texto", hash == null ? e.texto() : semSenhaTemporaria(e.texto(), hash, senhas));
+            o.put("html", hash == null ? e.html() : semSenhaTemporaria(e.html(), hash, senhas));
         }
         ArrayNode semReplyTo = NOS.arrayNode();
         esperados.forEach(e -> semReplyTo.add(((ObjectNode) e.deepCopy()).without(List.of("reply_to"))));
@@ -338,20 +390,46 @@ public class ReplayDeContrato {
     }
 
     /**
+     * A senha temporaria que o app mandou no e-mail vira {@link #SENHA_TEMPORARIA}, como no gravador: so a candidata
+     * que confere com o hash do destinatario (prova tambem que a senha do e-mail e a gravada).
+     */
+    static String semSenhaTemporaria(String texto, String hash, SenhaDjango senhas) {
+        return texto == null ? null : CANDIDATA_A_SENHA.matcher(texto).replaceAll(m -> Matcher.quoteReplacement(
+                senhas.matches(m.group(), hash) ? SENHA_TEMPORARIA : m.group()));
+    }
+
+    /** jobs_enfileirados com os tipos de {@link #JOBS_DIVERGENTES} trocados pelos do Java, reordenados (tipo, arg). */
+    private static JsonNode divergentes(JsonNode esperados, String arquivo) {
+        Map<String, String> troca = JOBS_DIVERGENTES.get(arquivo);
+        if (troca == null) {
+            return esperados;
+        }
+        List<ObjectNode> jobs = new ArrayList<>();
+        esperados.forEach(j -> jobs.add(((ObjectNode) j.deepCopy()).put("tipo",
+                troca.getOrDefault(j.get("tipo").asString(), j.get("tipo").asString()))));
+        jobs.sort(Comparator.<ObjectNode, String>comparing(j -> j.get("tipo").asString())
+                .thenComparing(j -> j.get("arg").asString()));
+        ArrayNode saida = NOS.arrayNode();
+        jobs.forEach(saida::add);
+        return saida;
+    }
+
+    /**
      * on_commit/.delay do gravador = linhas de scheduled_tasks (o scheduler fica desligado no perfil test). O payload
-     * (task_data) so pode levar o ID: o arg e esse ID (JSON string/numero, ou objeto de um campo so), e a instancia
-     * tem de ser exatamente "<tipo>/<arg>". Ordenado por (tipo, arg) antes de normalizar, como o gravador.
+     * (task_data) so pode levar IDs: o arg e o ID (JSON string/numero, ou o 1o campo de um objeto cujos campos sao
+     * todos IDs, como o {pedido, envio} do reenviar-oracao), e a instancia tem de ser exatamente "<tipo>/<arg>".
+     * Ordenado por (tipo, arg) antes de normalizar, como o gravador.
      */
     private void conferirJobs(JsonNode esperados, Set<String> fixos, String arquivo) {
         List<String[]> linhas = new ArrayList<>(jdbc.query(
                 "SELECT task_name, task_instance, task_data FROM scheduled_tasks", (rs, n) -> {
                     String tipo = rs.getString(1);
                     JsonNode dado = JSON.readTree(rs.getBytes(3));
-                    JsonNode id = dado.isObject() && dado.size() == 1 ? dado.properties().iterator().next().getValue()
-                            : dado;
-                    assertThat(id.isString() || id.isIntegralNumber())
-                            .as("%s: payload de %s so com o ID: %s", arquivo, tipo, dado).isTrue();
-                    String arg = id.asString();
+                    List<JsonNode> ids = dado.isObject()
+                            ? dado.properties().stream().map(Map.Entry::getValue).toList() : List.of(dado);
+                    assertThat(ids).as("%s: payload de %s so com IDs: %s", arquivo, tipo, dado).isNotEmpty()
+                            .allMatch(id -> id.isString() || id.isIntegralNumber());
+                    String arg = ids.getFirst().asString();
                     assertThat(rs.getString(2)).as("%s: instancia do job %s", arquivo, tipo).isEqualTo(tipo + "/" + arg);
                     return new String[] {tipo, arg};
                 }));
@@ -414,6 +492,9 @@ public class ReplayDeContrato {
         u.setForceChangePassword(d.get("force_change_password").asBoolean());
         u.setCpfCnpj(d.get("cpf_cnpj").isNull() ? null : d.get("cpf_cnpj").asString());
         u.setTelefone(d.get("telefone").isNull() ? null : d.get("telefone").asString());
+        if (d.hasNonNull("freemium_used_at")) {
+            u.setFreemiumUsedAt(OffsetDateTime.parse(d.get("freemium_used_at").asString()));
+        }
         usuarios.saveAndFlush(u);
     }
 

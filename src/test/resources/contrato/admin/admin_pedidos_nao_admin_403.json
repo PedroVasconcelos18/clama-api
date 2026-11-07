@@ -1,0 +1,364 @@
+{
+  "cenario": "admin_pedidos_nao_admin_403",
+  "configuracao": {
+    "ANTHROPIC_API_KEY": "sk-ant-contrato",
+    "FRONTEND_URL": "https://clama.me",
+    "FRONTEND_BASE_URL": "https://clama.me"
+  },
+  "usuarios": [
+    {
+      "email": "admin@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Admin",
+      "is_clama_admin": true,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    },
+    {
+      "email": "Ana@Exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Ana Souza",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    }
+  ],
+  "dados": {
+    "plans_plan": [
+      {
+        "id": "55555555-5555-4555-8555-000000000001",
+        "nome": "Pedido de Oração",
+        "valor_centavos": 2000,
+        "descricao": "Descrição de Pedido de Oração.",
+        "complexidade": "simples",
+        "ordem": 1,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000002",
+        "nome": "Oração + Versículo",
+        "valor_centavos": 5000,
+        "descricao": "Descrição de Oração + Versículo.",
+        "complexidade": "com_versiculo",
+        "ordem": 2,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000003",
+        "nome": "Oração + Profecia + Versículos",
+        "valor_centavos": 10000,
+        "descricao": "Descrição de Oração + Profecia + Versículos.",
+        "complexidade": "com_profecia_e_versiculos",
+        "ordem": 3,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000004",
+        "nome": "Plano Antigo",
+        "valor_centavos": 1500,
+        "descricao": "Descrição de Plano Antigo.",
+        "complexidade": "simples",
+        "ordem": 0,
+        "ativo": false,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000005",
+        "nome": "Gratuito",
+        "valor_centavos": 0,
+        "descricao": "Descrição de Gratuito.",
+        "complexidade": "simples_gratuita",
+        "ordem": 9,
+        "ativo": true,
+        "visivel": false
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000006",
+        "nome": "Livre",
+        "valor_centavos": 1,
+        "descricao": "Descrição de Livre.",
+        "complexidade": "simples",
+        "ordem": 10,
+        "ativo": true,
+        "visivel": false
+      }
+    ],
+    "instituicoes_instituicao": [
+      {
+        "id": "66666666-6666-4666-8666-000000000001",
+        "nome": "Lar Esperança",
+        "logo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+        "ativo": true,
+        "ordem": 1
+      },
+      {
+        "id": "66666666-6666-4666-8666-000000000002",
+        "nome": "Casa Fechada",
+        "logo": "",
+        "ativo": false,
+        "ordem": 2
+      }
+    ],
+    "orders_pedido": [
+      {
+        "created_at": "2026-11-01T02:59:59+00:00",
+        "updated_at": "2026-11-01T02:59:59+00:00",
+        "id": "44444444-4444-4444-8444-000000000001",
+        "nome": "gAAAAABq7oixY7HX_PrzfHAkwufzly3snQc9CEWVHHid21BEL76_bHnsIIbqRNxk3I2cEGX6QDQ-th8ddncXF88dUOHlTz7sRA==",
+        "email": "gAAAAABq7oixb4N7TxlHkHIh7JwOFUi8nGADjWMF5nOEopo76QQe8_M590xCyAeDrcUHZXPm8Yl5x2-Dmflwue9L1nnZ8ilyUEpo_jPhNnskLRECr60qdno=",
+        "telefone": "gAAAAABq7oixJBmIfijtysv9TSzAD4uAsEs17sdFqDHOjNmwPjCI5ZZgmdKnp9PZH-1TAW48La6vzm5YTAt10TLyD4K6EejBfw==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq7oixnxewHrbdIdBG5TpSu74YDiafnHrz8mXpUS8VPdlqx_9-yixh0ZkDlVYn33wZCIKVWL607ZblaX_MESRWGUbkrIn1KGZNpIu357qQxtt04BB39kw0-fzPp__s9JkIrWQu",
+        "oracao_gerada": "gAAAAABq7oixOAlpdJDgzZGm2HKL3iMGYNDNsYH8GqwC0hDraQ5pATF5RCtjGB0p8y6NSb5l7viqTl67uG3cHahif0pxY1RKzg==",
+        "valor_centavos": 3000,
+        "canal_entrega": "email",
+        "status": "aguardando_pagamento",
+        "plano_id": "55555555-5555-4555-8555-000000000001",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq7oixbWVFXNthII69N5FzbvXAD4LVnm4ALAa4-O9ZTzqNmw0qk749zg97gXenoRHGbf0-BNcBI3ar2U50rvSsioFOxQ==",
+        "user_id": null,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      },
+      {
+        "created_at": "2026-11-01T03:00:00+00:00",
+        "updated_at": "2026-11-01T03:00:00+00:00",
+        "id": "44444444-4444-4444-8444-000000000002",
+        "nome": "gAAAAABq7oixxu2fZZ9i1Xqaacgfjk4K9IMjycWb2MWGTwDPEK5UyzcQ3Xtw0o2QV70V0nSDFwIhnGLI3d8y8TvMQ7_XozjoFw==",
+        "email": "gAAAAABq7oixoPJseDRWsH2S5_gQFFZY9BA6BBsEaVGu97bBgfxQDmQUdfnP1Mu1SpSiTNieNz-MoRuxBCW8nNaH8gy__Qem3Q==",
+        "telefone": "gAAAAABq7oixVVoDchdFihdGEXmte-eit9XIOvqmSu_12DEd9usPB3sEklH92kMc02MVVjh8-5KKXX90axuDTewwiq3cEE3LZg==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq7oixm4Nj7oAfn7vgstDlMss2iDIagqdggXjlRxN8yjlrbzdIGLVPr97qOEJ-H3anqH2tCtyOOhPY8B4adlB-bE4WIaMbzfMpTw5ks9fyeSHd_lgrFsOJgPRNAqSqAE8cZvV9",
+        "oracao_gerada": "gAAAAABq7oix_mVxpkZ1-4kE6QuWjVyYmWJUKtvC7qFwap3pVuef8Jw6el9pezWJ1SvAqSsaueflyQp7TmCPP7Rg1JbYjZtuFg==",
+        "valor_centavos": 5000,
+        "canal_entrega": "whatsapp",
+        "status": "pago",
+        "plano_id": "55555555-5555-4555-8555-000000000002",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq7oixXGR-JIhvzoLy2GjB3867i1Vs7pOWSLeX07gUzAg7gcvrPV6chGMiWH15oVs3i72sXG1ye5yHxJBmQuORNbdRTg==",
+        "user_id": 2,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      },
+      {
+        "created_at": "2026-11-10T12:00:00+00:00",
+        "updated_at": "2026-11-10T12:00:00+00:00",
+        "id": "44444444-4444-4444-8444-000000000003",
+        "nome": "gAAAAABq7oixmPDENed6PwdzO3LiUBfO52cM8RZhObslvp9MhCYl1sJB6TbeAaL58VJ84aVi-PcFYWB5lGmdrxYWGKpVHN_Qkg==",
+        "email": "gAAAAABq7oixas-x01QoB8HhMeDEfuTXqwE74YLthp334r0Ushlvo8lw_9ha-uocD1L28wb6h-9szzuF_I1kMjt2JwX844rEQg==",
+        "telefone": "gAAAAABq7oixlkRmjpp1eJPClZeQ-wRYnOESdALGFX2iUSf-L5MWlyW_ySYjBqa0HIH8_yrLvV1pIGjmDNJHERwoNKuaEhENgQ==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq7oixDPqI5_vgDcMECETSPUiy9SzFqyZL6VEofTTC7msAjjf0c9AAo5SgYgJu4bZApocEHBqml8S9wShvuvEyaRolO4aAEixLgIFTVAZBLNAqYQSTsb8USFIr-q6MKu_v_z_b",
+        "oracao_gerada": "gAAAAABq7oixueumB1Ir_LRzvLXN1rFx5j0DO8-Ah08S63ZgwxYjoLs3fuvPm2RAqGBw_Z19-Gexg01g_EracjoBCRSIPZFEFQ==",
+        "valor_centavos": 2500,
+        "canal_entrega": "email",
+        "status": "erro",
+        "plano_id": "55555555-5555-4555-8555-000000000001",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "timeout",
+        "retry_count": 3,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq7oix8NRDD_Rpt5lZbRc1dvX9PT7hKcSLcpS9O-ysEGzbOBcqBYTzu2Sc87ku9Y_idE7_eUaOT9IbQ-YQeKTeNXs94w==",
+        "user_id": 2,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      },
+      {
+        "created_at": "2026-11-16T02:59:59+00:00",
+        "updated_at": "2026-11-16T02:59:59+00:00",
+        "id": "44444444-4444-4444-8444-000000000004",
+        "nome": "gAAAAABq7oixxqdhrgZhQR0cIn-qdcaK8_feYgmXMj9P1i80K-dXT-Kdajpq1_-FyLrolzNr3a7CPt6P7WNxAmD1EpRUyTqEaw==",
+        "email": "gAAAAABq7oixMQoK1Vyq-2MRk-an479mIz1OFJZf2098gHkSa9994o7PZ-2l5jKJirWxBB0YCsKYDanvpgg0FieLXD1D1wojpzwkU_p9HKeOXmbVW2saxsA=",
+        "telefone": "gAAAAABq7oixvp5I9ly8Qk0J5OAwXSJU9E8sst0GCXLjrruZCHZZFbAkAcahxAKIFXkrF9ldhqrEHAKI7mnpAv_roymhEl5Whw==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq7oixHVyCrm5Xr8K9nzKLyIhPGvKof7CM6yKwIYU_0_HH9q4t9Hp9yIL5yse1L-h6xguJGTOcMTBc8VxBs5O2nnvQU3M_bWeOkjk0ksgAjeExwEmLgc2R-iJaYAeJdLofeqkc",
+        "oracao_gerada": "gAAAAABq7oixO9DoPvhKwydjd8k4OJ6DaeDSygC7vtO4nFkIK4YdzYoLKtZ8LAQIWauQWD2HK3_qLef_U1Pmak5n055HO_dT7h92iwSwJlW14gvY5sJ5M6HH7EvjodmVWvH06WX5v1h8JZcGFRItYrbpzB9UVrCNmg==",
+        "valor_centavos": 10000,
+        "canal_entrega": "whatsapp",
+        "status": "enviada",
+        "plano_id": "55555555-5555-4555-8555-000000000003",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq7oixloN92PH8JoSzdf6jkp_7UR9T-PHY99IBhPP7mS57JU2uAcaQhRmVm2D4GS_Sr5Vy4O1cguT39PZhjfRf0uwGhQ==",
+        "user_id": null,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      },
+      {
+        "created_at": "2026-11-16T03:00:00+00:00",
+        "updated_at": "2026-11-16T03:00:00+00:00",
+        "id": "44444444-4444-4444-8444-000000000005",
+        "nome": "gAAAAABq7oixtFZGJCQyRJYGiWBa7LhY5ir28NuafYOsE9Ez1R48NG3Scl0l17d5JF-llqc8VJHEsd0wB8ScAWuDcJZ9xILjyA==",
+        "email": "gAAAAABq7oixlBmrUWo8q09FEzaP6WhFswaWs_UTC5AKjRK7FT5pHrw17QyVPeGlrT1WQ6BxgXmLGfA6dXSOhmW9yiT-bIk8nNN82sbBU4UpxNKDizrkWPs=",
+        "telefone": "gAAAAABq7oix53STQPbiNsxjFw3PdqOmtZk774jZo93vA_BzVI4TTG03d7EVB3Wj31LLSDhoV1XMBHTbksC4IQ5vttM73uUUnQ==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq7oixUsXnI7as8-fodaSjrbleWDM8fDwQ7zZfQAxr6kr9Yu_6oMWxglyA65V40uQ_5tHQeQyRAcOdyok7brT6s3FRjGu-ph0OPVdc6pqp_eOAhZyqgqQMUWjBZ0Giq3jfxuz8",
+        "oracao_gerada": "gAAAAABq7oixRxFOtBTa6FGNoJaHqs_KLqflHApuIpchUIYuMnzO2d-njQfJTeWfoBIXTFJlugydsSSSWa0yVtwuus6gRJY5bA==",
+        "valor_centavos": 0,
+        "canal_entrega": "email",
+        "status": "aguardando_reenvio",
+        "plano_id": "55555555-5555-4555-8555-000000000005",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq7oixnvKjk5JSw08BYzCA4FoQi1idqHqMp4OpUFgAxncqhvUTD6blzKLLHXxcSVxpP8asxTiC11ETLTxmAnnFX-zrQA==",
+        "user_id": null,
+        "eh_gratuito": true,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      }
+    ]
+  },
+  "passos": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/pedidos/"
+      },
+      "response": {
+        "status": 401,
+        "body": {
+          "error": {
+            "code": "not_authenticated",
+            "message": "Authentication required",
+            "pastoral_message": "Faça login pra continuar."
+          }
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/customer/auth/login/",
+        "body": {
+          "email": "ana@exemplo.com",
+          "password": "Clama-forte-2026"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "user": {
+            "id": "<id>",
+            "email": "Ana@Exemplo.com",
+            "nome_completo": "Ana Souza",
+            "force_change_password": false,
+            "freemium_used_at": null,
+            "nome_format_blog": "compacto",
+            "cpf_cnpj": "123.456.789-09",
+            "telefone": "+5511999990000",
+            "idade": null,
+            "sexo": ""
+          }
+        },
+        "cookies": [
+          {
+            "name": "clama_access",
+            "value": "<jwt>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 900
+          },
+          {
+            "name": "clama_refresh",
+            "value": "<jwt>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 604800
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/pedidos/"
+      },
+      "response": {
+        "status": 403,
+        "body": {
+          "detail": "Esse espaço é só para admins do Clama."
+        },
+        "cookies": []
+      }
+    }
+  ]
+}

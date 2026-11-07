@@ -1,0 +1,955 @@
+{
+  "cenario": "admin_pedidos_paginacao",
+  "configuracao": {
+    "ANTHROPIC_API_KEY": "sk-ant-contrato",
+    "FRONTEND_URL": "https://clama.me",
+    "FRONTEND_BASE_URL": "https://clama.me"
+  },
+  "usuarios": [
+    {
+      "email": "admin@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Admin",
+      "is_clama_admin": true,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    },
+    {
+      "email": "Ana@Exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Ana Souza",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    }
+  ],
+  "dados": {
+    "plans_plan": [
+      {
+        "id": "55555555-5555-4555-8555-000000000001",
+        "nome": "Pedido de Oração",
+        "valor_centavos": 2000,
+        "descricao": "Descrição de Pedido de Oração.",
+        "complexidade": "simples",
+        "ordem": 1,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000002",
+        "nome": "Oração + Versículo",
+        "valor_centavos": 5000,
+        "descricao": "Descrição de Oração + Versículo.",
+        "complexidade": "com_versiculo",
+        "ordem": 2,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000003",
+        "nome": "Oração + Profecia + Versículos",
+        "valor_centavos": 10000,
+        "descricao": "Descrição de Oração + Profecia + Versículos.",
+        "complexidade": "com_profecia_e_versiculos",
+        "ordem": 3,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000004",
+        "nome": "Plano Antigo",
+        "valor_centavos": 1500,
+        "descricao": "Descrição de Plano Antigo.",
+        "complexidade": "simples",
+        "ordem": 0,
+        "ativo": false,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000005",
+        "nome": "Gratuito",
+        "valor_centavos": 0,
+        "descricao": "Descrição de Gratuito.",
+        "complexidade": "simples_gratuita",
+        "ordem": 9,
+        "ativo": true,
+        "visivel": false
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000006",
+        "nome": "Livre",
+        "valor_centavos": 1,
+        "descricao": "Descrição de Livre.",
+        "complexidade": "simples",
+        "ordem": 10,
+        "ativo": true,
+        "visivel": false
+      }
+    ],
+    "instituicoes_instituicao": [
+      {
+        "id": "66666666-6666-4666-8666-000000000001",
+        "nome": "Lar Esperança",
+        "logo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+        "ativo": true,
+        "ordem": 1
+      },
+      {
+        "id": "66666666-6666-4666-8666-000000000002",
+        "nome": "Casa Fechada",
+        "logo": "",
+        "ativo": false,
+        "ordem": 2
+      }
+    ],
+    "orders_pedido": [
+      {
+        "created_at": "2026-11-01T02:59:59+00:00",
+        "updated_at": "2026-11-01T02:59:59+00:00",
+        "id": "44444444-4444-4444-8444-000000000001",
+        "nome": "gAAAAABq7oixDZ7T7A0ZZ6Xgoovt_GEMI9zrw_Yl3G25k7bjKEQzifbkcPxj4VCwoCaZOTqA-19SdK15mrfWQKIIz_4OMLwP4Q==",
+        "email": "gAAAAABq7oixB1AEMVMcVIicTR31sOBvQFZZn0f-J0Rp-uxLQHCF4ASeq2FXxX5B8zX9YTKS78u3AK4N_-jnxl1ymt13iWdOq3FfsDr5TV6NSO-n3zLr--s=",
+        "telefone": "gAAAAABq7oix09CVZx1W2fDtoMbghKRNOQGyfLOEEtpRAbgMwPe5L0szvZc73bCMmE-eRU9yGenrx0uUHOQYjjBo0UjwCgJEVQ==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq7oix5Ai1IT_rOnMgQJmCEl3lpZZkRyT_uLN4aIxwS8kxZD4AA2auRuDobfoV3_m7sEnBlymXd5w9NGu1Tc1wKBHJoThTvm0ocynaAfjbV55WqD5_h1cqKhcsL221TY7mTgiq",
+        "oracao_gerada": "gAAAAABq7oixlxVV-4zg0oNcLE22ycSiUa9fWK_sDF16hoyEq3oslw1SgUTr3xU6AXxiULJra77J0gbfOfuAjnH0mICFgJj3PA==",
+        "valor_centavos": 3000,
+        "canal_entrega": "email",
+        "status": "aguardando_pagamento",
+        "plano_id": "55555555-5555-4555-8555-000000000001",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq7oixTceaZFieUFtnhlUxY1Tq2lqO9zzX7NLGe3wNVLGNOZjv2ld2gIr2JSKd9a8qyHuP3M5PcW3NXcx34O5z1M1f4g==",
+        "user_id": null,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      },
+      {
+        "created_at": "2026-11-01T03:00:00+00:00",
+        "updated_at": "2026-11-01T03:00:00+00:00",
+        "id": "44444444-4444-4444-8444-000000000002",
+        "nome": "gAAAAABq7oixhUeWEHrb2TYpmBrfRR1kRmDgDA_fH-mHoVreuabiVG_SQn8LZsWhnMXPzG_mW3qb4RKz691Y9SD_48FzDKWoDg==",
+        "email": "gAAAAABq7oix73LnueVXc0uIGVBenzQkQRPoJa3dgA_R4milicAsfulysNkn2EROvd1p2kpIHo_abDWbDJUeMKvcjvDHk5Q2Xg==",
+        "telefone": "gAAAAABq7oixjaFe87iz4mRqSALi1itLA7sPDCatxmYwYvitv-c-PcTpQ8mTZ-gOh0mwlNoFWE2PgZYXRf2Fnaj5CZocJkEJLw==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq7oix3j2A_1f5vj4QWNODptIlzR9JFz9Dkop3aoI0C0At34o37SgGmulsLqUKtw3sTaWbiMmpktxO-8eZCXBEHIThA7TM0gRQ1887KHXyHMSy_L2QGMT7iHi7nqNpTPCDCHAN",
+        "oracao_gerada": "gAAAAABq7oixZymsOnHBEUoU_w5W51l5VITXx6iLtRyMu-DLxhXgtiEZ-NDUpRUW1UTNUpaVspKpzu-_EklTvNxEWYkenLnw0A==",
+        "valor_centavos": 5000,
+        "canal_entrega": "whatsapp",
+        "status": "pago",
+        "plano_id": "55555555-5555-4555-8555-000000000002",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq7oix6rhVNdOkzqQ02SML90PV_NOMNJF2EJ4kks3wBfxUzGWHk3XhiAY4l3TeVQx8Ev2eu20Qh7YnTr8Su9_iN5f-FQ==",
+        "user_id": 2,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      },
+      {
+        "created_at": "2026-11-10T12:00:00+00:00",
+        "updated_at": "2026-11-10T12:00:00+00:00",
+        "id": "44444444-4444-4444-8444-000000000003",
+        "nome": "gAAAAABq7oix6jUORU_t71q9Ec8TyyA2yEk33LHtWXvqXxrIH8G34bMB-9riDmne4nK-hNMUUg5vuw5GzWXlLjckT7lH4FeSog==",
+        "email": "gAAAAABq7oixmIuITZMiSRKAFcsU_-ISbdXIQNJ_AsKuOfmeIVnmzznIjaJrDGLvpYyfOe4pPQnCNIRvwBt8-cvfXJSpBOtoVw==",
+        "telefone": "gAAAAABq7oixa_fR2vvocbRS33zFyCxu19_eB1sESHNwae71LQ_Q3dJFWxb2ycbI1UF0C6wSOfJaqsjl3_225985U9_w3McC9Q==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq7oixqw3_L2jKHQPVNOMzkZRdIW9m-nUUG0PUAtlqBwKnp2ixsxfG47PurRreIpnVfBeT_96ON04R2P6Zvw3ZCsBHRabpCrrE9bIeP9SwTaIx5jiPsjwFQq7XRgYZo3-u1TAg",
+        "oracao_gerada": "gAAAAABq7oixcXd5HdlhaSNzNsRbpg8SjiZqn4CjvFLbcL8NDyRhh9efdTWzPMpR4PBscwx0coxx5mb7TUAgmqYi3fPb42URmw==",
+        "valor_centavos": 2500,
+        "canal_entrega": "email",
+        "status": "erro",
+        "plano_id": "55555555-5555-4555-8555-000000000001",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "timeout",
+        "retry_count": 3,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq7oix165E42eESOK-Vo7x_4vu4kWDmrp6D4k2P87H67X3js1zzHGOued0FOM6pE_vF0fOUV4pWD8MhueY4_tKE704kA==",
+        "user_id": 2,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      },
+      {
+        "created_at": "2026-11-16T02:59:59+00:00",
+        "updated_at": "2026-11-16T02:59:59+00:00",
+        "id": "44444444-4444-4444-8444-000000000004",
+        "nome": "gAAAAABq7oixDQ8jR8BVfr022ipjPz9bIORxGIccKxKq6QbG5928eb5AhNWdfLB2cdeJZ0W3izQOgccHbE0leKt6R0TWMNVt9w==",
+        "email": "gAAAAABq7oixmJlkX8I1IRea5es9bIWFTgRr6xIt5yOQaOicSdzlCgt0gR97CXbbb4IcRvPv-CDfqWfrb0UeFhA0orjuK4L527xRpg7FYCWWHVrNhFdeFRM=",
+        "telefone": "gAAAAABq7oixKkiNa6O-yGScAyTY-B7vOXnK40Vx0dfbl0KB0NYPOblLc8IQCJuogychWqFmGtFrye07PW7_MYAPUHNtkSYBTA==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq7oixzgGiv0me9bFLa1coJkZs4w5mqmQcdl945tsLpxTrBqE-5lbi2UTkemuOKLo01nRREkAm4bo7GLXNLRyIEmtZjQW4f_RL1ZsOLzGESQTAfejvHbw0AfwPwy-7y1eA2-nV",
+        "oracao_gerada": "gAAAAABq7oixNxR5ZG-jX_a78zU_bL2Z27kbJPehksy8WkDbnebzISx4EDLqYd17pHbos5zTM1H5FdO-mAaRZI7zsDZkEb8vm7HfaSDv4-WB6hPsJSh13d7b1oONtmnFZ61Dl7K312h3EeetKnr3DH_dwAWdi1udKg==",
+        "valor_centavos": 10000,
+        "canal_entrega": "whatsapp",
+        "status": "enviada",
+        "plano_id": "55555555-5555-4555-8555-000000000003",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq7oixpTycwDGfSdLBs6sFMJsiZUsOqURzERCUc2TD_R55kU_bkSuKPKNrIdihP9Ar7ZmxNoM_g9YqQMa-fHNClMNZVA==",
+        "user_id": null,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      },
+      {
+        "created_at": "2026-11-16T03:00:00+00:00",
+        "updated_at": "2026-11-16T03:00:00+00:00",
+        "id": "44444444-4444-4444-8444-000000000005",
+        "nome": "gAAAAABq7oixK2n-31-Ww_YUHUMF54i31zWRI2jnS8it70tq8_UR_gYwgjAOFF6nZ8XCw6UiGLIeaI0P1gui3EqamU_99xg5ag==",
+        "email": "gAAAAABq7oixyZFQ_aoa-j4A5DcSzStyZIlBPdQahthKUFSgHiGM4Z29p8cpgU4mbqE6r5YqKRYysSlfyN4eQ5nHnHW0hlh6z1DE9-g1mfwr4WcZLlfZVZU=",
+        "telefone": "gAAAAABq7oix3lR0cy8DZeB4mksj-rAlF2v6IjFbA6kmfu5h4LVhtm58RjiNQH9gUAOBD-mx1DjWBH0hW0VbqS3aQ61gAV1rpw==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq7oixh4uYJSGIVhsaYcEvLiccYACyZ_Gcw8k7pMCspnql5xurahj9RB3Tg82WLSKsC5GkeMcNVncixkpfB6cz-8FXuAk4bKMkeMeJH_dYLF6jX69sEc4r6qNZa3BNafKAVgEU",
+        "oracao_gerada": "gAAAAABq7oix71_njJZk1UlESxNTqrL2d3ojcsAlJ2nOpSm3RAF4e9QVmTdm-jEaef6LZ_hTw8tOzdpZsRnJQF1JlCc5B408Gw==",
+        "valor_centavos": 0,
+        "canal_entrega": "email",
+        "status": "aguardando_reenvio",
+        "plano_id": "55555555-5555-4555-8555-000000000005",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq7oixmxL8qm7y0Tln0XNTLS-Zyri8hyqwelwR_-3mOMUdLgE-ZTg5gt62kzix4rM47M_S3ELWPlbF80wmLzHOgEXM0g==",
+        "user_id": null,
+        "eh_gratuito": true,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      }
+    ]
+  },
+  "passos": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/admin/auth/login/",
+        "body": {
+          "email": "admin@exemplo.com",
+          "password": "Clama-forte-2026"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "user": {
+            "id": "<id>",
+            "email": "admin@exemplo.com",
+            "nome_completo": "Admin"
+          }
+        },
+        "cookies": [
+          {
+            "name": "clama_access",
+            "value": "<jwt>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 900
+          },
+          {
+            "name": "clama_refresh",
+            "value": "<jwt>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 604800
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/csrf/"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "csrf_token": "<csrf>"
+        },
+        "cookies": [
+          {
+            "name": "csrftoken",
+            "value": "<csrf>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 31449600
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/pedidos/?limit=2"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "count": 5,
+          "next": "http://testserver/api/admin/pedidos/?limit=2&offset=2",
+          "previous": null,
+          "results": [
+            {
+              "id": "44444444-4444-4444-8444-000000000005",
+              "created_at": "<ts>",
+              "nome": "Rita Gomes",
+              "email": "rita@exemplo.com",
+              "telefone": "",
+              "plano_nome": "Gratuito",
+              "valor_centavos": 0,
+              "valor_reais_str": "R$ 0,00",
+              "status": "aguardando_reenvio",
+              "canal_entrega": "email",
+              "eh_gratuito": true
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000004",
+              "created_at": "<ts>",
+              "nome": "João Pereira",
+              "email": "joao@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Oração + Profecia + Versículos",
+              "valor_centavos": 10000,
+              "valor_reais_str": "R$ 100,00",
+              "status": "enviada",
+              "canal_entrega": "whatsapp",
+              "eh_gratuito": false
+            }
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/pedidos/?limit=2&offset=2"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "count": 5,
+          "next": "http://testserver/api/admin/pedidos/?limit=2&offset=4",
+          "previous": "http://testserver/api/admin/pedidos/?limit=2",
+          "results": [
+            {
+              "id": "44444444-4444-4444-8444-000000000003",
+              "created_at": "<ts>",
+              "nome": "Ana Souza",
+              "email": "ana@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Pedido de Oração",
+              "valor_centavos": 2500,
+              "valor_reais_str": "R$ 25,00",
+              "status": "erro",
+              "canal_entrega": "email",
+              "eh_gratuito": false
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000002",
+              "created_at": "<ts>",
+              "nome": "Ana Souza",
+              "email": "ana@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Oração + Versículo",
+              "valor_centavos": 5000,
+              "valor_reais_str": "R$ 50,00",
+              "status": "pago",
+              "canal_entrega": "whatsapp",
+              "eh_gratuito": false
+            }
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/pedidos/?limit=2&offset=4"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "count": 5,
+          "next": null,
+          "previous": "http://testserver/api/admin/pedidos/?limit=2&offset=2",
+          "results": [
+            {
+              "id": "44444444-4444-4444-8444-000000000001",
+              "created_at": "<ts>",
+              "nome": "Maria Silva",
+              "email": "maria@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Pedido de Oração",
+              "valor_centavos": 3000,
+              "valor_reais_str": "R$ 30,00",
+              "status": "aguardando_pagamento",
+              "canal_entrega": "email",
+              "eh_gratuito": false
+            }
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/pedidos/?offset=10"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "count": 5,
+          "next": null,
+          "previous": "http://testserver/api/admin/pedidos/?limit=20",
+          "results": []
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/pedidos/?limit=2&offset=3"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "count": 5,
+          "next": null,
+          "previous": "http://testserver/api/admin/pedidos/?limit=2&offset=1",
+          "results": [
+            {
+              "id": "44444444-4444-4444-8444-000000000002",
+              "created_at": "<ts>",
+              "nome": "Ana Souza",
+              "email": "ana@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Oração + Versículo",
+              "valor_centavos": 5000,
+              "valor_reais_str": "R$ 50,00",
+              "status": "pago",
+              "canal_entrega": "whatsapp",
+              "eh_gratuito": false
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000001",
+              "created_at": "<ts>",
+              "nome": "Maria Silva",
+              "email": "maria@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Pedido de Oração",
+              "valor_centavos": 3000,
+              "valor_reais_str": "R$ 30,00",
+              "status": "aguardando_pagamento",
+              "canal_entrega": "email",
+              "eh_gratuito": false
+            }
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/pedidos/?limit=0"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "count": 5,
+          "next": null,
+          "previous": null,
+          "results": [
+            {
+              "id": "44444444-4444-4444-8444-000000000005",
+              "created_at": "<ts>",
+              "nome": "Rita Gomes",
+              "email": "rita@exemplo.com",
+              "telefone": "",
+              "plano_nome": "Gratuito",
+              "valor_centavos": 0,
+              "valor_reais_str": "R$ 0,00",
+              "status": "aguardando_reenvio",
+              "canal_entrega": "email",
+              "eh_gratuito": true
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000004",
+              "created_at": "<ts>",
+              "nome": "João Pereira",
+              "email": "joao@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Oração + Profecia + Versículos",
+              "valor_centavos": 10000,
+              "valor_reais_str": "R$ 100,00",
+              "status": "enviada",
+              "canal_entrega": "whatsapp",
+              "eh_gratuito": false
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000003",
+              "created_at": "<ts>",
+              "nome": "Ana Souza",
+              "email": "ana@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Pedido de Oração",
+              "valor_centavos": 2500,
+              "valor_reais_str": "R$ 25,00",
+              "status": "erro",
+              "canal_entrega": "email",
+              "eh_gratuito": false
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000002",
+              "created_at": "<ts>",
+              "nome": "Ana Souza",
+              "email": "ana@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Oração + Versículo",
+              "valor_centavos": 5000,
+              "valor_reais_str": "R$ 50,00",
+              "status": "pago",
+              "canal_entrega": "whatsapp",
+              "eh_gratuito": false
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000001",
+              "created_at": "<ts>",
+              "nome": "Maria Silva",
+              "email": "maria@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Pedido de Oração",
+              "valor_centavos": 3000,
+              "valor_reais_str": "R$ 30,00",
+              "status": "aguardando_pagamento",
+              "canal_entrega": "email",
+              "eh_gratuito": false
+            }
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/pedidos/?limit=abc"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "count": 5,
+          "next": null,
+          "previous": null,
+          "results": [
+            {
+              "id": "44444444-4444-4444-8444-000000000005",
+              "created_at": "<ts>",
+              "nome": "Rita Gomes",
+              "email": "rita@exemplo.com",
+              "telefone": "",
+              "plano_nome": "Gratuito",
+              "valor_centavos": 0,
+              "valor_reais_str": "R$ 0,00",
+              "status": "aguardando_reenvio",
+              "canal_entrega": "email",
+              "eh_gratuito": true
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000004",
+              "created_at": "<ts>",
+              "nome": "João Pereira",
+              "email": "joao@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Oração + Profecia + Versículos",
+              "valor_centavos": 10000,
+              "valor_reais_str": "R$ 100,00",
+              "status": "enviada",
+              "canal_entrega": "whatsapp",
+              "eh_gratuito": false
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000003",
+              "created_at": "<ts>",
+              "nome": "Ana Souza",
+              "email": "ana@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Pedido de Oração",
+              "valor_centavos": 2500,
+              "valor_reais_str": "R$ 25,00",
+              "status": "erro",
+              "canal_entrega": "email",
+              "eh_gratuito": false
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000002",
+              "created_at": "<ts>",
+              "nome": "Ana Souza",
+              "email": "ana@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Oração + Versículo",
+              "valor_centavos": 5000,
+              "valor_reais_str": "R$ 50,00",
+              "status": "pago",
+              "canal_entrega": "whatsapp",
+              "eh_gratuito": false
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000001",
+              "created_at": "<ts>",
+              "nome": "Maria Silva",
+              "email": "maria@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Pedido de Oração",
+              "valor_centavos": 3000,
+              "valor_reais_str": "R$ 30,00",
+              "status": "aguardando_pagamento",
+              "canal_entrega": "email",
+              "eh_gratuito": false
+            }
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/pedidos/?limit=-1"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "count": 5,
+          "next": null,
+          "previous": null,
+          "results": [
+            {
+              "id": "44444444-4444-4444-8444-000000000005",
+              "created_at": "<ts>",
+              "nome": "Rita Gomes",
+              "email": "rita@exemplo.com",
+              "telefone": "",
+              "plano_nome": "Gratuito",
+              "valor_centavos": 0,
+              "valor_reais_str": "R$ 0,00",
+              "status": "aguardando_reenvio",
+              "canal_entrega": "email",
+              "eh_gratuito": true
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000004",
+              "created_at": "<ts>",
+              "nome": "João Pereira",
+              "email": "joao@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Oração + Profecia + Versículos",
+              "valor_centavos": 10000,
+              "valor_reais_str": "R$ 100,00",
+              "status": "enviada",
+              "canal_entrega": "whatsapp",
+              "eh_gratuito": false
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000003",
+              "created_at": "<ts>",
+              "nome": "Ana Souza",
+              "email": "ana@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Pedido de Oração",
+              "valor_centavos": 2500,
+              "valor_reais_str": "R$ 25,00",
+              "status": "erro",
+              "canal_entrega": "email",
+              "eh_gratuito": false
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000002",
+              "created_at": "<ts>",
+              "nome": "Ana Souza",
+              "email": "ana@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Oração + Versículo",
+              "valor_centavos": 5000,
+              "valor_reais_str": "R$ 50,00",
+              "status": "pago",
+              "canal_entrega": "whatsapp",
+              "eh_gratuito": false
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000001",
+              "created_at": "<ts>",
+              "nome": "Maria Silva",
+              "email": "maria@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Pedido de Oração",
+              "valor_centavos": 3000,
+              "valor_reais_str": "R$ 30,00",
+              "status": "aguardando_pagamento",
+              "canal_entrega": "email",
+              "eh_gratuito": false
+            }
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/pedidos/?limit=500"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "count": 5,
+          "next": null,
+          "previous": null,
+          "results": [
+            {
+              "id": "44444444-4444-4444-8444-000000000005",
+              "created_at": "<ts>",
+              "nome": "Rita Gomes",
+              "email": "rita@exemplo.com",
+              "telefone": "",
+              "plano_nome": "Gratuito",
+              "valor_centavos": 0,
+              "valor_reais_str": "R$ 0,00",
+              "status": "aguardando_reenvio",
+              "canal_entrega": "email",
+              "eh_gratuito": true
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000004",
+              "created_at": "<ts>",
+              "nome": "João Pereira",
+              "email": "joao@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Oração + Profecia + Versículos",
+              "valor_centavos": 10000,
+              "valor_reais_str": "R$ 100,00",
+              "status": "enviada",
+              "canal_entrega": "whatsapp",
+              "eh_gratuito": false
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000003",
+              "created_at": "<ts>",
+              "nome": "Ana Souza",
+              "email": "ana@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Pedido de Oração",
+              "valor_centavos": 2500,
+              "valor_reais_str": "R$ 25,00",
+              "status": "erro",
+              "canal_entrega": "email",
+              "eh_gratuito": false
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000002",
+              "created_at": "<ts>",
+              "nome": "Ana Souza",
+              "email": "ana@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Oração + Versículo",
+              "valor_centavos": 5000,
+              "valor_reais_str": "R$ 50,00",
+              "status": "pago",
+              "canal_entrega": "whatsapp",
+              "eh_gratuito": false
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000001",
+              "created_at": "<ts>",
+              "nome": "Maria Silva",
+              "email": "maria@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Pedido de Oração",
+              "valor_centavos": 3000,
+              "valor_reais_str": "R$ 30,00",
+              "status": "aguardando_pagamento",
+              "canal_entrega": "email",
+              "eh_gratuito": false
+            }
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/pedidos/?limit=2&offset=abc"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "count": 5,
+          "next": "http://testserver/api/admin/pedidos/?limit=2&offset=2",
+          "previous": null,
+          "results": [
+            {
+              "id": "44444444-4444-4444-8444-000000000005",
+              "created_at": "<ts>",
+              "nome": "Rita Gomes",
+              "email": "rita@exemplo.com",
+              "telefone": "",
+              "plano_nome": "Gratuito",
+              "valor_centavos": 0,
+              "valor_reais_str": "R$ 0,00",
+              "status": "aguardando_reenvio",
+              "canal_entrega": "email",
+              "eh_gratuito": true
+            },
+            {
+              "id": "44444444-4444-4444-8444-000000000004",
+              "created_at": "<ts>",
+              "nome": "João Pereira",
+              "email": "joao@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Oração + Profecia + Versículos",
+              "valor_centavos": 10000,
+              "valor_reais_str": "R$ 100,00",
+              "status": "enviada",
+              "canal_entrega": "whatsapp",
+              "eh_gratuito": false
+            }
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/pedidos/?status=pago,erro&limit=1"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "count": 2,
+          "next": "http://testserver/api/admin/pedidos/?limit=1&offset=1&status=pago%2Cerro",
+          "previous": null,
+          "results": [
+            {
+              "id": "44444444-4444-4444-8444-000000000003",
+              "created_at": "<ts>",
+              "nome": "Ana Souza",
+              "email": "ana@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Pedido de Oração",
+              "valor_centavos": 2500,
+              "valor_reais_str": "R$ 25,00",
+              "status": "erro",
+              "canal_entrega": "email",
+              "eh_gratuito": false
+            }
+          ]
+        },
+        "cookies": []
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/pedidos/?limit=1&offset=1&status=pago,erro"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "count": 2,
+          "next": null,
+          "previous": "http://testserver/api/admin/pedidos/?limit=1&status=pago%2Cerro",
+          "results": [
+            {
+              "id": "44444444-4444-4444-8444-000000000002",
+              "created_at": "<ts>",
+              "nome": "Ana Souza",
+              "email": "ana@exemplo.com",
+              "telefone": "(11) 99999-8888",
+              "plano_nome": "Oração + Versículo",
+              "valor_centavos": 5000,
+              "valor_reais_str": "R$ 50,00",
+              "status": "pago",
+              "canal_entrega": "whatsapp",
+              "eh_gratuito": false
+            }
+          ]
+        },
+        "cookies": []
+      }
+    }
+  ]
+}
