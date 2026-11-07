@@ -8,6 +8,7 @@ import me.clama.api.BancoDeTeste;
 import me.clama.api.RelogioDeTeste;
 import me.clama.api.blog.Comentario;
 import me.clama.api.blog.ComentarioRepository;
+import me.clama.api.blog.JanelaFixa;
 import me.clama.api.blog.PostEspelho;
 import me.clama.api.blog.PostEspelhoRepository;
 import me.clama.api.identidade.Usuario;
@@ -39,10 +40,12 @@ class ComentariosTest {
     @Autowired PostEspelhoRepository espelhos;
     @Autowired ComentarioRepository comentarios;
     @Autowired RelogioDeTeste.Fixavel relogio;
+    @Autowired JanelaFixa janela;
     ApiDoBlog api;
 
     @BeforeEach
     void prepara() {
+        janela.limpar();
         api = new ApiDoBlog(porta, jdbc, usuarios, tokens);
         api.limpar();
         api.espelho(espelhos, "salmo-23", PostEspelho.PUBLICADO);
@@ -59,11 +62,14 @@ class ComentariosTest {
     void sextoComentario429ComCorpoPlano() throws Exception {
         ApiDoBlog.Sessao ana = api.sessao(api.usuario("Ana Souza", false));
         assertThat(api.enviar("POST", ROTA, "{\"conteudo\": \"Amém, irmãos\"}", ana).statusCode()).isEqualTo(201);
-        for (int i = 0; i < 4; i++) { // invalido tambem conta
+        for (int i = 0; i < 3; i++) { // invalido tambem conta
             assertThat(api.enviar("POST", ROTA, "{\"conteudo\": \"a\"}", ana).statusCode()).isEqualTo(400);
         }
-        // o 429 sai antes da validacao: corpo invalido no 6o pedido tambem e 429
-        for (String corpo : new String[] {"{\"conteudo\": \"Mais um\"}", "[]"}) {
+        HttpResponse<String> quebrado = api.enviar("POST", ROTA, "{quebrado", ana); // JSON quebrado tambem conta
+        assertThat(quebrado.statusCode()).isEqualTo(400);
+        assertThat(quebrado.body()).isEqualTo("{\"detail\":\"JSON parse error - Invalid JSON\"}");
+        // o 429 sai antes da validacao: corpo invalido (inclusive JSON quebrado) no 6o pedido tambem e 429
+        for (String corpo : new String[] {"{\"conteudo\": \"Mais um\"}", "[]", "{quebrado"}) {
             HttpResponse<String> r = api.enviar("POST", ROTA, corpo, ana);
             assertThat(r.statusCode()).isEqualTo(429);
             assertThat(r.body()).isEqualTo("{\"code\":\"rate_limit_exceeded\",\"pastoral_message\":\"Calma! Aguarde um"
@@ -89,6 +95,10 @@ class ComentariosTest {
             assertThat(r.statusCode()).as(rota).isEqualTo(403);
             assertThat(r.body()).as(rota).isEqualTo(BANIDO);
         }
+        // a permissao vem antes do metodo (DRF): GET de banido na curtida e 403 plano, nao 405
+        HttpResponse<String> get = api.enviar("GET", "/api/blog/posts/salmo-23/like/", null, s);
+        assertThat(get.statusCode()).isEqualTo(403);
+        assertThat(get.body()).isEqualTo(BANIDO);
         // banimento revogado nao barra
         jdbc.update("update blog_customerbanido set revogado_em = now() where customer_id = ?", beto.getId());
         assertThat(api.enviar("POST", ROTA, "{\"conteudo\": \"Amém!\"}", s).statusCode()).isEqualTo(201);

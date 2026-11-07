@@ -81,6 +81,35 @@ public class StubDeIntegracoes {
                 .isEqualTo(numerosPorValor(esperadas.isMissingNode() ? NOS.arrayNode() : esperadas));
     }
 
+    /**
+     * Divergencia aceita (REDE_CAIDA do blog, opcao c): o java.net.http.HttpClient repete sozinho o GET cuja conexao
+     * caiu. Igual ao gravado passa; senao, repeticoes seguidas da mesma requisicao viram uma so, dos dois lados, o resto
+     * tem de bater (metodo, caminho, cabecalhos, corpo, ordem) e o Java tem de ter mandado mais que o gravado.
+     *
+     * @return true se tolerou repeticoes (o que o cenario na lista exige de pelo menos um stub)
+     */
+    public synchronized boolean conferirComRepeticoes(JsonNode esperadas, String cenario) {
+        JsonNode gravadas = numerosPorValor(esperadas.isMissingNode() ? NOS.arrayNode() : esperadas);
+        JsonNode obtidas = numerosPorValor(NOS.arrayNode().addAll(recebidas));
+        if (obtidas.equals(gravadas)) {
+            return false;
+        }
+        assertThat(semRepeticoes(obtidas)).as("%s: %s (repeticoes seguidas colapsadas)", cenario, rotulo)
+                .isEqualTo(semRepeticoes(gravadas));
+        assertThat(obtidas.size()).as("%s: %s a mais que o gravado", cenario, rotulo).isGreaterThan(gravadas.size());
+        return true;
+    }
+
+    static JsonNode semRepeticoes(JsonNode lista) {
+        ArrayNode a = NOS.arrayNode();
+        lista.forEach(v -> {
+            if (a.isEmpty() || !a.get(a.size() - 1).equals(v)) {
+                a.add(v);
+            }
+        });
+        return a;
+    }
+
     private void atender(HttpExchange troca) throws IOException {
         byte[] corpo = troca.getRequestBody().readAllBytes();
         ObjectNode req = NOS.objectNode();

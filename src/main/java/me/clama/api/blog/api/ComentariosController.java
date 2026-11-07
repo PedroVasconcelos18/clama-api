@@ -28,7 +28,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * ComentarioListCreateView (views.py:165-295). GET AllowAny (Cache-Control publico de 10 s em toda resposta, no
@@ -38,6 +41,7 @@ import tools.jackson.databind.JsonNode;
 @RestController
 class ComentariosController {
     static final String ROTA = "/api/blog/posts/{slug:[-a-zA-Z0-9_]+}/comments/";
+    private static final ObjectMapper JSON = new ObjectMapper();
     static final String CURTO = "Esse comentário precisa de um pouquinho mais de texto pra ser publicado.";
 
     private final ResolucaoDoEspelho resolucao;
@@ -78,6 +82,18 @@ class ComentariosController {
         return s;
     }
 
+    /** O JSONParser do DRF: corpo vazio vale {} (CamposDrf), JSON invalido e o 400 "JSON parse error". */
+    private static JsonNode json(String corpo) {
+        if (corpo == null || corpo.isEmpty()) {
+            return null;
+        }
+        try {
+            return JSON.readTree(corpo);
+        } catch (JacksonException e) {
+            throw new HttpMessageNotReadableException("JSON invalido", e, null);
+        }
+    }
+
     @GetMapping(ROTA)
     Map<String, Object> listar(@PathVariable String slug, HttpServletRequest req) {
         UUID espelho;
@@ -95,12 +111,13 @@ class ComentariosController {
 
     @PostMapping(ROTA)
     ResponseEntity<Item> comentar(@PathVariable String slug, @AuthenticationPrincipal Usuario eu,
-            @RequestBody(required = false) JsonNode corpo, HttpServletRequest req) {
+            @RequestBody(required = false) String corpo, HttpServletRequest req) {
+        // o corpo so e lido depois de contar: JSON quebrado tambem gasta a janela e leva 429 (R11)
         if (janela.excedeu("comentario", eu.getId(), 5)) {
             throw new RespostaDeErro(429, new ErroPlano("rate_limit_exceeded",
                     "Calma! Aguarde um momento antes de comentar de novo."));
         }
-        String texto = conteudo(corpo, true);
+        String texto = conteudo(json(corpo), true);
         UUID espelho = resolucao.resolver(slug).getId();
         String ip = ClienteIp.cru(req);
         return ResponseEntity.status(201).body(tx.execute(s -> {

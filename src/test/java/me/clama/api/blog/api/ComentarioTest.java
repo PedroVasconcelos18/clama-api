@@ -8,6 +8,7 @@ import me.clama.api.BancoDeTeste;
 import me.clama.api.RelogioDeTeste;
 import me.clama.api.blog.Comentario;
 import me.clama.api.blog.ComentarioRepository;
+import me.clama.api.blog.JanelaFixa;
 import me.clama.api.blog.PostEspelho;
 import me.clama.api.blog.PostEspelhoRepository;
 import me.clama.api.identidade.Usuario;
@@ -37,11 +38,13 @@ class ComentarioTest {
     @Autowired PostEspelhoRepository espelhos;
     @Autowired ComentarioRepository comentarios;
     @Autowired RelogioDeTeste.Fixavel relogio;
+    @Autowired JanelaFixa janela;
     ApiDoBlog api;
     PostEspelho espelho;
 
     @BeforeEach
     void prepara() {
+        janela.limpar();
         api = new ApiDoBlog(porta, jdbc, usuarios, tokens);
         api.limpar();
         espelho = api.espelho(espelhos, "salmo-23", PostEspelho.PUBLICADO);

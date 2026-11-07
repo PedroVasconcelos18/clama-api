@@ -19,8 +19,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * HTTP e dados dos testes do widget (comentarios, curtidas, /api/blog/comments/{id}/). Usuarios novos a cada teste (ids
- * nunca reaproveitados): o contador da janela fixa e por id e nao vaza entre testes.
+ * HTTP e dados dos testes do widget (comentarios, curtidas, /api/blog/comments/{id}/). Cada teste zera a JanelaFixa no
+ * {@code @BeforeEach} (o contador e por id de usuario).
  */
 class ApiDoBlog {
     static final ObjectMapper JSON = new ObjectMapper();

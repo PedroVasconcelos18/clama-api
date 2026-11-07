@@ -154,6 +154,7 @@ public class ReplayDeContrato {
     private Collection<? extends TarefaAgendada> tarefas;
     private List<SentryEvent> sentry;
     private JanelaFixa janela;
+    private Set<String> repeticoesToleradas = Set.of();
 
     /**
      * O que o harness precisa do app fora do banco: o cache de senhas temporarias (SenhasTemporarias) e o dedup em
@@ -238,6 +239,15 @@ public class ReplayDeContrato {
     /** O rate limit de janela fixa do widget do blog (etapa 6): zerado antes de cada cenario, como o limiter. */
     public ReplayDeContrato comJanelaFixa(JanelaFixa janela) {
         this.janela = janela;
+        return this;
+    }
+
+    /**
+     * Cenarios (nome do arquivo) em que o stub aceita repeticoes seguidas da mesma requisicao (divergencia aceita: o
+     * HttpClient do JDK repete o GET de conexao caida). Ver {@link StubDeIntegracoes#conferirComRepeticoes}.
+     */
+    public ReplayDeContrato comRepeticoesToleradas(Collection<String> arquivos) {
+        this.repeticoesToleradas = Set.copyOf(arquivos);
         return this;
     }
 
@@ -400,7 +410,6 @@ public class ReplayDeContrato {
                     req.get("path")).isEqualTo(canaisComoConjunto(passo.get("response")));
             i++;
         }
-        stubs.forEach((nome, stub) -> stub.conferir(cenario.path(nome + "_requisicoes"), arquivo));
         if (cenario.has("sentry")) {
             ArrayNode obtidos = NOS.arrayNode();
             for (SentryEvent e : sentry) {
@@ -441,6 +450,18 @@ public class ReplayDeContrato {
         for (Map.Entry<String, JsonNode> tabela : cenario.path("estado_final").properties()) {
             conferirEstadoFinal(tabela.getKey(), tabela.getValue(), fixos, tokensSemeados, agoraGravado, arquivo);
         }
+        // por ultimo: uma falha aqui prova que todo o resto (passos, Sentry, e-mails, jobs, estado final) bateu
+        boolean tolerou = false;
+        for (Map.Entry<String, StubDeIntegracoes> s : stubs.entrySet()) {
+            JsonNode esperadas = cenario.path(s.getKey() + "_requisicoes");
+            if (repeticoesToleradas.contains(arquivo)) {
+                tolerou |= s.getValue().conferirComRepeticoes(esperadas, arquivo);
+            } else {
+                s.getValue().conferir(esperadas, arquivo);
+            }
+        }
+        assertThat(tolerou || !repeticoesToleradas.contains(arquivo))
+                .as("%s esta entre as repeticoes toleradas, mas nenhum stub recebeu repeticao", arquivo).isTrue();
     }
 
     /**

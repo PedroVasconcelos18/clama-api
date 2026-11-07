@@ -96,11 +96,10 @@ class ContratoBlogTest {
      */
     static final List<String> ANINHADOS = List.of(SemWordPress.CENARIO);
     /**
-     * Rede caida no WordPress ("falha": "conexao", o stub fecha a conexao sem responder): o Django faz 3 GETs (3
-     * tentativas do with_retry); o java.net.http.HttpClient retenta sozinho todo GET cuja conexao cai antes da resposta
-     * (ate jdk.httpclient.redirects.retrylimit, padrao 5, sem opcao por cliente), entao o Java faz mais GETs que o
-     * gravado. Status, corpo e cookies de todos os passos batem; so a contagem de requisicoes ao WordPress diverge.
-     * Aguardando decisao (transporte do ClienteWordPress, Task 3): {@link #redeCaidaNoWordPressRepeteGets}.
+     * Rede caida no WordPress ("falha": "conexao", o stub fecha a conexao sem responder): o Django faz um GET por
+     * tentativa do with_retry; o java.net.http.HttpClient repete sozinho o GET cuja conexao cai antes da resposta (sem
+     * opcao por cliente), entao o Java manda o mesmo GET mais vezes. Divergencia aceita (opcao c): so nestes cenarios o
+     * replay colapsa repeticoes seguidas identicas e exige mais requisicoes que o gravado; o resto compara inteiro.
      */
     static final List<String> REDE_CAIDA = List.of("blog_comentarios_criar_wordpress_indisponivel_400.json",
             "blog_comentarios_lista_sem_espelho_wp_fora.json", "blog_like_post_indisponivel.json");
@@ -151,8 +150,7 @@ class ContratoBlogTest {
         try (Stream<Path> s = Files.list(CENARIOS)) {
             List<Path> lista = s.filter(p -> p.toString().endsWith(".json")).sorted().toList();
             List<Path> rodam = lista.stream().filter(p -> grupo(p, LIGADOS))
-                    .filter(p -> !OUTRA_CONFIGURACAO.contains(p.getFileName().toString()))
-                    .filter(p -> !REDE_CAIDA.contains(p.getFileName().toString())).toList();
+                    .filter(p -> !OUTRA_CONFIGURACAO.contains(p.getFileName().toString())).toList();
             // guarda: fonte vazia ou incompleta nao passa calada; o que nao roda esta pendente
             assertThat(lista).hasSize(GRAVADOS);
             assertThat(lista.stream().filter(p -> grupo(p, LIGADOS) || grupo(p, PENDENTES)).count())
@@ -190,15 +188,40 @@ class ContratoBlogTest {
     }
 
     /**
-     * {@link #REDE_CAIDA}: roda cada um e exige que a unica divergencia seja a contagem de GETs ao WordPress (os passos
-     * ja foram comparados quando o stub confere). Quando o transporte deixar de retentar sozinho, este teste falha:
-     * mover os tres de volta para {@link #cenario}.
+     * A tolerancia de {@link #REDE_CAIDA} e so a repeticao: os tres cenarios existem e sao de grupo ligado; igual ao
+     * gravado passa sem tolerar nada (o replay exige que algum stub tenha tolerado); um GET a mais que nao e repeticao
+     * seguida (outro caminho) ou fora de ordem continua falhando.
      */
     @Test
-    void redeCaidaNoWordPressRepeteGets() {
-        for (String arquivo : REDE_CAIDA) {
-            assertThatThrownBy(() -> replay().executar(CENARIOS.resolve(arquivo), base())).as(arquivo)
-                    .isInstanceOf(AssertionError.class).hasMessageContaining(arquivo + ": requisicoes ao WordPress");
+    void redeCaidaSoToleraRepeticaoSeguida() throws Exception {
+        assertThat(REDE_CAIDA).allSatisfy(a -> {
+            assertThat(CENARIOS.resolve(a)).exists();
+            assertThat(grupo(Path.of(a), LIGADOS)).isTrue();
+        });
+        StubDeIntegracoes stub = new StubDeIntegracoes("requisicoes ao WordPress", Map.of("accept", "Accept"));
+        try {
+            JsonNode gravadas = JSON.readTree("[{\"metodo\": \"GET\", \"caminho\": \"/a\", \"accept\": null},"
+                    + " {\"metodo\": \"GET\", \"caminho\": \"/b\", \"accept\": null}]");
+            HttpClient http = HttpClient.newHttpClient();
+            for (String[] rodada : new String[][] {{"/a", "/a", "/b", "/b"}, {"/a", "/b"}, {"/a", "/b", "/a"},
+                    {"/b", "/a", "/a"}}) {
+                stub.preparar(JSON.createArrayNode());
+                for (String caminho : rodada) {
+                    http.send(HttpRequest.newBuilder(URI.create(stub.url() + caminho)).build(),
+                            HttpResponse.BodyHandlers.discarding());
+                }
+                if (rodada.length == 4) {
+                    assertThat(stub.conferirComRepeticoes(gravadas, "repetido")).isTrue(); // so repeticao seguida
+                } else if (rodada.length == 2) {
+                    assertThat(stub.conferirComRepeticoes(gravadas, "igual")).isFalse(); // igual ao gravado
+                } else {
+                    // GET a mais que nao repete o anterior, ordem trocada: falha
+                    assertThatThrownBy(() -> stub.conferirComRepeticoes(gravadas, "x"))
+                            .as(String.join(",", rodada)).isInstanceOf(AssertionError.class);
+                }
+            }
+        } finally {
+            stub.parar();
         }
     }
 
@@ -338,7 +361,8 @@ class ContratoBlogTest {
     private static ReplayDeContrato replayBase(ApplicationContext c) {
         return new ReplayDeContrato(c.getBean(JdbcTemplate.class), c.getBean(UsuarioRepository.class),
                 c.getBean(ServicoDeTokens.class), c.getBean(RateLimiter.class), TABELAS)
-                .comJanelaFixa(c.getBean(JanelaFixa.class)).comStubs(Map.of("wordpress", WORDPRESS, "monitores", MONITORES), c.getEnvironment())
+                .comJanelaFixa(c.getBean(JanelaFixa.class)).comRepeticoesToleradas(REDE_CAIDA)
+                .comStubs(Map.of("wordpress", WORDPRESS, "monitores", MONITORES), c.getEnvironment())
                 .comOracao(c.getBean(CaixaDeSaidaEmMemoria.class), jobs(c), ContratoOracaoTest.ganchos(c));
     }
 

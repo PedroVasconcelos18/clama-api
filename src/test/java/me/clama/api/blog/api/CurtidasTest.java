@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
 import me.clama.api.BancoDeTeste;
 import me.clama.api.RelogioDeTeste;
+import me.clama.api.blog.JanelaFixa;
 import me.clama.api.blog.PostEspelho;
 import me.clama.api.blog.PostEspelhoRepository;
 import me.clama.api.identidade.Usuario;
@@ -46,10 +47,12 @@ class CurtidasTest {
     @Autowired PostEspelhoRepository espelhos;
     @Autowired RelogioDeTeste.Fixavel relogio;
     @Autowired DataSource dados;
+    @Autowired JanelaFixa janela;
     ApiDoBlog api;
 
     @BeforeEach
     void prepara() {
+        janela.limpar();
         api = new ApiDoBlog(porta, jdbc, usuarios, tokens);
         api.limpar();
         api.espelho(espelhos, "salmo-23", PostEspelho.PUBLICADO);
