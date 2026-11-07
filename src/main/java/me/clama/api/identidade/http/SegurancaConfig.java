@@ -109,6 +109,8 @@ public class SegurancaConfig {
                         .requestMatchers(FiltroJwtCookie.PUBLICAS, FiltroJwtCookie.ABERTAS).permitAll()
                         .requestMatchers(semRota(mapeamentos)).permitAll()
                         .requestMatchers("/api/admin/**").hasAuthority(FiltroJwtCookie.ADMIN)
+                        // IsClamaAdmin do blog: o 403 fora de /api/admin/ e o SEM_PERMISSAO do DRF
+                        .requestMatchers("/api/blog/admin/**").hasAuthority(FiltroJwtCookie.ADMIN)
                         .requestMatchers(SENHA_EM_DIA).access(SegurancaConfig::senhaEmDia)
                         .requestMatchers("/api/customer/**").authenticated()
                         // escritas do widget: IsUnbannedCustomer (o GET de comentarios esta nas ABERTAS)

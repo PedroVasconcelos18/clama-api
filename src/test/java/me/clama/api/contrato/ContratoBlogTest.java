@@ -78,9 +78,10 @@ class ContratoBlogTest {
     /** Gravados (os .json da pasta). */
     static final int GRAVADOS = 74;
     /** Grupos ligados, por prefixo do arquivo. Cada task move o seu prefixo de PENDENTES para LIGADOS. */
-    static final List<String> LIGADOS = List.of("blog_comentarios_", "blog_like_", "blog_comentario_id_");
+    static final List<String> LIGADOS = List.of("blog_comentarios_", "blog_like_", "blog_comentario_id_",
+            "blog_admin_");
     /** Gravados mas ainda sem implementacao (Tasks 5 a 7). */
-    static final List<String> PENDENTES = List.of("blog_admin_comentarios_", "blog_admin_bans_", "blog_webhook_",
+    static final List<String> PENDENTES = List.of("blog_webhook_",
             "job_sincronizar_espelho_", "tarefa_reconciliar_espelho_", "tarefa_monitorar_seo_", "tarefa_verificar_urls_",
             "tarefa_alerta_comentarios_", "tarefa_purgar_ips_");
     /**
