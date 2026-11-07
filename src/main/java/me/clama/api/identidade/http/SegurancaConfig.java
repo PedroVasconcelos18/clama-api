@@ -24,6 +24,7 @@ import org.springframework.security.authorization.AuthorizationResult;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
@@ -48,6 +49,8 @@ public class SegurancaConfig {
     static final String SEM_PERMISSAO = "Você não tem permissão para executar essa ação.";
     /** MSG_NO_PERMISSION do permission_denied do AdminAPIView/AdminGenericAPIView. */
     static final String SO_ADMIN = "Esse espaço é só para admins do Clama.";
+    /** D3: admin sem is_superuser numa escrita de usuarios. */
+    static final String SO_SUPERUSUARIO = "Só o superusuário gerencia usuários.";
     /**
      * permission_classes = [IsAuthenticated, IsCustomerPasswordCurrent] (clama/core/permissions.py): anonimo 401,
      * senha temporaria 403 pastoral. Roda no filtro, antes do throttle, como o check_permissions do DRF.
@@ -85,6 +88,10 @@ public class SegurancaConfig {
         // O GET/HEAD de comentarios do blog leva "public, max-age=10" em toda resposta, inclusive 401, 404, 409 e 429
         // (finalize_response da view); escrito aqui, no commit da resposta, pega tambem os erros dos filtros.
         PathPatternRequestMatcher.Builder rotas = PathPatternRequestMatcher.withDefaults();
+        // D3: toda escrita em /api/admin/customers/ (criar, PATCH, senha, excluir) exige is_superuser
+        RequestMatcher rotaDeUsuarios = rotas.matcher("/api/admin/customers/**");
+        RequestMatcher escritaDeUsuarios = req -> !FiltroJwtCookie.METODOS_SEGUROS.contains(req.getMethod())
+                && rotaDeUsuarios.matches(req);
         RequestMatcher leituraDeComentarios = req -> ("GET".equals(req.getMethod()) || "HEAD".equals(req.getMethod()))
                 && FiltroJwtCookie.COMENTARIOS.matcher(req.getRequestURI()).matches();
         return http.csrf(c -> c.disable())
@@ -115,6 +122,8 @@ public class SegurancaConfig {
                                 PastoralExceptionHandler.escrever(resp, PastoralException.senhaTemporaria());
                             } else if (ex instanceof SemBanimento.Suspenso) {
                                 PastoralExceptionHandler.escrever(resp, 403, SemBanimento.CORPO);
+                            } else if (escritaDeUsuarios.matches(req) && ehAdmin()) {
+                                PastoralExceptionHandler.escrever(resp, 403, Map.of("detail", SO_SUPERUSUARIO));
                             } else {
                                 PastoralExceptionHandler.escrever(resp, 403, Map.of("detail",
                                         req.getRequestURI().startsWith("/api/admin/") ? SO_ADMIN : SEM_PERMISSAO));
@@ -125,6 +134,8 @@ public class SegurancaConfig {
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll() // /error de pedido ja autorizado
                         .requestMatchers(FiltroJwtCookie.PUBLICAS, FiltroJwtCookie.ABERTAS).permitAll()
                         .requestMatchers(semRota(mapeamentos)).permitAll()
+                        .requestMatchers(escritaDeUsuarios).hasAllAuthorities(FiltroJwtCookie.ADMIN,
+                                FiltroJwtCookie.SUPERUSER)
                         .requestMatchers("/api/admin/**").hasAuthority(FiltroJwtCookie.ADMIN)
                         // IsClamaAdmin do blog: o 403 fora de /api/admin/ e o SEM_PERMISSAO do DRF
                         .requestMatchers("/api/blog/admin/**").hasAuthority(FiltroJwtCookie.ADMIN)
@@ -198,6 +209,11 @@ public class SegurancaConfig {
                 "x-requested-with"));
         c.setMaxAge(86400L);
         return req -> origens.contains(req.getHeader("Origin")) ? c : null;
+    }
+
+    private static boolean ehAdmin() {
+        var a = SecurityContextHolder.getContext().getAuthentication();
+        return a != null && a.getAuthorities().stream().anyMatch(g -> FiltroJwtCookie.ADMIN.equals(g.getAuthority()));
     }
 
     private static List<String> lista(String v) {

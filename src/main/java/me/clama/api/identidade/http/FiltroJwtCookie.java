@@ -65,7 +65,7 @@ public class FiltroJwtCookie extends OncePerRequestFilter {
     static final String ADMIN = "ADMIN";
     /** is_superuser: gestao de usuarios (D3). Vem alem de ADMIN, nunca no lugar. */
     static final String SUPERUSER = "SUPERUSER";
-    private static final Set<String> METODOS_SEGUROS = Set.of("GET", "HEAD", "OPTIONS", "TRACE");
+    static final Set<String> METODOS_SEGUROS = Set.of("GET", "HEAD", "OPTIONS", "TRACE");
 
     private final ServicoDeTokens tokens;
     private final UsuarioRepository usuarios;
