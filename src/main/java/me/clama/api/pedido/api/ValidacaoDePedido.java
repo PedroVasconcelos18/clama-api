@@ -15,7 +15,6 @@ import me.clama.api.catalogo.plano.InferenciaDePlano;
 import me.clama.api.catalogo.plano.Plano;
 import me.clama.api.catalogo.plano.PlanoRepository;
 import me.clama.api.comum.api.CamposDrf;
-import me.clama.api.comum.documento.ValidadorDocumento;
 import me.clama.api.comum.email.ValidadorDeEmail;
 import me.clama.api.comum.ratelimit.ClienteIp;
 import me.clama.api.comum.texto.TextoPython;
@@ -69,7 +68,7 @@ class ValidacaoDePedido {
         String email = c.texto("email", true, "Por favor, digite seu e-mail.", CamposDrf.maxLength(254),
                 s -> ValidadorDeEmail.valido(s) ? List.of() : List.of("Confira seu e-mail — parece que faltou algo."));
         String telefone = c.texto("telefone", false, null, CamposDrf.maxLength(20));
-        String cpf = documento(c, c.texto("cpf_cnpj", true, null, CamposDrf.maxLength(18)));
+        String cpf = c.documento("cpf_cnpj", c.texto("cpf_cnpj", true, null, CamposDrf.maxLength(18)));
         JsonNode idade = c.get("idade");
         Integer anos = idade != null && idade.isNull() ? null : c.inteiro("idade", false, 0, Short.MAX_VALUE);
         String sexo = c.escolha("sexo", false, List.of("", "feminino", "masculino", "nao_informado"));
@@ -123,24 +122,6 @@ class ValidacaoDePedido {
         p.setConsentVersao(POLITICA_VERSAO_ATUAL);
         p.setConsentAceitoAt(OffsetDateTime.now());
         p.setConsentIp(ClienteIp.validado(req));
-    }
-
-    /** validate_cpf_cnpj: guarda so os digitos. */
-    private static String documento(CamposDrf c, String valor) {
-        if (valor == null) {
-            return null;
-        }
-        String d = ValidadorDocumento.soDigitos(valor);
-        int n = d.codePointCount(0, d.length());
-        if (n == 11) {
-            return ValidadorDocumento.cpfValido(d) ? d
-                    : c.erro("cpf_cnpj", "Confira seu CPF — parece que tem algum dígito errado.");
-        }
-        if (n == 14) {
-            return ValidadorDocumento.cnpjValido(d) ? d
-                    : c.erro("cpf_cnpj", "Confira seu CNPJ — parece que tem algum dígito errado.");
-        }
-        return c.erro("cpf_cnpj", "CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos.");
     }
 
     /** PrimaryKeyRelatedField(queryset=Plan.objects.all()) + validate_plano. */

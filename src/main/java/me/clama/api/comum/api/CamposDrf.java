@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
+import me.clama.api.comum.documento.ValidadorDocumento;
 import me.clama.api.comum.texto.TextoPython;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeFactory;
@@ -14,7 +15,7 @@ import tools.jackson.databind.node.JsonNodeFactory;
 public final class CamposDrf {
     public static final String OBRIGATORIO = "Este campo é obrigatório.";
     public static final String NULO = "Este campo pode não ser nulo.";
-    static final String BRANCO = "Este campo pode não estar em branco.";
+    public static final String BRANCO = "Este campo pode não estar em branco.";
     static final String NAO_E_STRING = "Não é uma string válida.";
     static final String CARACTERES_NULOS = "Caracteres nulos não são permitidos.";
 
@@ -226,6 +227,30 @@ public final class CamposDrf {
     public static Function<String, List<String>> maxLength(int n) {
         return s -> s.codePointCount(0, s.length()) > n
                 ? List.of("Certifique-se de que este campo não tenha mais de " + n + " caracteres.") : List.of();
+    }
+
+    /** MinLengthValidator do CharField, com o texto padrao do DRF pt-BR (que diz "mais de", nao "pelo menos"). */
+    public static Function<String, List<String>> minLength(int n) {
+        return s -> s.codePointCount(0, s.length()) < n
+                ? List.of("Certifique-se de que este campo tenha mais de " + n + " caracteres.") : List.of();
+    }
+
+    /** validate_cpf_cnpj: devolve so os digitos, ou registra o erro do campo e devolve null. valor nulo passa direto. */
+    public String documento(String campo, String valor) {
+        if (valor == null) {
+            return null;
+        }
+        String d = ValidadorDocumento.soDigitos(valor);
+        int n = d.codePointCount(0, d.length());
+        if (n == 11) {
+            return ValidadorDocumento.cpfValido(d) ? d
+                    : erro(campo, "Confira seu CPF — parece que tem algum dígito errado.");
+        }
+        if (n == 14) {
+            return ValidadorDocumento.cnpjValido(d) ? d
+                    : erro(campo, "Confira seu CNPJ — parece que tem algum dígito errado.");
+        }
+        return erro(campo, "CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos.");
     }
 
     /** is_valid(raise_exception=True). */
