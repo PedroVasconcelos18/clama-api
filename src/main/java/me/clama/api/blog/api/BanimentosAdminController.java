@@ -94,6 +94,7 @@ class BanimentosAdminController {
                         + "remover acesso, edite a flag is_clama_admin diretamente."));
             }
             // R9: serializa por customer ate o commit; quem espera ja enxerga o ban de quem passou na frente
+            // ponytail: colisao de hashtext entre dois customers so serializa os bans deles, inofensivo
             em.createNativeQuery("select 1 from (select pg_advisory_xact_lock(hashtext('ban-blog:' || cast(?1 as text)))) x")
                     .setParameter(1, alvo.getId()).getSingleResult();
             var existente = ativo(alvo.getId());

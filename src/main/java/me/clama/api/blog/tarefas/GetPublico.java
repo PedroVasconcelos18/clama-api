@@ -22,9 +22,9 @@ import javax.net.ssl.SSLException;
  * O requests.get dos monitores: sem retry da aplicacao, sem autenticacao. Falha de rede vira o nome da classe da
  * excecao do requests ({@link #nomeDoErro}). O corpo e lido ate {@link #LIMITE} caracteres.
  *
- * <p>ponytail: o timeout do JDK vale ate os headers; o do requests e por leitura de socket, entao um corpo que pinga
- * devagar prende a thread (o requests cortaria em 10 s sem bytes). Charset do Content-Type, senao UTF-8 (o requests
- * usaria ISO-8859-1 para text/* sem charset ou o chardet). Os monitores so procuram ASCII no corpo.
+ * <p>ponytail: o timeout do JDK (HttpRequest.timeout) e um prazo total por tentativa, corpo incluso; o do requests e por
+ * leitura de socket. Um corpo constante mas lento, acima de 10 s, falha aqui e o requests aceitaria. Charset do
+ * Content-Type, senao UTF-8 (o requests usaria ISO-8859-1 para text/* sem charset ou o chardet). Os monitores so procuram ASCII no corpo.
  */
 final class GetPublico {
     /** resposta.text[:200000] */
