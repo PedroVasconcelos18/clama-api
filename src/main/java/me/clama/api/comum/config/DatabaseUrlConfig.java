@@ -47,6 +47,8 @@ public class DatabaseUrlConfig {
 		ds.setPassword(p.senha());
 		ds.setMaximumPoolSize(20);
 		ds.setConnectionTimeout(10_000);
+		// o Detail de uma violacao de unique traz o e-mail e o Hibernate o loga: o driver nem o poe na mensagem
+		ds.addDataSourceProperty("logServerErrorDetail", "false");
 		return ds;
 	}
 }

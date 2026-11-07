@@ -3,6 +3,11 @@ spring:
     name: clama-api
   jackson:
     time-zone: America/Sao_Paulo
+  datasource:
+    hikari:
+      data-source-properties:
+        # o Detail do Postgres traz o valor duplicado (e-mail); o Hibernate o loga em org.hibernate.orm.jdbc.error
+        logServerErrorDetail: "false"
   servlet:
     multipart:
       # Django nao limita o upload no parser; quem recusa e o serializer (logo 250 KB, documento 100 MB)
