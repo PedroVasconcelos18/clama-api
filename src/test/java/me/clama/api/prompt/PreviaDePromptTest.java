@@ -63,10 +63,7 @@ class PreviaDePromptTest {
     @BeforeEach
     void preparar() throws Exception {
         BancoDeTeste.exigirContainer(jdbc);
-        jdbc.update("delete from prompts_prompttemplate");
-        jdbc.update("delete from token_blacklist_blacklistedtoken");
-        jdbc.update("delete from token_blacklist_outstandingtoken");
-        jdbc.update("delete from users_user");
+        jdbc.execute("TRUNCATE prompts_prompttemplate, users_user CASCADE");
         jdbc.update("""
                 insert into prompts_prompttemplate (id, nome, versao, system_prompt, instrucoes_por_complexidade, ativo,
                   created_at, updated_at) values (?::uuid, 'previa', 1, 'Sistema.', '{}', false, now(), now())""", ID);

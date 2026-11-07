@@ -129,4 +129,25 @@ class VarreduraDePedidosPresosTest {
         assertThat(status(id)).isEqualTo("pago");
         assertThat(alertas()).isZero();
     }
+
+    @Test
+    void executarMarcaOsQuatroStatusPresos() {
+        List<UUID> ids = List.of(pedido(StatusPedido.PAGO, 30), pedido(StatusPedido.GERANDO_ORACAO, 30),
+                pedido(StatusPedido.ORACAO_GERADA, 30), pedido(StatusPedido.AGUARDANDO_REENVIO, 30));
+        var r = varredura.executar(ModoDeExecucao.EXECUTAR);
+        assertThat(r.resumo()).containsExactly(Map.entry("presos", 4), Map.entry("marcados", 4));
+        assertThat(ids.stream().map(this::status)).containsOnly("erro");
+        assertThat(alertas()).isEqualTo(4);
+    }
+
+    /** O status mudou depois da leitura, com updated_at igual: o WHERE status = ? segura. */
+    @Test
+    void varreduraNaoMarcaPedidoQueMudouDeStatus() {
+        UUID id = pedido(StatusPedido.PAGO, 30);
+        varredura.aposLeitura = () -> jdbc.update("update orders_pedido set status = 'enviada' where id = ?", id);
+        var r = varredura.executar(ModoDeExecucao.EXECUTAR);
+        assertThat(r.resumo()).containsEntry("presos", 1).containsEntry("marcados", 0);
+        assertThat(status(id)).isEqualTo("enviada");
+        assertThat(alertas()).isZero();
+    }
 }

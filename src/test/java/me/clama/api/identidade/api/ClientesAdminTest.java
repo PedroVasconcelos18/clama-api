@@ -45,11 +45,8 @@ class ClientesAdminTest {
     @BeforeEach
     void admin() {
         BancoDeTeste.exigirContainer(jdbc);
-        jdbc.update("delete from orders_pedido");
-        jdbc.update("delete from blog_customerbanido");
-        jdbc.update("delete from token_blacklist_blacklistedtoken");
-        jdbc.update("delete from token_blacklist_outstandingtoken");
-        jdbc.update("delete from users_user");
+        // CASCADE leva junto as tabelas do blog (comentarios, banimentos) e os tokens
+        jdbc.execute("TRUNCATE orders_pedido, users_user CASCADE");
         Usuario u = new Usuario();
         u.setEmail("admin-clientes@exemplo.com");
         u.setPassword("x");
