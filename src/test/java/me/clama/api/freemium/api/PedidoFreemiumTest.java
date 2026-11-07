@@ -215,4 +215,17 @@ class PedidoFreemiumTest {
         assertThat(jdbc.queryForObject("select count(*) from scheduled_tasks where task_name = ? and task_instance = ?",
                 Integer.class, "confirmacao-freemium", "confirmacao-freemium/" + id)).isEqualTo(1);
     }
+
+    /** Cookie de acesso invalido numa rota aberta e 401 (como no Django). */
+    @Test
+    void cookieInvalidoDa401() throws Exception {
+        limiter.limpar();
+        var r = http.send(HttpRequest.newBuilder(URI.create("http://localhost:" + porta + "/api/freemium/pedidos/"))
+                .header("Content-Type", "application/json").header("Cookie", "clama_access=lixo")
+                .POST(HttpRequest.BodyPublishers.ofString(corpo().toString())).build(),
+                HttpResponse.BodyHandlers.ofString());
+        assertThat(r.statusCode()).isEqualTo(401);
+        assertThat(code(r)).isEqualTo("not_authenticated");
+        assertThat(contar("orders_pedido")).isZero();
+    }
 }

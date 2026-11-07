@@ -2,6 +2,7 @@ package me.clama.api.freemium.api;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -146,6 +147,7 @@ class ConfirmacaoFreemiumController {
 
         // R2: o lock da conta antes de criar; e-mail literal ja existente = o IntegrityError do Django (409)
         provisionamento.travarConta(p.getEmail());
+        if (usuarios.existsByEmail(p.getEmail())) throw colisaoDeEmail(p); // antes do argon2: sem hash jogado fora
         String senha = GeradorDeSenhaTemporaria.gerar();
         Usuario u = new Usuario();
         u.setEmail(p.getEmail());
@@ -157,10 +159,10 @@ class ConfirmacaoFreemiumController {
         u.setSexo(p.getSexo());
         u.setForceChangePassword(true);
         u.setFreemiumUsedAt(agora);
-        if (usuarios.existsByEmail(u.getEmail())) throw colisaoDeEmail(p);
         try {
             usuarios.saveAndFlush(u);
         } catch (DataIntegrityViolationException e) {
+            if (!violacaoDeUnique(e)) throw e;
             throw colisaoDeEmail(p);
         }
 
@@ -174,6 +176,7 @@ class ConfirmacaoFreemiumController {
         try {
             blacklist.saveAndFlush(b);
         } catch (DataIntegrityViolationException e) {
+            if (!violacaoDeUnique(e)) throw e;
             LOG.info("Blacklist insert falhou durante confirmação (race)"
                     + " (event=freemium_blacklist_unique_collision_confirm, pedido_id={})", p.getId());
             throw PedidoFreemiumController.blacklistHit();
@@ -196,6 +199,11 @@ class ConfirmacaoFreemiumController {
     private static PastoralException invalido() {
         return new PastoralException(400, "confirmation_token_invalido", "Token de confirmação inválido ou já utilizado",
                 "Esse link não é mais válido. Faça um novo pedido.");
+    }
+
+    /** So a violacao de unique (SQLState 23505) vira 409; "value too long" e o resto seguem como 500. */
+    private static boolean violacaoDeUnique(DataIntegrityViolationException e) {
+        return e.getMostSpecificCause() instanceof SQLException sql && "23505".equals(sql.getSQLState());
     }
 
     /** R10: sem o texto da violacao (traz o e-mail). */

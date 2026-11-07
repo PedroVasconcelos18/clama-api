@@ -5,6 +5,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 
@@ -24,10 +26,12 @@ import java.util.concurrent.TimeUnit;
 import me.clama.api.BancoDeTeste;
 import me.clama.api.RelogioDeTeste;
 import me.clama.api.catalogo.plano.PlanoRepository;
+import me.clama.api.comum.cripto.HashIdentificador;
 import me.clama.api.comum.fila.Fila;
 import me.clama.api.comum.fila.TipoDeJob;
 import me.clama.api.comum.ratelimit.RateLimiter;
 import me.clama.api.conta.ProvisionamentoDeConta;
+import me.clama.api.freemium.FreemiumBlacklistRepository;
 import me.clama.api.freemium.TokenDeConfirmacao;
 import me.clama.api.freemium.TokenDeConfirmacaoRepository;
 import me.clama.api.identidade.senha.SenhaDjango;
@@ -74,7 +78,9 @@ class ConfirmacaoFreemiumTest {
     @Autowired PlanoRepository planos;
     @Autowired TokenDeConfirmacaoRepository tokens;
     @Autowired ProvisionamentoDeConta provisionamento;
+    @Autowired HashIdentificador hash;
     @MockitoSpyBean Fila fila;
+    @MockitoSpyBean FreemiumBlacklistRepository blacklist;
     @MockitoSpyBean SenhasTemporarias senhas;
 
     final HttpClient http = HttpClient.newHttpClient();
@@ -322,5 +328,45 @@ class ConfirmacaoFreemiumTest {
         }
         assertThat(get("").statusCode()).isEqualTo(429);
         assertThat(post("", "{}").statusCode()).isEqualTo(429);
+    }
+
+    /** Cookie de acesso invalido numa rota aberta e 401 (como no Django), GET e POST. */
+    @Test
+    void cookieInvalidoDa401() throws Exception {
+        var get = http.send(HttpRequest.newBuilder(URI.create("http://localhost:" + porta
+                + "/api/freemium/confirmar/?token=" + TOKEN)).header("Cookie", "clama_access=lixo").GET().build(),
+                HttpResponse.BodyHandlers.ofString());
+        var post = http.send(HttpRequest.newBuilder(URI.create("http://localhost:" + porta + "/api/freemium/confirmar/"))
+                .header("Cookie", "clama_access=lixo").header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("{\"token\": \"" + TOKEN + "\"}")).build(),
+                HttpResponse.BodyHandlers.ofString());
+        for (var r : List.of(get, post)) {
+            assertThat(r.statusCode()).isEqualTo(401);
+            assertThat(code(r)).isEqualTo("not_authenticated");
+        }
+        nadaFicou();
+    }
+
+    /**
+     * Corrida com outra confirmacao que ja gravou a blacklist (a pre-checagem nao viu): o unique estoura no insert,
+     * e o 409 desfaz a conta, a senha e o uso do token.
+     */
+    @Test
+    void uniqueDaBlacklistNaCorridaDa409EDesfazTudo() throws Exception {
+        jdbc.update("""
+                insert into freemium_freemiumblacklist (id, created_at, updated_at, cpf_hash, email_hash)
+                values (gen_random_uuid(), now(), now(), ?, ?)""", hash.hashCpfCnpj("52998224725"), "e".repeat(64));
+        doReturn(false).when(blacklist).existeAlgum(anyString(), anyString(), anyString(), any());
+        HttpResponse<String> r = confirmar();
+        assertThat(r.statusCode()).isEqualTo(409);
+        assertThat(code(r)).isEqualTo("freemium_blacklist_hit");
+        verify(senhas, never()).guardar(anyString(), anyString());
+        assertThat(contar("select count(*) from users_user")).isZero();
+        assertThat(contar("select count(*) from freemium_freemiumblacklist")).isEqualTo(1); // so a semeada
+        assertThat(contar("select count(*) from scheduled_tasks")).isZero();
+        assertThat(contar("select count(*) from orders_pedido where id = ? and user_id is null and status = ?", pedido,
+                "aguardando_confirmacao_email")).isEqualTo(1);
+        assertThat(contar("select count(*) from freemium_freemiumconfirmationtoken where used_at is null"))
+                .isEqualTo(1);
     }
 }
