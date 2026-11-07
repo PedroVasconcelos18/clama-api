@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 /** before_send de clama/core/sentry_config.py: tira PII (LGPD) do evento antes de sair. */
 public final class RedacaoSentry {
 	private static final Set<String> PII_FIELDS = Set.of("email", "telefone", "nome", "pedido_oracao", "oracao_gerada",
-			"phone", "name", "password", "senha", "token", "refresh", "access");
+			"phone", "name", "password", "senha", "token", "refresh", "access", "cpf");
 	private static final Pattern EMAIL = Pattern.compile("[a-zA-Z0-9_.+\\-]+@[a-zA-Z0-9\\-]+\\.[a-zA-Z0-9\\-.]+");
 	private static final Pattern PHONE = Pattern.compile("\\(?\\d{2}\\)?\\s*\\d{4,5}[-\\s]?\\d{4}", Pattern.UNICODE_CHARACTER_CLASS);
 
