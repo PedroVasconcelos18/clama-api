@@ -71,7 +71,7 @@ class ContratoFreemiumTest {
     /** Grupos ligados, por prefixo do arquivo. Cada task move o seu prefixo de PENDENTES para LIGADOS. */
     static final List<String> LIGADOS = List.of("job_confirmacao_freemium_", "freemium_submit_",
             "freemium_confirmar_", "reconciliar_freemium_");
-    /** Gravados mas ainda sem implementacao . */
+    /** Gravados mas ainda sem implementacao. */
     static final List<String> PENDENTES = List.of();
     static final List<String> TABELAS = List.of("users_user", "token_blacklist_outstandingtoken",
             "token_blacklist_blacklistedtoken", "plans_plan", "instituicoes_instituicao", "orders_pedido",
