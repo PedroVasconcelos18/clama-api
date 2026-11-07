@@ -3,13 +3,16 @@ package me.clama.api.blog.api;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.http.HttpResponse;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import javax.sql.DataSource;
 import me.clama.api.BancoDeTeste;
 import me.clama.api.RelogioDeTeste;
 import me.clama.api.blog.CustomerBanidoRepository;
@@ -36,6 +39,7 @@ class BanimentosAdminTest {
 
     @Value("${local.server.port}") int porta;
     @Autowired JdbcTemplate jdbc;
+    @Autowired DataSource dados;
     @Autowired UsuarioRepository usuarios;
     @Autowired ServicoDeTokens tokens;
     @Autowired CustomerBanidoRepository banidos;
@@ -115,28 +119,38 @@ class BanimentosAdminTest {
         assertThat(banidos.count()).isZero();
     }
 
-    /** R9: POSTs simultaneos deixam um ban ativo so (um 201, o resto 200), e revogar libera o customer. */
+    /**
+     * R9, deterministico: o teste segura o mesmo advisory lock numa transacao aberta, dispara dois POSTs e so solta
+     * quando os dois estao parados nele. Sem o lock no controller eles nao esperariam (o teste estoura no limite).
+     */
     @Test
     void banConcorrente() throws Exception {
         Usuario ana = api.usuario("Ana", false);
-        int n = 8;
-        ExecutorService pool = Executors.newFixedThreadPool(n);
-        try {
-            CountDownLatch largada = new CountDownLatch(1);
-            List<Future<Integer>> fs = new ArrayList<>();
-            for (int i = 0; i < n; i++) {
-                fs.add(pool.submit(() -> {
-                    largada.await();
-                    return api.enviar("POST", "/api/blog/admin/banned-customers/", corpo(ana), sessaoAdmin)
-                            .statusCode();
-                }));
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try (Connection trava = dados.getConnection()) {
+            trava.setAutoCommit(false);
+            try (PreparedStatement lock = trava
+                    .prepareStatement("select pg_advisory_xact_lock(hashtext('ban-blog:' || cast(? as text)))")) {
+                lock.setLong(1, ana.getId());
+                lock.execute();
             }
-            largada.countDown();
+            List<Future<Integer>> fs = new ArrayList<>();
+            for (int i = 0; i < 2; i++) {
+                fs.add(pool.submit(() -> api.enviar("POST", "/api/blog/admin/banned-customers/", corpo(ana),
+                        sessaoAdmin).statusCode()));
+            }
+            long limite = System.nanoTime() + 10_000_000_000L;
+            while (jdbc.queryForObject("select count(*) from pg_stat_activity where wait_event_type = 'Lock'"
+                    + " and wait_event = 'advisory' and query ilike '%pg_advisory_xact_lock%'", Long.class) < 2) {
+                assertThat(System.nanoTime()).as("os dois pedidos nao pararam no advisory lock").isLessThan(limite);
+                Thread.sleep(20);
+            }
+            trava.commit();
             List<Integer> status = new ArrayList<>();
             for (Future<Integer> f : fs) {
-                status.add(f.get());
+                status.add(f.get(10, TimeUnit.SECONDS));
             }
-            assertThat(status).containsOnly(200, 201).filteredOn(x -> x == 201).hasSize(1);
+            assertThat(status).containsExactlyInAnyOrder(200, 201);
         } finally {
             pool.shutdownNow();
         }
