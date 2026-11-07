@@ -92,6 +92,18 @@ class AgendaTest {
 		assertThat(t.modos).isEmpty();
 	}
 
+	/** Modo comando (mapa R7): a agenda nao agenda nada, mas a tarefa continua disponivel para o executarAgora. */
+	@Test
+	void agendaInativaNaoAgendaNadaMasExecutarAgoraFunciona() {
+		var t = new Fake(false, false);
+		assertThat(agendar(t, env().withProperty("clama.agenda.ativa", "false")
+				.withProperty("clama.agenda.x.modo", "EXECUTAR"))).isNull();
+		verify(scheduler, never()).schedule(any(Runnable.class), any(Trigger.class));
+		new AgendaConfig(List.of(t), env().withProperty("clama.agenda.ativa", "false"), scheduler)
+				.executarAgora("x", ModoDeExecucao.LISTAR);
+		assertThat(t.modos).containsExactly(ModoDeExecucao.LISTAR);
+	}
+
 	@Test
 	void semCronNaoSobe() {
 		assertThatThrownBy(() -> new AgendaConfig(List.of(new Fake(true, false)), new MockEnvironment(), scheduler))

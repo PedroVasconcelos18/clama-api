@@ -1,0 +1,14 @@
+# Modo comando do jar (java -jar clama-api.jar <comando>; mapa §9). Processo one-shot, rodado do Mac contra producao.
+spring:
+  main:
+    web-application-type: none
+  flyway:
+    enabled: false # nunca migrar a partir do Mac (R3, D6): um jar mais novo que o deploy poria o schema a frente
+  datasource:
+    hikari:
+      maximum-pool-size: 2
+clama:
+  fila:
+    scheduler-ativo: false # sem poller (FilaConfig); o SchedulerClient continua enfileirando
+  agenda:
+    ativa: false # R7: nenhuma tarefa agendada dispara no processo do comando

@@ -14,6 +14,7 @@ import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.identidade.token.ServicoDeTokens;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -75,7 +76,9 @@ public class SegurancaConfig {
         return r;
     }
 
+    /** So com web: o modo comando (WebApplicationType.NONE) nao tem HttpSecurity (mapa R6). */
     @Bean
+    @ConditionalOnWebApplication
     SecurityFilterChain filtros(HttpSecurity http, ServicoDeTokens tokens, UsuarioRepository usuarios,
             CookieCsrfTokenRepository csrf, ObjectProvider<HandlerMapping> mapeamentos, SemBanimento banimento,
             AssinaturaWordPress assinaturaWordPress,

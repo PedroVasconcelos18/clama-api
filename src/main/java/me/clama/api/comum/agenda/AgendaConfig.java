@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import me.clama.api.comum.agenda.TarefaAgendada.ResultadoDaTarefa;
 import me.clama.api.comum.observabilidade.SentryConfig;
 import org.slf4j.Logger;
@@ -28,6 +29,8 @@ public class AgendaConfig implements SmartInitializingSingleton {
 	private final Map<String, TarefaAgendada> tarefas = new LinkedHashMap<>();
 	private final Map<String, String> crons = new LinkedHashMap<>();
 	private final Map<String, ModoDeExecucao> modos = new LinkedHashMap<>();
+	/** false no modo comando (mapa R7): nada e agendado no processo one-shot; o executarAgora continua. */
+	private final boolean ativa;
 
 	@Bean
 	static ThreadPoolTaskScheduler agendaScheduler() {
@@ -45,6 +48,7 @@ public class AgendaConfig implements SmartInitializingSingleton {
 	/** Falha rapido: sem cron ou modo invalido a aplicacao nao sobe. */
 	public AgendaConfig(List<TarefaAgendada> lista, Environment env, @Qualifier("agendaScheduler") TaskScheduler scheduler) {
 		this.scheduler = scheduler;
+		this.ativa = env.getProperty("clama.agenda.ativa", Boolean.class, true);
 		for (TarefaAgendada t : lista) {
 			String n = t.nome();
 			if (tarefas.put(n, t) != null) {
@@ -70,6 +74,10 @@ public class AgendaConfig implements SmartInitializingSingleton {
 
 	@Override
 	public void afterSingletonsInstantiated() {
+		if (!ativa) {
+			LOG.info("Agenda desligada (clama.agenda.ativa=false): nenhuma tarefa agendada");
+			return;
+		}
 		tarefas.forEach((n, t) -> {
 			ModoDeExecucao modo = modos.get(n);
 			LOG.info("Tarefa agendada '{}': cron '{}' (America/Sao_Paulo), modo {}", n, crons.get(n), modo);
@@ -77,6 +85,11 @@ public class AgendaConfig implements SmartInitializingSingleton {
 				scheduler.schedule(() -> rodarAgendada(t, modo), new CronTrigger(crons.get(n), FUSO));
 			}
 		});
+	}
+
+	/** As tarefas registradas, na ordem de registro. */
+	public Set<String> nomes() {
+		return tarefas.keySet();
 	}
 
 	/** Roda uma tarefa uma vez, a mao (comando do jar). Erros propagam. */

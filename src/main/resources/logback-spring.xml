@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+O default do Boot (defaults.xml + console-appender.xml, equivalente a configuracao programatica), com uma excecao:
+no perfil comando (java -jar clama-api.jar <comando>) o console vai para o stderr. O stdout do comando e o relatorio
+que o script mensal le (tail/wc -l); nenhuma linha de log pode cair nele (mapa R1).
+-->
+<configuration>
+	<include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+	<springProfile name="comando">
+		<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+			<target>System.err</target>
+			<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+				<level>${CONSOLE_LOG_THRESHOLD}</level>
+			</filter>
+			<encoder>
+				<pattern>${CONSOLE_LOG_PATTERN}</pattern>
+				<charset>${CONSOLE_LOG_CHARSET}</charset>
+			</encoder>
+		</appender>
+	</springProfile>
+	<springProfile name="!comando">
+		<include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+	</springProfile>
+	<root level="INFO">
+		<appender-ref ref="CONSOLE"/>
+	</root>
+</configuration>

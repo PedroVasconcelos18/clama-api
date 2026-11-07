@@ -1,8 +1,13 @@
 package me.clama.api.contrato;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -15,6 +20,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import me.clama.api.BancoDeTeste;
 import me.clama.api.RelogioDeTeste;
+import me.clama.api.comum.comando.Comandos;
 import me.clama.api.comum.ratelimit.RateLimiter;
 import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.identidade.token.ServicoDeTokens;
@@ -25,6 +31,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -33,9 +40,9 @@ import tools.jackson.databind.ObjectMapper;
 
 /**
  * Cenarios gravados por clama-backend/contrato/test_gravar_comandos.py (etapa 8): os management commands que o jar
- * porta, rodados pelo {@link ExecutorDeComando} e comparados pelo {@link ReplayDeContrato#conferirComando}. O modo
- * comando ainda nao existe (Task 2): tudo pendente. Os testes sinteticos provam o harness com um executor falso que
- * devolve o gravado ({@link Eco}).
+ * porta, rodados em processo pelo {@link #emProcesso} (o mesmo Comandos.executar do jar, no contexto de teste) e
+ * comparados pelo {@link ReplayDeContrato#conferirComando}. Os testes sinteticos provam o harness com um executor falso
+ * que devolve o gravado ({@link Eco}).
  */
 @SpringBootTest
 @Import({BancoDeTeste.class, RelogioDeTeste.class})
@@ -45,11 +52,10 @@ class ContratoComandosTest {
     /** Gravados (os .json da pasta). */
     static final int GRAVADOS = 59;
     /** Grupos ligados, por prefixo do arquivo. Cada task move o seu prefixo de PENDENTES para LIGADOS. */
-    static final List<String> LIGADOS = List.of();
+    static final List<String> LIGADOS = List.of("cmd_instituicoes_");
     /** Gravados mas ainda sem implementacao. */
     static final List<String> PENDENTES = List.of("cmd_relatorio_repasse_", "cmd_auditar_repasses_",
-            "cmd_marcar_repasse_transferido_", "cmd_adotar_pedidos_orfaos_", "cmd_purgar_dados_blog_customer_",
-            "cmd_instituicoes_");
+            "cmd_marcar_repasse_transferido_", "cmd_adotar_pedidos_orfaos_", "cmd_purgar_dados_blog_customer_");
     /** Cenarios cujo comando grava no banco: o eco (que nao grava) tem de cair no estado final. */
     static final Set<String> GRAVAM = Set.of("cmd_marcar_repasse_transferido_confirmar.json",
             "cmd_adotar_pedidos_orfaos_vincula.json", "cmd_adotar_pedidos_orfaos_email.json",
@@ -60,14 +66,13 @@ class ContratoComandosTest {
             "blog_reacao", "blog_comentario", "blog_customerbanido", "blog_postespelho");
     /** Os comandos cujo cenario leva o sha256 do relatorio_repasse.py de referencia (working tree do Django). */
     static final List<String> COM_REFERENCIA = List.of("relatorio_repasse", "marcar_repasse_transferido");
-    /** Ate a Task 2 nao ha modo comando; nenhum grupo esta ligado, entao isto nunca roda. */
-    static final ExecutorDeComando SEM_MODO_COMANDO = (args, stdin, dir) -> {
-        throw new AssertionError("modo comando ainda nao existe: a Task 2 liga o executor");
-    };
     private static final ObjectMapper JSON = new ObjectMapper();
 
     @Autowired
     JdbcTemplate jdbc;
+
+    @Autowired
+    ApplicationContext ctx;
 
     @Autowired
     UsuarioRepository usuarios;
@@ -133,7 +138,7 @@ class ContratoComandosTest {
     @ParameterizedTest(name = "{0}", allowZeroInvocations = true)
     @MethodSource("cenarios")
     void cenario(Path json) throws Exception {
-        replay(SEM_MODO_COMANDO).executar(json, null);
+        replay(emProcesso(ctx)).executar(json, null);
     }
 
     /**
@@ -251,6 +256,20 @@ class ContratoComandosTest {
     private static byte[] semBom(byte[] b) {
         assertThat(b).startsWith((byte) 0xEF, (byte) 0xBB, (byte) 0xBF);
         return java.util.Arrays.copyOfRange(b, 3, b.length);
+    }
+
+    /**
+     * O modo comando em processo, como o jar o roda (Comandos.executar), no contexto ja aberto: stdout e stderr em
+     * UTF-8, o stdin gravado (null = EOF na 1a leitura) e o dirSaida como diretorio de trabalho do comando.
+     */
+    public static ExecutorDeComando emProcesso(ApplicationContext ctx) {
+        return (args, stdin, dir) -> {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            ByteArrayOutputStream err = new ByteArrayOutputStream();
+            int exit = Comandos.executar(args, new PrintStream(out, true, UTF_8), new PrintStream(err, true, UTF_8),
+                    new BufferedReader(new StringReader(stdin == null ? "" : stdin)), dir, ctx);
+            return new ExecutorDeComando.Resultado(out.toString(UTF_8), err.toString(UTF_8), exit);
+        };
     }
 
     private ReplayDeContrato replay(ExecutorDeComando executor) {

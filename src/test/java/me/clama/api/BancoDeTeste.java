@@ -29,6 +29,11 @@ public class BancoDeTeste {
 		POSTGRES.start(); // o Ryuk do Testcontainers derruba no fim da JVM
 	}
 
+	/** Para quem usa o banco fora do @SpringBootTest (ComandoBootTest, FumacaDoJarIT). */
+	public static PostgreSQLContainer container() {
+		return POSTGRES;
+	}
+
 	@Bean(destroyMethod = "")
 	@ServiceConnection
 	PostgreSQLContainer postgres() {

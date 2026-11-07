@@ -42,6 +42,10 @@ public class PastoralException extends RuntimeException {
                 "Você fez vários pedidos seguidos — espera um instante e tenta de novo, com calma.");
     }
 
+    public String pastoralMessage() {
+        return pastoralMessage;
+    }
+
     public int status() {
         return status;
     }

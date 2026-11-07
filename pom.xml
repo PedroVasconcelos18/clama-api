@@ -158,6 +158,27 @@
 					</includes>
 				</configuration>
 			</plugin>
+			<!-- fumaca do jar empacotado (*IT): roda no verify, depois do package; o processo filho nao tem o perfil test -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<configuration>
+					<environmentVariables>
+						<SENTRY_DSN></SENTRY_DSN>
+					</environmentVariables>
+					<systemPropertyVariables>
+						<clama.jar>${project.build.directory}/${project.build.finalName}.jar</clama.jar>
+					</systemPropertyVariables>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 
