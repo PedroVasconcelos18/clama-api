@@ -88,6 +88,11 @@ class ApiDoBlog {
         return new Sessao("clama_access=" + tokens.emitirPar(u).access() + "; csrftoken=" + csrf, csrf);
     }
 
+    /** Mesma sessao, mas o pedido sai sem o header X-CSRFToken. */
+    static Sessao semCsrf(Sessao s) {
+        return new Sessao(s.cookies(), null);
+    }
+
     /** s null = anonimo; corpo null = sem corpo. headers em pares nome, valor. */
     HttpResponse<String> enviar(String metodo, String path, String corpo, Sessao s, String... headers)
             throws Exception {
@@ -97,7 +102,10 @@ class ApiDoBlog {
             b.header("Content-Type", "application/json");
         }
         if (s != null) {
-            b.header("Cookie", s.cookies()).header("X-CSRFToken", s.csrf());
+            b.header("Cookie", s.cookies());
+            if (s.csrf() != null) {
+                b.header("X-CSRFToken", s.csrf());
+            }
         }
         for (int i = 0; i < headers.length; i += 2) {
             b.header(headers[i], headers[i + 1]);
