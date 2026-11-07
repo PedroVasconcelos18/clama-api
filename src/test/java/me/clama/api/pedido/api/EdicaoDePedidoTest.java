@@ -130,6 +130,7 @@ class EdicaoDePedidoTest {
 
     @Test
     void mudaSoOsCamposEnviadosEDevolveODetalhe() throws Exception {
+        jdbc.update("update orders_pedido set status = 'pago' where id = ?", id); // sair de aguardando e 409
         JsonNode d = ok("""
                 {"nome": " Maria Souza ", "idade": null, "sexo": "", "plano": "%s", "valor_centavos": 0,
                  "canal_entrega": "whatsapp", "status": "enviada", "oracao_gerada": "Amém."}""".formatted(P2));
@@ -174,11 +175,27 @@ class EdicaoDePedidoTest {
 
     @Test
     void statusErroEnfileiraUmAlertaEODedupDeUmaHora() throws Exception {
+        jdbc.update("update orders_pedido set status = 'pago' where id = ?", id);
         ok("{\"status\": \"erro\"}");
         assertThat(alertas()).isEqualTo(1);
         ok("{\"status\": \"erro\"}"); // sem mudanca, mas o Django dispara em qualquer save: o dedup segura
         assertThat(alertas()).isEqualTo(1);
         assertThat(pedidos.findById(id).orElseThrow().getStatus()).isEqualTo(StatusPedido.ERRO);
+    }
+
+    @Test
+    void sairDeAguardandoPagamentoNaMaoDa409SemEfeitoNemAuditoria() throws Exception {
+        HttpResponse<String> r = patch(id, "{\"nome\": \"Outro Nome\", \"status\": \"pago\"}", cookie, true);
+        assertThat(r.statusCode()).as(r.body()).isEqualTo(409);
+        JsonNode e = json.readTree(r.body()).get("error");
+        assertThat(e.get("code").asString()).isEqualTo("pagamento_pendente");
+        assertThat(e.get("pastoral_message").asString()).contains("Marcar gratuito").contains("reprocesse o webhook");
+        assertThat(pedidos.findById(id).orElseThrow().getStatus()).isEqualTo(StatusPedido.AGUARDANDO_PAGAMENTO);
+        assertThat(pedidos.findById(id).orElseThrow().getNome()).isEqualTo("Maria Silva");
+        assertThat(jdbc.queryForObject("select count(*) from django_admin_log", Integer.class)).isZero();
+        // as demais transicoes seguem livres
+        jdbc.update("update orders_pedido set status = 'pago' where id = ?", id);
+        assertThat(ok("{\"status\": \"enviada\"}").get("status").asString()).isEqualTo("enviada");
     }
 
     @Test

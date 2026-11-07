@@ -222,6 +222,13 @@ class PedidosAdminController {
             String status = c.escolha("status", false, java.util.Arrays.stream(StatusPedido.values())
                     .map(StatusPedido::valor).toList());
             c.validar();
+            if (p.getStatus() == StatusPedido.AGUARDANDO_PAGAMENTO && status != null
+                    && !status.equals(p.getStatus().valor())) {
+                // sair daqui na mao descartaria um pagamento real: o webhook/reprocesso cairia em TransicaoInvalida
+                throw new PastoralException(409, "pagamento_pendente", "Pedido aguardando pagamento",
+                        "Esse pedido ainda espera o pagamento. Para entregar sem pagamento, use 'Marcar gratuito'; "
+                                + "se o pagamento já caiu, reprocesse o webhook.");
+            }
 
             // ordem e rotulos do formulario do PedidoAdmin (verbose_name do model)
             List<String> mudou = new ArrayList<>();
