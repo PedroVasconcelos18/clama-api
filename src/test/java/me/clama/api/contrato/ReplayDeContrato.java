@@ -155,6 +155,7 @@ public class ReplayDeContrato {
     private List<SentryEvent> sentry;
     private JanelaFixa janela;
     private Set<String> repeticoesToleradas = Set.of();
+    private Runnable limpeza = () -> { };
 
     /**
      * O que o harness precisa do app fora do banco: o cache de senhas temporarias (SenhasTemporarias) e o dedup em
@@ -242,6 +243,12 @@ public class ReplayDeContrato {
         return this;
     }
 
+    /** Estado em memoria do app zerado antes de cada cenario (o cache.clear() do gravador), alem do limiter. */
+    public ReplayDeContrato comLimpeza(Runnable limpeza) {
+        this.limpeza = limpeza;
+        return this;
+    }
+
     /**
      * Cenarios (nome do arquivo) em que o stub aceita repeticoes seguidas da mesma requisicao (divergencia aceita: o
      * HttpClient do JDK repete o GET de conexao caida). Ver {@link StubDeIntegracoes#conferirComRepeticoes}.
@@ -296,6 +303,7 @@ public class ReplayDeContrato {
         if (janela != null) {
             janela.limpar();
         }
+        limpeza.run();
         if (caixa != null) {
             caixa.limpar();
             ganchos.limpar();

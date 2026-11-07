@@ -35,6 +35,18 @@ clama:
     # Django: crontab(minute=17, hour="*/6"). Comeca em LISTAR; so EXECUTAR depois de contar os pendentes >48 h em prod
     reconciliar-freemium:
       cron: "0 17 */6 * * *"
+    # blog (mapa da etapa 6, secao 5). Sem .modo: quem altera dados (reconciliar-espelho, purgar-ips) comeca em
+    # LISTAR, os que so leem (monitores e alerta) em EXECUTAR (R2, R6)
+    reconciliar-espelho:
+      cron: "0 */15 * * * *"
+    monitorar-seo:
+      cron: "0 */30 * * * *"
+    verificar-urls:
+      cron: "0 0 4 * * *"
+    alerta-comentarios:
+      cron: "0 0 8 * * *"
+    purgar-ips:
+      cron: "0 0 3 * * *"
   # MEDIA_ROOT do Django (FileSystemStorage): documents/<uuid>/<nome>
   media-root: ./media
   documentos:

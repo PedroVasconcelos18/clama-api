@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 import me.clama.api.BancoDeTeste;
 import me.clama.api.RelogioDeTeste;
 import me.clama.api.blog.JanelaFixa;
+import me.clama.api.blog.tarefas.ContadorDeDivergencia;
 import me.clama.api.comum.agenda.ModoDeExecucao;
 import me.clama.api.comum.agenda.TarefaAgendada;
 import me.clama.api.comum.email.CaixaDeSaidaEmMemoria;
@@ -79,10 +80,10 @@ class ContratoBlogTest {
     static final int GRAVADOS = 74;
     /** Grupos ligados, por prefixo do arquivo. Cada task move o seu prefixo de PENDENTES para LIGADOS. */
     static final List<String> LIGADOS = List.of("blog_comentarios_", "blog_like_", "blog_comentario_id_",
-            "blog_admin_", "blog_webhook_", "job_sincronizar_espelho_");
-    /** Gravados mas ainda sem implementacao (Task 7). */
-    static final List<String> PENDENTES = List.of("tarefa_reconciliar_espelho_", "tarefa_monitorar_seo_",
-            "tarefa_verificar_urls_", "tarefa_alerta_comentarios_", "tarefa_purgar_ips_");
+            "blog_admin_", "blog_webhook_", "job_sincronizar_espelho_", "tarefa_reconciliar_espelho_",
+            "tarefa_monitorar_seo_", "tarefa_verificar_urls_", "tarefa_alerta_comentarios_", "tarefa_purgar_ips_");
+    /** Gravados mas ainda sem implementacao. */
+    static final List<String> PENDENTES = List.of();
     /**
      * Gravados com outra configuracao: sem credencial do WordPress (WORDPRESS_API_USER e _APP_PASSWORD vazios), com
      * INDEXNOW_KEY=chave-indexnow-contrato e com ADMIN_ALERT_EMAIL vazio. O replay recusa o contexto padrao para eles.
@@ -94,21 +95,27 @@ class ContratoBlogTest {
      * Os de {@link #OUTRA_CONFIGURACAO} que ja rodam, cada um na sua classe aninhada (contexto proprio). Todo cenario de
      * outra configuracao de um grupo ligado tem de estar aqui: nenhum fica filtrado em silencio.
      */
-    static final List<String> ANINHADOS = List.of(SemWordPress.CENARIO);
+    static final List<String> ANINHADOS = List.of(SemWordPress.CENARIO, SemWordPress.TAREFA, ComIndexNow.DIVERGENTE,
+            ComIndexNow.INACESSIVEL, SemDestinatario.CENARIO);
     /**
      * Rede caida no WordPress ("falha": "conexao", o stub fecha a conexao sem responder): o Django faz um GET por
      * tentativa do with_retry; o java.net.http.HttpClient repete sozinho o GET cuja conexao cai antes da resposta (sem
      * opcao por cliente), entao o Java manda o mesmo GET mais vezes. Divergencia aceita (opcao c): so nestes cenarios o
      * replay colapsa repeticoes seguidas identicas e exige mais requisicoes que o gravado; o resto compara inteiro.
+     * Os dois monitores (um GET por URL, sem retentativa propria) mandam ate 5 GETs para a URL caida; o stub dos
+     * monitores derruba os reenvios tambem ({@link StubDeIntegracoes#comQuedaPersistente}), e o resumo continua sendo o
+     * nome da classe do requests ("ConnectionError").
      */
     static final List<String> REDE_CAIDA = List.of("blog_comentarios_criar_wordpress_indisponivel_400.json",
-            "blog_comentarios_lista_sem_espelho_wp_fora.json", "blog_like_post_indisponivel.json");
+            "blog_comentarios_lista_sem_espelho_wp_fora.json", "blog_like_post_indisponivel.json",
+            "tarefa_monitorar_seo_indisponivel.json", "tarefa_verificar_urls_regressao.json");
     static final List<String> TABELAS = List.of("users_user", "token_blacklist_outstandingtoken",
             "token_blacklist_blacklistedtoken", "blog_reacao", "blog_comentario", "blog_customerbanido",
             "blog_postespelho", "payments_webhookevento", "scheduled_tasks");
     static final StubDeIntegracoes WORDPRESS = new StubDeIntegracoes("requisicoes ao WordPress",
             Map.of("autorizacao", "Authorization", "accept", "Accept"));
-    static final StubDeIntegracoes MONITORES = new StubDeIntegracoes("GETs dos monitores", Map.of());
+    static final StubDeIntegracoes MONITORES = new StubDeIntegracoes("GETs dos monitores", Map.of())
+            .comQuedaPersistente();
     static final TransportEmMemoria SENTRY = new TransportEmMemoria();
     private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -225,20 +232,100 @@ class ContratoBlogTest {
         }
     }
 
+    /**
+     * Queda persistente (stub dos monitores): os reenvios automaticos do HttpClient para a URL caida caem tambem, sem
+     * consumir a resposta da proxima URL; a proxima requisicao diferente segue a fila. Sem ela, o reenvio levaria a
+     * resposta seguinte.
+     */
+    @Test
+    void quedaPersistenteDerrubaSoOReenvioIdentico() throws Exception {
+        for (boolean persistente : new boolean[] {true, false}) {
+            StubDeIntegracoes stub = new StubDeIntegracoes("monitores", Map.of());
+            if (persistente) {
+                stub.comQuedaPersistente();
+            }
+            try {
+                stub.preparar(JSON.readTree("[{\"falha\": \"conexao\"}, {\"status\": 404, \"corpo_texto\": \"\"}]"));
+                HttpClient http = HttpClient.newHttpClient();
+                HttpRequest a = HttpRequest.newBuilder(URI.create(stub.url() + "/a")).build();
+                if (persistente) {
+                    assertThatThrownBy(() -> http.send(a, HttpResponse.BodyHandlers.discarding()))
+                            .isInstanceOf(IOException.class);
+                    assertThat(http.send(HttpRequest.newBuilder(URI.create(stub.url() + "/b")).build(),
+                            HttpResponse.BodyHandlers.discarding()).statusCode()).isEqualTo(404);
+                    assertThat(stub.conferirComRepeticoes(JSON.readTree("[{\"metodo\": \"GET\", \"caminho\":"
+                            + " \"/a\"}, {\"metodo\": \"GET\", \"caminho\": \"/b\"}]"), "persistente")).isTrue();
+                } else {
+                    // o reenvio do JDK pega o 404 que era da proxima URL
+                    assertThat(http.send(a, HttpResponse.BodyHandlers.discarding()).statusCode()).isEqualTo(404);
+                }
+            } finally {
+                stub.parar();
+            }
+        }
+    }
+
     /** WORDPRESS_API_USER e _APP_PASSWORD vazios: slug sem espelho nao existe (404), sem rede. */
     @Nested
     @TestPropertySource(properties = {"WORDPRESS_API_USER=", "WORDPRESS_API_APP_PASSWORD="})
     class SemWordPress {
         static final String CENARIO = "blog_comentarios_sem_wordpress_configurado.json";
+        static final String TAREFA = "tarefa_reconciliar_espelho_sem_credencial.json";
 
         @Autowired
         ApplicationContext c;
 
         @Test
         void semWordPressConfigurado() throws Exception {
-            replay(c).executar(CENARIOS.resolve(CENARIO),
-                    URI.create("http://localhost:" + c.getEnvironment().getProperty("local.server.port")));
+            aninhado(c, CENARIO);
         }
+
+        /** Reconciliacao sem credencial: abortada, sem rede e sem Sentry. */
+        @Test
+        void reconciliacaoSemCredencial() throws Exception {
+            aninhado(c, TAREFA);
+        }
+    }
+
+    /** INDEXNOW_KEY definida: o monitor de SEO faz a 4a checagem. */
+    @Nested
+    @TestPropertySource(properties = "INDEXNOW_KEY=chave-indexnow-contrato")
+    class ComIndexNow {
+        static final String DIVERGENTE = "tarefa_monitorar_seo_indexnow_divergente.json";
+        static final String INACESSIVEL = "tarefa_monitorar_seo_indexnow_inacessivel.json";
+
+        @Autowired
+        ApplicationContext c;
+
+        @Test
+        void chaveDivergente() throws Exception {
+            aninhado(c, DIVERGENTE);
+        }
+
+        @Test
+        void chaveInacessivel() throws Exception {
+            aninhado(c, INACESSIVEL);
+        }
+    }
+
+    /** ADMIN_ALERT_EMAIL vazio: o alerta diario conta e nao envia. */
+    @Nested
+    @TestPropertySource(properties = "ADMIN_ALERT_EMAIL=")
+    class SemDestinatario {
+        static final String CENARIO = "tarefa_alerta_comentarios_sem_destinatario.json";
+
+        @Autowired
+        ApplicationContext c;
+
+        @Test
+        void alertaSemDestinatario() throws Exception {
+            aninhado(c, CENARIO);
+        }
+    }
+
+    private static void aninhado(ApplicationContext c, String cenario) throws Exception {
+        replay(c).executar(CENARIOS.resolve(cenario),
+                URI.create("http://localhost:" + c.getEnvironment().getProperty("local.server.port")));
     }
 
     /**
@@ -361,7 +448,8 @@ class ContratoBlogTest {
     private static ReplayDeContrato replayBase(ApplicationContext c) {
         return new ReplayDeContrato(c.getBean(JdbcTemplate.class), c.getBean(UsuarioRepository.class),
                 c.getBean(ServicoDeTokens.class), c.getBean(RateLimiter.class), TABELAS)
-                .comJanelaFixa(c.getBean(JanelaFixa.class)).comRepeticoesToleradas(REDE_CAIDA)
+                .comJanelaFixa(c.getBean(JanelaFixa.class)).comLimpeza(c.getBean(ContadorDeDivergencia.class)::limpar)
+                .comRepeticoesToleradas(REDE_CAIDA)
                 .comStubs(Map.of("wordpress", WORDPRESS, "monitores", MONITORES), c.getEnvironment())
                 .comOracao(c.getBean(CaixaDeSaidaEmMemoria.class), jobs(c), ContratoOracaoTest.ganchos(c));
     }

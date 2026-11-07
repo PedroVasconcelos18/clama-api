@@ -92,6 +92,17 @@ class ClienteWordPressTest {
         assertThat(pg.posts()).hasSize(1);
     }
 
+    /** Item sem id numerico: a listagem o conta e segue (a reconciliacao pula); a busca por slug e indisponivel. */
+    @Test
+    void postSemIdNaListagemContaENaBuscaEIndisponivel() {
+        corpo = "[{\"id\":\"abc\",\"slug\":\"a\"}, \"x\", {\"id\":7,\"slug\":\"b\"}]";
+        PaginaWp pg = cliente().listar(1);
+        assertThat(pg.posts()).extracting(PostWp::id).containsExactly(7L);
+        assertThat(pg.semId()).isEqualTo(2);
+        corpo = "[{\"slug\":\"a\"}]";
+        assertThatThrownBy(() -> cliente().buscarPorSlug("a")).isInstanceOf(WordPressIndisponivel.class);
+    }
+
     @Test
     void totalDePaginasAusenteOuInvalidoEUm() {
         assertThat(cliente().listar(1).totalPaginas()).isEqualTo(1);

@@ -75,7 +75,13 @@ public class ClienteWordPress {
         p.put("context", "edit");
         p.put("per_page", "1");
         p.put("_fields", CAMPOS);
-        List<PostWp> posts = get(p).posts();
+        PaginaWp pagina = get(p);
+        if (pagina.semId() > 0) {
+            // ruling da Task 3: o Django da 500; aqui e "nao deu para perguntar", nunca "nao existe"
+            LOG.warn("wordpress_api_erro: post do WordPress sem id numerico (slug={})", slug);
+            throw new WordPressIndisponivel(null);
+        }
+        List<PostWp> posts = pagina.posts();
         return posts.isEmpty() ? Optional.empty() : Optional.of(posts.get(0));
     }
 
@@ -139,9 +145,13 @@ public class ClienteWordPress {
             throw new IllegalStateException("Resposta do WordPress não é uma lista de posts.");
         }
         List<PostWp> posts = new ArrayList<>();
-        raiz.forEach(n -> posts.add(post(n)));
+        int semId = 0;
+        for (JsonNode n : raiz) {
+            if (n.isObject() && n.path("id").canConvertToLong()) posts.add(post(n));
+            else semId++;
+        }
         int total = r.headers().firstValue("X-WP-TotalPages").map(ClienteWordPress::inteiro).orElse(1);
-        return new PaginaWp(posts, total);
+        return new PaginaWp(posts, total, semId);
     }
 
     private static int inteiro(String s) {
@@ -153,9 +163,6 @@ public class ClienteWordPress {
     }
 
     private static PostWp post(JsonNode n) {
-        if (!n.isObject() || !n.path("id").canConvertToLong()) {
-            throw new IllegalStateException("Post do WordPress sem id numérico.");
-        }
         JsonNode titulo = n.path("title");
         return new PostWp(n.get("id").asLong(), texto(n.get("slug")), texto(titulo.get("raw")),
                 texto(titulo.get("rendered")), texto(n.get("status")), texto(n.get("date_gmt")),

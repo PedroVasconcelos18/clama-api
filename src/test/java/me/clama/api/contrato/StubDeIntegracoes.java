@@ -38,6 +38,9 @@ public class StubDeIntegracoes {
     private final HttpServer servidor;
     private final Deque<JsonNode> respostas = new ArrayDeque<>();
     private final List<JsonNode> recebidas = new ArrayList<>();
+    private boolean quedaPersistente;
+    /** A requisicao cuja conexao o stub derrubou por ultimo (so com quedaPersistente). */
+    private JsonNode ultimaQueda;
 
     /** O do Mercado Pago: grava o Authorization. */
     public StubDeIntegracoes() {
@@ -56,6 +59,18 @@ public class StubDeIntegracoes {
         servidor.start();
     }
 
+    /**
+     * O endpoint que derrubou a conexao derruba tambem as repeticoes identicas seguintes, sem consumir resposta: o
+     * java.net.http.HttpClient reenvia sozinho o GET de conexao caida (ate 5 vezes), e sem isto o reenvio levaria a
+     * resposta da proxima URL. So para quem nao retenta por conta propria (os monitores do blog, um GET por URL); o
+     * stub do WordPress nao usa, porque la a retentativa do app e uma requisicao identica que consome a proxima
+     * resposta gravada.
+     */
+    public StubDeIntegracoes comQuedaPersistente() {
+        quedaPersistente = true;
+        return this;
+    }
+
     public String url() {
         return "http://127.0.0.1:" + servidor.getAddress().getPort();
     }
@@ -68,6 +83,7 @@ public class StubDeIntegracoes {
     public synchronized void preparar(JsonNode respostasDoCenario) {
         respostas.clear();
         recebidas.clear();
+        ultimaQueda = null;
         respostasDoCenario.forEach(respostas::add);
     }
 
@@ -128,11 +144,15 @@ public class StubDeIntegracoes {
             req.set("corpo", json);
         }
         JsonNode resposta;
+        boolean queda;
         synchronized (this) {
+            boolean reenvio = quedaPersistente && req.equals(ultimaQueda);
             recebidas.add(req);
-            resposta = respostas.poll();
+            resposta = reenvio ? null : respostas.poll();
+            queda = reenvio || resposta != null && resposta.path("falha").asString("").equals("conexao");
+            ultimaQueda = queda ? req : null;
         }
-        if (resposta != null && resposta.path("falha").asString("").equals("conexao")) {
+        if (queda) {
             troca.close(); // falha de rede (requests.ConnectionError no gravador): fecha sem resposta
             return;
         }
