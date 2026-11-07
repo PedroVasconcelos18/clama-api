@@ -65,6 +65,9 @@ import tools.jackson.databind.node.ObjectNode;
  * Django: cookie apagado fica com valor "" e continua sendo enviado.
  */
 public class ReplayDeContrato {
+    /** Argon2 custa ~2 s por senha; qualquer hash valido da mesma senha confere, entao um por texto basta. */
+    private static final java.util.Map<String, String> HASHES = new java.util.concurrent.ConcurrentHashMap<>();
+
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final JsonNodeFactory NOS = JsonNodeFactory.instance;
     // \w e \d do Python 3 sao unicode; $ do Python so aceita "\n" antes do fim (UNIX_LINES)
@@ -734,7 +737,7 @@ public class ReplayDeContrato {
     private void criarUsuario(JsonNode d) {
         Usuario u = new Usuario();
         u.setEmail(d.get("email").asString());
-        u.setPassword(senhas.encode(d.get("senha").asString()));
+        u.setPassword(HASHES.computeIfAbsent(d.get("senha").asString(), senhas::encode));
         u.setNomeCompleto(d.get("nome_completo").asString());
         u.setClamaAdmin(d.get("is_clama_admin").asBoolean());
         u.setActive(d.get("is_active").asBoolean());
