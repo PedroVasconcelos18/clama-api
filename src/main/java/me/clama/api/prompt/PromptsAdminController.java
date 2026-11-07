@@ -102,7 +102,6 @@ class PromptsAdminController {
         });
     }
 
-
     /**
      * Previa sem persistir, sem documentos e sem throttle (o de 5/min do Django nunca valeu). O 404 vem antes da
      * validacao do corpo; pedido_exemplo e DictField(child=CharField), com o erro aninhado por chave.

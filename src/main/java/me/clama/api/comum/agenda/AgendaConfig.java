@@ -34,7 +34,7 @@ public class AgendaConfig implements SmartInitializingSingleton {
 		var s = new ThreadPoolTaskScheduler();
 		s.setPoolSize(2);
 		s.setThreadNamePrefix("agenda-");
-		// redeploy no Railway: deixa a tarefa em andamento terminar (draining time >= 30 s, Etapa 9)
+		// redeploy no Railway: deixa a tarefa em andamento terminar (draining time >= 35 s, Etapa 9)
 		s.setWaitForTasksToCompleteOnShutdown(true);
 		s.setAwaitTerminationSeconds(10);
 		// tarefa futura nao roda no shutdown: so a que ja esta em andamento termina
