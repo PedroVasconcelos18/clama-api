@@ -6,12 +6,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import jakarta.servlet.http.HttpServletRequest;
 import me.clama.api.comum.Dinheiro;
 import me.clama.api.comum.api.DatasDrf;
 import me.clama.api.comum.api.PaginaLimitOffset;
+import me.clama.api.comum.api.ParametrosDeQuery;
 import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.comum.texto.TextoPython;
 import me.clama.api.pedido.Pedido;
@@ -88,7 +90,7 @@ class PedidosAdminController {
         List<String> onde = new ArrayList<>();
         List<Object> args = new ArrayList<>();
 
-        String status = req.getParameter("status");
+        String status = ParametrosDeQuery.ultimo(req, "status");
         if (status != null && !status.isEmpty()) {
             List<String> valores = new ArrayList<>();
             for (String s : status.split(",", -1)) {
@@ -97,12 +99,12 @@ class PedidosAdminController {
             onde.add("status = any(?)");
             args.add(valores.toArray(String[]::new));
         }
-        String canal = req.getParameter("canal");
+        String canal = ParametrosDeQuery.ultimo(req, "canal");
         if (canal != null && !canal.isEmpty()) {
             onde.add("canal_entrega = ?");
             args.add(canal.toLowerCase(Locale.ROOT));
         }
-        String plano = req.getParameter("plano");
+        String plano = ParametrosDeQuery.ultimo(req, "plano");
         if (plano != null && !plano.isEmpty()) {
             if (!UUID_HEX.matcher(plano).matches()) {
                 throw new ParametroInvalido("plano");
@@ -112,7 +114,7 @@ class PedidosAdminController {
         }
         dia(req, "created_after", ">=", onde, args);
         dia(req, "created_before", "<=", onde, args);
-        String userId = req.getParameter("user_id");
+        String userId = ParametrosDeQuery.ultimo(req, "user_id");
         if (userId != null && !userId.isEmpty()) {
             String u = TextoPython.strip(userId);
             if (!INTEIRO.matcher(u).matches()) {
@@ -121,7 +123,7 @@ class PedidosAdminController {
             onde.add("user_id = ?::bigint");
             args.add(u.startsWith("+") ? u.substring(1) : u);
         }
-        String q = req.getParameter("q");
+        String q = ParametrosDeQuery.ultimo(req, "q");
         if (q != null && !q.isEmpty()) {
             // paridade com o bug do Django: o ILIKE roda no texto cifrado; a busca de verdade fica para a Etapa 7
             onde.add("(nome ilike ? or email ilike ?)");
@@ -129,7 +131,7 @@ class PedidosAdminController {
             args.add(like);
             args.add(like);
         }
-        String ordem = ORDENACOES.getOrDefault(req.getParameter("ordering") == null ? "" : req.getParameter("ordering"),
+        String ordem = ORDENACOES.getOrDefault(Objects.toString(ParametrosDeQuery.ultimo(req, "ordering"), ""),
                 "created_at desc");
         String filtro = onde.isEmpty() ? "" : " where " + String.join(" and ", onde);
 
@@ -150,7 +152,7 @@ class PedidosAdminController {
 
     /** created_at__date no fuso America/Sao_Paulo; data invalida e 400. */
     private static void dia(HttpServletRequest req, String nome, String op, List<String> onde, List<Object> args) {
-        String v = req.getParameter(nome);
+        String v = ParametrosDeQuery.ultimo(req, nome);
         if (v == null || v.isEmpty()) {
             return;
         }

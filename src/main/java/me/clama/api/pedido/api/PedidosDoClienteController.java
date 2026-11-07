@@ -6,8 +6,10 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import me.clama.api.comum.api.DatasDrf;
+import me.clama.api.comum.api.ParametrosDeQuery;
 import me.clama.api.identidade.Usuario;
 import me.clama.api.pedido.Pedido;
 import me.clama.api.pedido.PedidoRepository;
@@ -15,7 +17,6 @@ import me.clama.api.pedido.StatusPedido;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -50,11 +51,10 @@ class PedidosDoClienteController {
     }
 
     @GetMapping("/api/customer/pedidos/")
-    List<Item> listar(@AuthenticationPrincipal Usuario eu, @RequestParam(name = "from", required = false) String de,
-            @RequestParam(name = "to", required = false) String ate) {
-        LocalDate dia = dia(de);
+    List<Item> listar(@AuthenticationPrincipal Usuario eu, HttpServletRequest req) {
+        LocalDate dia = dia(ParametrosDeQuery.ultimo(req, "from"));
         OffsetDateTime inicio = dia == null ? SEM_INICIO : dia.atStartOfDay(FUSO).toOffsetDateTime();
-        dia = dia(ate);
+        dia = dia(ParametrosDeQuery.ultimo(req, "to"));
         OffsetDateTime fim = dia == null ? SEM_FIM
                 : dia.atTime(LocalTime.of(23, 59, 59, 999_999_000)).atZone(FUSO).toOffsetDateTime();
         return tx.execute(st -> pedidos.doUsuario(eu.getId(), inicio, fim).stream().map(Item::de).toList());

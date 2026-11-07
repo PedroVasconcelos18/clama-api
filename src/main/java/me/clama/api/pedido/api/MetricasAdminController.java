@@ -8,10 +8,12 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import me.clama.api.comum.Dinheiro;
+import me.clama.api.comum.api.ParametrosDeQuery;
 import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.pedido.Pedido;
 import me.clama.api.pedido.PedidoRepository;
@@ -22,7 +24,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * OverviewMetricsView e DistributionMetricsView (metrics_views.py): acesso admin e do SegurancaConfig. Janelas em UTC.
@@ -104,7 +105,8 @@ class MetricasAdminController {
     }
 
     @GetMapping("/api/admin/metrics/overview/")
-    ResponseEntity<Map<String, Object>> overview(@RequestParam(required = false) String period) {
+    ResponseEntity<Map<String, Object>> overview(HttpServletRequest req) {
+        String period = ParametrosDeQuery.ultimo(req, "period");
         Janela j = periodo(period);
         String ag = StatusPedido.AGUARDANDO_PAGAMENTO.valor();
         Map<String, Object> linha = jdbc.queryForMap("""
@@ -141,7 +143,8 @@ class MetricasAdminController {
             List<Alerta> alertas_erro) {}
 
     @GetMapping("/api/admin/metrics/distribution/")
-    ResponseEntity<Distribuicao> distribution(@RequestParam(required = false) String period) {
+    ResponseEntity<Distribuicao> distribution(HttpServletRequest req) {
+        String period = ParametrosDeQuery.ultimo(req, "period");
         Janela j = periodo(period);
         String base = " from orders_pedido p join plans_plan pl on pl.id = p.plano_id where p.created_at between ? and ?"
                 + " and p.status <> 'aguardando_pagamento'";

@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 import me.clama.api.comum.api.DatasDrf;
 import me.clama.api.comum.api.PaginaLimitOffset;
+import me.clama.api.comum.api.ParametrosDeQuery;
 import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.comum.texto.TextoPython;
 import me.clama.api.identidade.Usuario;
@@ -57,8 +58,7 @@ class ClientesAdminController {
 
     /** query_params.get: o ultimo valor. */
     private static String param(HttpServletRequest req, String nome) {
-        String[] vs = req.getParameterValues(nome);
-        return vs == null ? "" : vs[vs.length - 1];
+        return java.util.Objects.toString(ParametrosDeQuery.ultimo(req, nome), "");
     }
 
     @GetMapping("/api/admin/customers/")

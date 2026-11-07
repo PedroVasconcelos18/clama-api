@@ -14,6 +14,7 @@ import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.identidade.token.ServicoDeTokens;
 import me.clama.api.pedido.Pedido;
 import me.clama.api.pedido.PedidoRepository;
+import me.clama.api.pedido.StatusPedido;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -78,6 +79,34 @@ class PedidosAdminTest {
         }
         JsonNode corpo = json.readTree(get("?limit=1", "X-Forwarded-Proto", "https").body());
         assertThat(corpo.get("next").asString()).startsWith("https://localhost:").endsWith("/api/admin/pedidos/?limit=1&offset=1");
+    }
+
+    @Test
+    void statusRepetidoVaiComOUltimoValor() throws Exception {
+        ApiDePedidos.semearCatalogo(jdbc);
+        for (StatusPedido s : new StatusPedido[] {StatusPedido.PAGO, StatusPedido.ENVIADA}) {
+            Pedido p = new Pedido();
+            p.setPlano(planos.findById(UUID.fromString(ApiDePedidos.P1)).orElseThrow());
+            p.setValorCentavos(2000);
+            p.setStatus(s);
+            pedidos.saveAndFlush(p);
+        }
+        JsonNode corpo = json.readTree(get("?status=pago&status=enviada").body());
+        assertThat(corpo.get("count").asInt()).isEqualTo(1);
+        assertThat(corpo.get("results").get(0).get("status").asString()).isEqualTo("enviada");
+    }
+
+    @Test
+    void xForwardedProtoComListaEMaiusculas() throws Exception {
+        ApiDePedidos.semearCatalogo(jdbc);
+        for (int i = 0; i < 2; i++) {
+            Pedido p = new Pedido();
+            p.setPlano(planos.findById(UUID.fromString(ApiDePedidos.P1)).orElseThrow());
+            p.setValorCentavos(2000);
+            pedidos.saveAndFlush(p);
+        }
+        JsonNode corpo = json.readTree(get("?limit=1", "X-Forwarded-Proto", "HTTPS, http").body());
+        assertThat(corpo.get("next").asString()).startsWith("https://");
     }
 
     @ParameterizedTest

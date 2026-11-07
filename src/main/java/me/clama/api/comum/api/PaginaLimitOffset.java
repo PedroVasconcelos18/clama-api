@@ -42,8 +42,13 @@ public final class PaginaLimitOffset {
         int l = limit == null || limit.signum() <= 0 ? PADRAO : limit.min(BigInteger.valueOf(MAXIMO)).intValue();
         // ponytail: offset acima de 2^62 e travado; o Django estoura no banco (500), aqui vira pagina vazia
         long o = offset == null || offset.signum() < 0 ? 0 : offset.min(BigInteger.ONE.shiftLeft(62)).longValue();
-        String https = "https".equals(req.getHeader("X-Forwarded-Proto")) ? "https" : req.getScheme();
+        String https = https(req.getHeader("X-Forwarded-Proto")) ? "https" : req.getScheme();
         return new PaginaLimitOffset(l, o, https + "://" + req.getHeader("Host") + req.getRequestURI(), query);
+    }
+
+    /** Primeiro valor da lista (proxies em cadeia), sem caixa. */
+    private static boolean https(String proto) {
+        return proto != null && proto.split(",", 2)[0].trim().equalsIgnoreCase("https");
     }
 
     public int limit() {

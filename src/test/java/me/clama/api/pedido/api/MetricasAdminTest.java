@@ -17,6 +17,7 @@ import me.clama.api.identidade.token.ServicoDeTokens;
 import me.clama.api.pedido.Pedido;
 import me.clama.api.pedido.PedidoRepository;
 import me.clama.api.pedido.StatusPedido;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,6 +64,11 @@ class MetricasAdminTest {
         relogio.fixar(AGORA);
     }
 
+    @AfterEach
+    void liberaRelogio() {
+        relogio.fixar(null);
+    }
+
     @Test
     void janelasExatas() {
         var dia = MetricasAdminController.janela("day", AGORA);
@@ -107,6 +113,13 @@ class MetricasAdminTest {
         assertThat(ruim.statusCode()).isEqualTo(400);
         assertThat(ruim.headers().firstValue("Cache-Control")).isEmpty();
         assertThat(ruim.headers().firstValue("Expires")).isEmpty();
+    }
+
+    @Test
+    void periodRepetidoVaiComOUltimoValor() throws Exception {
+        HttpResponse<String> r = get("overview/?period=day&period=week");
+        assertThat(r.statusCode()).isEqualTo(200);
+        assertThat(json.readTree(r.body()).get("period").asString()).isEqualTo("week");
     }
 
     @Test
