@@ -6,6 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -30,6 +32,7 @@ public class RegistroDeAuditoria {
         this.relogio = relogio;
     }
 
+    @Transactional(propagation = Propagation.MANDATORY)
     public void registrar(long autorId, String appLabel, String model, String objetoId, String objetoRepr, int acao,
             Object mudanca) {
         String mensagem = mudanca == null ? "" : JSON.writeValueAsString(mudanca);

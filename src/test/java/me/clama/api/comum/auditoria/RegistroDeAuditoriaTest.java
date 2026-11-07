@@ -90,4 +90,12 @@ class RegistroDeAuditoriaTest {
         }
         assertThat(jdbc.queryForObject("select count(*) from django_admin_log", Integer.class)).isZero();
     }
+
+    @Test
+    void foraDeTransacaoFalhaEmVezDeAutocomitar() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> auditoria.registrar(7, "users", "user", "1", "x", 3, null))
+                .isInstanceOf(org.springframework.transaction.IllegalTransactionStateException.class);
+        assertThat(jdbc.queryForObject("select count(*) from django_admin_log", Integer.class)).isZero();
+    }
 }
