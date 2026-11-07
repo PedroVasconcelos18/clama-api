@@ -31,8 +31,10 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID> {
     @Query("select p from Pedido p join fetch p.plano where p.id in ?1")
     java.util.List<Pedido> comPlano(java.util.Collection<UUID> ids);
 
-    /** Gate de pendente do freemium: Pedido.filter(eh_gratuito=True, status=...), decifrado na leitura. */
-    java.util.List<Pedido> findByEhGratuitoTrueAndStatus(StatusPedido status);
+    /** Gate de pendente do freemium: Pedido.filter(eh_gratuito=True, status=...), so id e identificadores, decifrados. */
+    @Query("select new me.clama.api.pedido.IdentificadoresPendentes(p.id, p.email, p.telefone, p.cpfCnpj)"
+            + " from Pedido p where p.ehGratuito = true and p.status = ?1")
+    java.util.List<IdentificadoresPendentes> pendentesDoFreemium(StatusPedido status);
 
     /** Detalhe admin: plano e instituicao junto. */
     @Query("select p from Pedido p join fetch p.plano left join fetch p.instituicao where p.id = ?1")

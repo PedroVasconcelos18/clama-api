@@ -119,12 +119,13 @@ class PedidoFreemiumController {
         }
 
         // os identificadores do Pedido sao cifrados: decifra cada pendente e compara os hashes (sem filtro de idade, R1)
-        // ponytail: varre todos os pendentes a cada submit, como o Django; se crescer, coluna de hash no pedido
-        for (Pedido p : pedidos.findByEhGratuitoTrueAndStatus(StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL)) {
-            if (hash.hashCpfCnpj(p.getCpfCnpj()).equals(cpfHash) || hash.hashEmail(p.getEmail()).equals(emailHash)
-                    || hash.hashTelefone(p.getTelefone()).equals(telefoneHash)) {
+        // ponytail: varre todos os pendentes a cada submit, como o Django; o reconciliador (R1) mantem n pequeno, e se
+        // crescer o caminho e uma coluna de hash no pedido
+        for (var p : pedidos.pendentesDoFreemium(StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL)) {
+            if (hash.hashCpfCnpj(p.cpfCnpj()).equals(cpfHash) || hash.hashEmail(p.email()).equals(emailHash)
+                    || hash.hashTelefone(p.telefone()).equals(telefoneHash)) {
                 LOG.info("Submissão freemium bloqueada — pedido pendente do mesmo identificador"
-                        + " event=freemium_pedido_em_andamento_gate_hit pedido_id={}", p.getId());
+                        + " event=freemium_pedido_em_andamento_gate_hit pedido_id={}", p.id());
                 throw new PastoralException(409, "pedido_em_andamento",
                         "Pedido pendente aguardando confirmação por e-mail",
                         "Você já tem um pedido aguardando confirmação. Confira seu e-mail para finalizar — se não"
