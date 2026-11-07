@@ -98,6 +98,17 @@ class JobConfirmacaoFreemiumTest {
     }
 
     @Test
+    void tokenAusenteVaiParaErroComAlerta() {
+        UUID id = pedido(StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL, AGORA.plusSeconds(3600), false);
+        jdbc.update("delete from freemium_freemiumconfirmationtoken");
+        job.executar(id, 0);
+        assertThat(caixa.enviados()).isEmpty();
+        assertThat(ler(id).getStatus()).isEqualTo(StatusPedido.ERRO);
+        assertThat(ler(id).getLastError()).isEqualTo("token_expirado_antes_de_envio");
+        assertThat(alertas(id)).isEqualTo(1);
+    }
+
+    @Test
     void tokenUsadoTambemVaiParaErro() {
         UUID id = pedido(StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL, AGORA.plusSeconds(3600), true);
         job.executar(id, 0);

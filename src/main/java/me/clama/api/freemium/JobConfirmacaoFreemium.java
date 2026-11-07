@@ -86,7 +86,8 @@ public class JobConfirmacaoFreemium implements TipoDeJob<UUID> {
     }
 
     private Email preparar(UUID id) {
-        Pedido p = pedidos.findById(id).orElse(null);
+        // travado: o erro abaixo nao pode sobrescrever um gerando_oracao que a saga acabou de gravar
+        Pedido p = pedidos.travar(id).orElse(null);
         if (p == null) {
             LOG.warn("enviar_email_confirmacao_freemium_pedido_nao_encontrado (event=freemium_confirmacao_pedido_not_found,"
                     + " pedido_id={})", id);
@@ -99,10 +100,12 @@ public class JobConfirmacaoFreemium implements TipoDeJob<UUID> {
         }
         Optional<TokenDeConfirmacao> t = tokens.doPedido(id);
         OffsetDateTime agora = OffsetDateTime.now(relogio);
-        if (t.isEmpty() || !t.get().getExpiresAt().isAfter(agora) || t.get().getUsedAt() != null) {
+        boolean expirado = t.isPresent() && !t.get().getExpiresAt().isAfter(agora);
+        boolean usado = t.isPresent() && t.get().getUsedAt() != null;
+        if (t.isEmpty() || expirado || usado) {
             LOG.warn("Token expirado ou consumido antes do email de confirmacao ser enviado"
-                    + " (event=freemium_confirmacao_token_invalido_pre_envio, pedido_id={}, token_existe={})", id,
-                    t.isPresent());
+                    + " (event=freemium_confirmacao_token_invalido_pre_envio, pedido_id={}, token_existe={},"
+                    + " token_expirado={}, token_usado={})", id, t.isPresent(), expirado, usado);
             p.setStatus(StatusPedido.ERRO);
             p.setLastError("token_expirado_antes_de_envio");
             alerta.registrar(id);
