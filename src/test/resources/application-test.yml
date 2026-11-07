@@ -4,6 +4,9 @@ DJANGO_SECRET_KEY: test-secret-key-do-not-use-in-production
 AUTH_COOKIE_SECURE: "false"
 LIMITE_ANONIMO_ATIVO: "false"
 clama:
+  agenda:
+    pedidos-presos:
+      modo: DESLIGADA
   fila:
     scheduler-ativo: false
     polling: 100ms
