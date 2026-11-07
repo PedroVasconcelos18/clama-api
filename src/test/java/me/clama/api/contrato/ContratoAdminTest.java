@@ -53,9 +53,9 @@ class ContratoAdminTest {
     /** Gravados (os .json da pasta). */
     static final int GRAVADOS = 38;
     /** Grupos ligados, por prefixo do arquivo. Cada task move o seu prefixo de PENDENTES para LIGADOS. */
-    static final List<String> LIGADOS = List.of();
+    static final List<String> LIGADOS = List.of("customer_pedidos_", "forgot_");
     /** Gravados mas ainda sem implementacao. */
-    static final List<String> PENDENTES = List.of("customer_pedidos_", "forgot_", "admin_pedidos_", "admin_pedido_",
+    static final List<String> PENDENTES = List.of("admin_pedidos_", "admin_pedido_",
             "admin_reenviar_", "admin_marcar_gratuito_", "metrics_", "admin_customers_", "admin_customer_",
             "prompt_preview_");
     static final List<String> TABELAS = List.of("users_user", "token_blacklist_outstandingtoken",
@@ -112,9 +112,7 @@ class ContratoAdminTest {
         }
     }
 
-    // allowZeroInvocations: todos pendentes ate a Task 2 ligar o 1o prefixo (a guarda de cenarios() segue valendo);
-    // tirar quando LIGADOS deixar de ser vazio
-    @ParameterizedTest(name = "{0}", allowZeroInvocations = true)
+    @ParameterizedTest(name = "{0}")
     @MethodSource("cenarios")
     void cenario(Path json) throws Exception {
         replay().executar(json, base());

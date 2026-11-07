@@ -17,4 +17,9 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID> {
     @QueryHints(@QueryHint(name = "jakarta.persistence.lock.timeout", value = "15000"))
     @Query("select p from Pedido p where p.id = ?1")
     Optional<Pedido> travar(UUID id);
+
+    /** Pedidos do usuario, mais recentes primeiro, com o plano. Os limites sao inclusivos. */
+    @Query("select p from Pedido p join fetch p.plano where p.user.id = ?1 and p.createdAt >= ?2 and p.createdAt <= ?3 "
+            + "order by p.createdAt desc")
+    java.util.List<Pedido> doUsuario(Long usuario, java.time.OffsetDateTime de, java.time.OffsetDateTime ate);
 }
