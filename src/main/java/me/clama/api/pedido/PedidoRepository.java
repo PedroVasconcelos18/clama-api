@@ -23,6 +23,10 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID> {
             + "order by p.createdAt desc")
     java.util.List<Pedido> doUsuario(Long usuario, java.time.OffsetDateTime de, java.time.OffsetDateTime ate);
 
+    /** Alertas das metricas: pedidos nesses status, mais recentes primeiro, com o plano. */
+    @Query("select p from Pedido p join fetch p.plano where p.status in ?1 order by p.createdAt desc, p.id")
+    java.util.List<Pedido> alertas(java.util.Collection<StatusPedido> status, org.springframework.data.domain.Pageable pagina);
+
     /** Itens da lista admin (plano junto); a ordem vem de quem pediu. */
     @Query("select p from Pedido p join fetch p.plano where p.id in ?1")
     java.util.List<Pedido> comPlano(java.util.Collection<UUID> ids);

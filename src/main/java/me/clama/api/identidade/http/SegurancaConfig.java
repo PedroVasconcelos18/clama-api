@@ -59,7 +59,9 @@ public class SegurancaConfig {
             @Value("${DJANGO_CSRF_TRUSTED_ORIGINS:https://clama.me,https://www.clama.me}") String confiaveis,
             @Value("${DJANGO_CORS_ALLOWED_ORIGINS:}") String cors) throws Exception {
         // O CSRF fica no FiltroJwtCookie (como no Django, so pra quem autenticou por cookie), nao no CsrfFilter.
+        // o Django nao manda no-cache/no-store; so as metricas mandam Cache-Control (max-age=60)
         return http.csrf(c -> c.disable())
+                .headers(h -> h.cacheControl(c -> c.disable()))
                 .cors(c -> c.configurationSource(cors(lista(cors))))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .requestCache(c -> c.disable())

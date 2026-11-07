@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import me.clama.api.BancoDeTeste;
+import me.clama.api.RelogioDeTeste;
 import me.clama.api.comum.email.CaixaDeSaidaEmMemoria;
 import me.clama.api.comum.fila.TipoDeJob;
 import me.clama.api.comum.ratelimit.RateLimiter;
@@ -46,7 +47,7 @@ import tools.jackson.databind.node.ObjectNode;
 // porta aleatoria, vem do @DynamicPropertySource
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "ANTHROPIC_API_KEY=sk-ant-contrato", "FRONTEND_URL=https://clama.me", "FRONTEND_BASE_URL=https://clama.me"})
-@Import(BancoDeTeste.class)
+@Import({BancoDeTeste.class, RelogioDeTeste.class})
 @ActiveProfiles("test")
 class ContratoAdminTest {
     static final Path CENARIOS = Path.of("src/test/resources/contrato/admin");
@@ -54,9 +55,9 @@ class ContratoAdminTest {
     static final int GRAVADOS = 38;
     /** Grupos ligados, por prefixo do arquivo. Cada task move o seu prefixo de PENDENTES para LIGADOS. */
     static final List<String> LIGADOS = List.of("customer_pedidos_", "forgot_", "admin_pedidos_",
-            "admin_pedido_detalhe");
+            "admin_pedido_detalhe", "metrics_");
     /** Gravados mas ainda sem implementacao. */
-    static final List<String> PENDENTES = List.of("admin_reenviar_", "admin_marcar_gratuito_", "metrics_", "admin_customers_", "admin_customer_",
+    static final List<String> PENDENTES = List.of("admin_reenviar_", "admin_marcar_gratuito_", "admin_customers_", "admin_customer_",
             "prompt_preview_");
     static final List<String> TABELAS = List.of("users_user", "token_blacklist_outstandingtoken",
             "token_blacklist_blacklistedtoken", "plans_plan", "instituicoes_instituicao", "orders_pedido",
@@ -115,7 +116,7 @@ class ContratoAdminTest {
     @ParameterizedTest(name = "{0}")
     @MethodSource("cenarios")
     void cenario(Path json) throws Exception {
-        replay().executar(json, base());
+        replay().comRelogio(ctx.getBean(RelogioDeTeste.Fixavel.class)::fixar).executar(json, base());
     }
 
     /**

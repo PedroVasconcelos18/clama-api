@@ -298,8 +298,8 @@ public class ReplayDeContrato {
                     }
                 }
             }
-            assertThat(obtido).as("%s passo %d: %s %s", cenarioJson.getFileName(), i, metodo, req.get("path"))
-                    .isEqualTo(passo.get("response"));
+            assertThat(canaisComoConjunto(obtido)).as("%s passo %d: %s %s", cenarioJson.getFileName(), i, metodo,
+                    req.get("path")).isEqualTo(canaisComoConjunto(passo.get("response")));
             i++;
         }
         stubs.forEach((nome, stub) -> stub.conferir(cenario.path(nome + "_requisicoes"), arquivo));
@@ -332,6 +332,24 @@ public class ReplayDeContrato {
         for (Map.Entry<String, JsonNode> tabela : cenario.path("estado_final").properties()) {
             conferirEstadoFinal(tabela.getKey(), tabela.getValue(), fixos, arquivo);
         }
+    }
+
+    /**
+     * "distribuicao_por_canal" sai sem ordem no Django (GROUP BY sem ORDER BY): so esse campo do corpo compara como
+     * conjunto (copia com a lista ordenada pelo texto de cada item).
+     */
+    private static JsonNode canaisComoConjunto(JsonNode resposta) {
+        JsonNode lista = resposta.path("body").path("distribuicao_por_canal");
+        if (!lista.isArray()) {
+            return resposta;
+        }
+        List<JsonNode> itens = new ArrayList<>();
+        lista.forEach(itens::add);
+        itens.sort(java.util.Comparator.comparing(JsonNode::toString));
+        ObjectNode copia = (ObjectNode) resposta.deepCopy();
+        ArrayNode ordenada = ((ObjectNode) copia.get("body")).putArray("distribuicao_por_canal");
+        itens.forEach(ordenada::add);
+        return copia;
     }
 
     /**
