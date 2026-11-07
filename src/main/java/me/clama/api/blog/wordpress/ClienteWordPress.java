@@ -103,15 +103,17 @@ public class ClienteWordPress {
                         + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
                 .collect(Collectors.joining("&"));
         String credencial = usuario + ":" + senha.replace(" ", "");
-        HttpRequest req = HttpRequest.newBuilder(URI.create(baseUrl + CAMINHO + "?" + query)).timeout(TIMEOUT)
-                .header("Authorization", "Basic "
-                        + Base64.getEncoder().encodeToString(credencial.getBytes(StandardCharsets.UTF_8)))
-                .header("Accept", "application/json").GET().build();
         try {
+            // URL malformada em WORDPRESS_API_URL: IllegalArgumentException, tambem "indisponivel" (nao 500)
+            HttpRequest req = HttpRequest.newBuilder(URI.create(baseUrl + CAMINHO + "?" + query)).timeout(TIMEOUT)
+                    .header("Authorization", "Basic "
+                            + Base64.getEncoder().encodeToString(credencial.getBytes(StandardCharsets.UTF_8)))
+                    .header("Accept", "application/json").GET().build();
             HttpResponse<String> r = Retentativa.executar(() -> enviar(req), 3, Retentativa.ESPERAS_PADRAO,
                     Retentativa::padrao, dormir);
             return interpretar(r);
-        } catch (HttpStatusException | UncheckedIOException | IllegalStateException e) {
+        } catch (HttpStatusException | UncheckedIOException | IllegalStateException
+                | IllegalArgumentException e) {
             LOG.warn("wordpress_api_erro: {}", e.getMessage());
             throw new WordPressIndisponivel(e);
         }
@@ -147,7 +149,11 @@ public class ClienteWordPress {
         List<PostWp> posts = new ArrayList<>();
         int semId = 0;
         for (JsonNode n : raiz) {
-            if (n.isObject() && n.path("id").canConvertToLong()) posts.add(post(n));
+            // id fora de [0, Integer.MAX_VALUE] conta como sem id: o espelho guarda o id em int
+            JsonNode id = n.path("id");
+            if (n.isObject() && id.canConvertToLong() && id.asLong() >= 0 && id.asLong() <= Integer.MAX_VALUE) {
+                posts.add(post(n));
+            }
             else semId++;
         }
         int total = r.headers().firstValue("X-WP-TotalPages").map(ClienteWordPress::inteiro).orElse(1);

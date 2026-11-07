@@ -103,6 +103,24 @@ class ClienteWordPressTest {
         assertThatThrownBy(() -> cliente().buscarPorSlug("a")).isInstanceOf(WordPressIndisponivel.class);
     }
 
+    /** O espelho guarda o id em int: id negativo ou acima de Integer.MAX_VALUE conta como sem id, nao estoura depois. */
+    @Test
+    void idForaDoIntContaComoSemId() {
+        corpo = "[{\"id\":2147483648,\"slug\":\"a\"}, {\"id\":-1,\"slug\":\"b\"}, {\"id\":2147483647,\"slug\":\"c\"},"
+                + " {\"id\":0,\"slug\":\"d\"}]";
+        PaginaWp pg = cliente().listar(1);
+        assertThat(pg.posts()).extracting(PostWp::id).containsExactly(2147483647L, 0L);
+        assertThat(pg.semId()).isEqualTo(2);
+    }
+
+    @Test
+    void urlMalformadaViraIndisponivelNao500() {
+        ClienteWordPress c = new ClienteWordPress("http://exemplo .com", "u", "s", esperas::add);
+        assertThatThrownBy(() -> c.buscarPorSlug("x")).isInstanceOf(WordPressIndisponivel.class);
+        assertThatThrownBy(() -> c.listar(1)).isInstanceOf(WordPressIndisponivel.class);
+        assertThat(chamadas).hasValue(0);
+    }
+
     @Test
     void totalDePaginasAusenteOuInvalidoEUm() {
         assertThat(cliente().listar(1).totalPaginas()).isEqualTo(1);
