@@ -196,7 +196,7 @@ class PedidoFreemiumController {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(b);
     }
 
-    private static PastoralException blacklistHit() {
+    static PastoralException blacklistHit() {
         return new PastoralException(409, "freemium_blacklist_hit", "Identificador já usou o pedido gratuito",
                 "Você já recebeu sua oração gratuita. Sempre que quiser, pode fazer um novo pedido pela página"
                         + " principal.");

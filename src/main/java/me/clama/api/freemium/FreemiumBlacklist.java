@@ -44,9 +44,13 @@ public class FreemiumBlacklist {
     @Column(name = "ip_hash")
     private String ipHash;
 
+    /** created_at pode vir pronto (a confirmacao usa o Clock); senao, agora. */
     @PrePersist
     void criado() {
-        createdAt = updatedAt = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
+        if (createdAt == null) {
+            createdAt = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
+        }
+        updatedAt = createdAt;
     }
 
     @PreUpdate
@@ -60,6 +64,10 @@ public class FreemiumBlacklist {
 
     public OffsetDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public void setCreatedAt(OffsetDateTime v) {
+        createdAt = v;
     }
 
     public String getCpfHash() {

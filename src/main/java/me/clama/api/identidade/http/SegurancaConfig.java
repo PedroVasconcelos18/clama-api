@@ -26,8 +26,10 @@ import org.springframework.security.web.authentication.AnonymousAuthenticationFi
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.header.writers.CacheControlHeadersWriter;
 import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -63,11 +65,15 @@ public class SegurancaConfig {
             @Value("${DJANGO_CSRF_TRUSTED_ORIGINS:https://clama.me,https://www.clama.me}") String confiaveis,
             @Value("${DJANGO_CORS_ALLOWED_ORIGINS:}") String cors) throws Exception {
         // O CSRF fica no FiltroJwtCookie (como no Django, so pra quem autenticou por cookie), nao no CsrfFilter.
-        // no-cache/no-store fica em tudo (PII), menos nas metricas, que mandam o proprio Cache-Control (cache_page(60))
+        // no-cache/no-store fica em tudo (PII), menos nas metricas, que mandam o proprio Cache-Control (cache_page(60)),
+        // e no /confirmar/ do freemium: o 302 e o 200 levam no-store, os erros saem sem Cache-Control (como no Django).
+        // Referrer-Policy: same-origin do SecurityMiddleware, so onde a resposta nao trouxe a sua (setdefault)
+        PathPatternRequestMatcher.Builder rotas = PathPatternRequestMatcher.withDefaults();
         return http.csrf(c -> c.disable())
                 .headers(h -> h.cacheControl(c -> c.disable()).addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(
-                        new NegatedRequestMatcher(PathPatternRequestMatcher.withDefaults()
-                                .matcher("/api/admin/metrics/**")), new CacheControlHeadersWriter())))
+                        new NegatedRequestMatcher(new OrRequestMatcher(rotas.matcher("/api/admin/metrics/**"),
+                                rotas.matcher("/api/freemium/confirmar/**"))), new CacheControlHeadersWriter()))
+                        .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.SAME_ORIGIN)))
                 .cors(c -> c.configurationSource(cors(lista(cors))))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .requestCache(c -> c.disable())

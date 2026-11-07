@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
@@ -66,7 +65,7 @@ public class ProvisionamentoDeConta {
         }
         String dominio = email.contains("@") ? email.substring(email.lastIndexOf('@') + 1) : "?";
         String emailHash = hash.hashEmail(email);
-        jdbc.queryForObject("select pg_advisory_xact_lock(hashtext(?))", Object.class, "conta-doador:" + email);
+        travarConta(email);
 
         Usuario u = usuarios.buscarPorEmailOuHash(email, emailHash).stream().findFirst().orElse(null);
         if (u != null) {
@@ -88,27 +87,18 @@ public class ProvisionamentoDeConta {
         u.setForceChangePassword(true);
         usuarios.saveAndFlush(u);
         p.setUser(u);
-        guardarSenha(u.getId(), senha);
+        senhas.guardarNaTransacao(PREFIXO_SENHA + u.getId(), senha);
         LOG.info("Conta de doador provisionada (event=doador_conta_provisionada, pedido_id={}, user_id={}, "
                 + "email_dominio={}, email_hash={})", p.getId(), u.getId(), dominio, emailHash);
         return new Conta(u, true);
     }
 
     /**
-     * A senha entra no cache ja, antes do commit: o boas-vindas so fica visivel na fila com o commit, entao nunca le a
-     * conta sem a senha. Rollback apaga (o id da conta desfeita nunca volta, mas nao fica lixo). Commit de resultado
-     * desconhecido mantem: senha a mais e inofensiva, conta sem senha perderia o e-mail.
+     * Lock transacional da conta pelo e-mail normalizado (Gmail canonico): serializa quem busca e cria conta para o
+     * mesmo e-mail (este provisionamento e a confirmacao do freemium, decisao R2 da etapa 5). Exige transacao ativa.
      */
-    private void guardarSenha(Long userId, String senha) {
-        String chave = PREFIXO_SENHA + userId;
-        senhas.guardar(chave, senha);
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCompletion(int status) {
-                if (status == STATUS_ROLLED_BACK) {
-                    senhas.apagar(chave);
-                }
-            }
-        });
+    public void travarConta(String email) {
+        jdbc.queryForObject("select pg_advisory_xact_lock(hashtext(?))", Object.class,
+                "conta-doador:" + HashIdentificador.normalizarEmail(email));
     }
 }

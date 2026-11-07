@@ -15,6 +15,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * O cache de senhas temporarias do Django ({@code doador:temp_password:<userId>}, {@code freemium:temp_password:<userId>}):
@@ -47,6 +49,23 @@ public class SenhasTemporarias {
         Instant agora = Instant.now();
         cache.values().removeIf(e -> e.expira().isBefore(agora));
         cache.put(chave, new Entrada(fernet.cifrar(senha), agora.plus(TTL)));
+    }
+
+    /**
+     * guardar ja, antes do commit (quem le so ve a conta na fila com o commit, entao nunca a le sem a senha), e apagar
+     * se a transacao desfizer (o id da conta desfeita nunca volta, mas nao fica lixo). Commit de resultado desconhecido
+     * mantem: senha a mais e inofensiva, conta sem senha perderia o e-mail. Exige transacao ativa.
+     */
+    public void guardarNaTransacao(String chave, String senha) {
+        guardar(chave, senha);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == STATUS_ROLLED_BACK) {
+                    apagar(chave);
+                }
+            }
+        });
     }
 
     /** Ausente, expirada ou indecifravel (desencriptar_senha_do_cache devolve "": warning e Sentry) = vazio. */

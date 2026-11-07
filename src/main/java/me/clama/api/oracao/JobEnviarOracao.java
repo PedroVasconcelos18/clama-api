@@ -32,7 +32,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class JobEnviarOracao implements TipoDeJob<UUID> {
     private static final Logger LOG = LoggerFactory.getLogger(JobEnviarOracao.class);
     public static final String NOME = "enviar-oracao";
-    static final String PREFIXO_SENHA_FREEMIUM = "freemium:temp_password:";
+    public static final String PREFIXO_SENHA_FREEMIUM = "freemium:temp_password:";
 
     private final PedidoRepository pedidos;
     private final EnviadorDeEmail enviador;
