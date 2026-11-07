@@ -31,6 +31,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RestController
 class MetricasAdminController {
     private static final DateTimeFormatter SEGUNDOS = DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss");
+    /** http_date do Django: dia com 2 digitos. */
+    private static final DateTimeFormatter HTTP_DATE = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss 'GMT'",
+            java.util.Locale.ENGLISH);
     private static final List<StatusPedido> ALERTAS = List.of(StatusPedido.ERRO, StatusPedido.AGUARDANDO_REENVIO);
 
     private final JdbcTemplate jdbc;
@@ -96,8 +99,7 @@ class MetricasAdminController {
     /** cache_page(60): Cache-Control: max-age=60 e Expires daqui a 60 s. */
     private <T> ResponseEntity<T> comCache(T corpo) {
         return ResponseEntity.ok().cacheControl(CacheControl.maxAge(java.time.Duration.ofSeconds(60)))
-                .header("Expires", DateTimeFormatter.RFC_1123_DATE_TIME.format(
-                        relogio.instant().plusSeconds(60).atOffset(ZoneOffset.UTC)).replace("+0000", "GMT"))
+                .header("Expires", HTTP_DATE.format(relogio.instant().plusSeconds(60).atOffset(ZoneOffset.UTC)))
                 .body(corpo);
     }
 

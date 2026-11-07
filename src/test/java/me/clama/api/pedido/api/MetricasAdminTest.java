@@ -109,6 +109,20 @@ class MetricasAdminTest {
         assertThat(ruim.headers().firstValue("Expires")).isEmpty();
     }
 
+    @Test
+    void expiresComDiaDeDoisDigitos() throws Exception {
+        relogio.fixar(Instant.parse("2026-11-07T10:00:00Z"));
+        assertThat(get("overview/?period=day").headers().firstValue("Expires")).contains("Sat, 07 Nov 2026 10:01:00 GMT");
+    }
+
+    @Test
+    void rotaAutenticadaForaDasMetricasSegueNoStore() throws Exception {
+        HttpResponse<String> r = http.send(HttpRequest.newBuilder(URI.create("http://localhost:" + porta
+                + "/api/admin/pedidos/")).header("Cookie", cookie).build(), HttpResponse.BodyHandlers.ofString());
+        assertThat(r.statusCode()).isEqualTo(200);
+        assertThat(r.headers().firstValue("Cache-Control").orElse("")).contains("no-store");
+    }
+
     private HttpResponse<String> get(String caminho) throws Exception {
         return http.send(HttpRequest.newBuilder(URI.create("http://localhost:" + porta + "/api/admin/metrics/" + caminho))
                 .header("Cookie", cookie).build(), HttpResponse.BodyHandlers.ofString());
