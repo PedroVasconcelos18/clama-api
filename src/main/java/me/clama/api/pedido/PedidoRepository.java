@@ -22,4 +22,12 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID> {
     @Query("select p from Pedido p join fetch p.plano where p.user.id = ?1 and p.createdAt >= ?2 and p.createdAt <= ?3 "
             + "order by p.createdAt desc")
     java.util.List<Pedido> doUsuario(Long usuario, java.time.OffsetDateTime de, java.time.OffsetDateTime ate);
+
+    /** Itens da lista admin (plano junto); a ordem vem de quem pediu. */
+    @Query("select p from Pedido p join fetch p.plano where p.id in ?1")
+    java.util.List<Pedido> comPlano(java.util.Collection<UUID> ids);
+
+    /** Detalhe admin: plano e instituicao junto. */
+    @Query("select p from Pedido p join fetch p.plano left join fetch p.instituicao where p.id = ?1")
+    Optional<Pedido> detalhe(UUID id);
 }
