@@ -21,6 +21,15 @@ public class NaoEncontrado extends RuntimeException {
         super("Não encontrado.", null, false, false);
     }
 
+    /** PageNumberPagination do DRF: {"detail": "Página inválida."}. */
+    public static NaoEncontrado paginaInvalida() {
+        return new NaoEncontrado(null, "Página inválida.");
+    }
+
+    private NaoEncontrado(Void sentinela, String detalhe) {
+        super(detalhe, null, false, false);
+    }
+
     public NaoEncontrado(String modelo) {
         super("No " + modelo + " matches the given query.", null, false, false);
     }

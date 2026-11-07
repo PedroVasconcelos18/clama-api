@@ -15,6 +15,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class WebhookEventoRepository {
     static final String MERCADO_PAGO = "MERCADO_PAGO";
+    public static final String WORDPRESS = "WORDPRESS";
 
     private final JdbcTemplate jdbc;
 
@@ -22,17 +23,22 @@ public class WebhookEventoRepository {
         this.jdbc = jdbc;
     }
 
-    /** INSERT ... ON CONFLICT DO NOTHING e leitura: a linha nova (RECEBIDO) ou a ja existente, com o status dela. */
+    /** Evento do Mercado Pago (4B). */
     public WebhookEvento registrar(String externalEventId, String tipo, String payloadJson) {
+        return registrar(MERCADO_PAGO, externalEventId, tipo, payloadJson);
+    }
+
+    /** INSERT ... ON CONFLICT DO NOTHING e leitura: a linha nova (RECEBIDO) ou a ja existente, com o status dela. */
+    public WebhookEvento registrar(String provider, String externalEventId, String tipo, String payloadJson) {
         jdbc.update("""
                 INSERT INTO payments_webhookevento (created_at, updated_at, id, provider, external_event_id, event_type,
                     payload, status, error_message, pedido_id)
                 VALUES (now(), now(), ?, ?, ?, ?, ?::jsonb, 'RECEBIDO', '', NULL)
                 ON CONFLICT (provider, external_event_id) DO NOTHING""",
-                UUID.randomUUID(), MERCADO_PAGO, externalEventId, tipo, payloadJson);
+                UUID.randomUUID(), provider, externalEventId, tipo, payloadJson);
         return jdbc.queryForObject("SELECT id, status FROM payments_webhookevento WHERE provider = ? AND "
                 + "external_event_id = ?", (rs, n) -> new WebhookEvento(rs.getObject(1, UUID.class), rs.getString(2)),
-                MERCADO_PAGO, externalEventId);
+                provider, externalEventId);
     }
 
     /** mark_processed(pedido): status e pedido; error_message fica (o do fetch que falhou antes, se houve). */

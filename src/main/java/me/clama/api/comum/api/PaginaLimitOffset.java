@@ -47,7 +47,7 @@ public final class PaginaLimitOffset {
     }
 
     /** Primeiro valor da lista (proxies em cadeia), sem caixa. */
-    private static boolean https(String proto) {
+    static boolean https(String proto) {
         return proto != null && proto.split(",", 2)[0].trim().equalsIgnoreCase("https");
     }
 
@@ -90,7 +90,7 @@ public final class PaginaLimitOffset {
     }
 
     /** int() do Python (espacos e sinal +); invalido = null. */
-    private static BigInteger inteiro(String v) {
+    static BigInteger inteiro(String v) {
         if (v == null) {
             return null;
         }
@@ -99,7 +99,7 @@ public final class PaginaLimitOffset {
     }
 
     /** parse_qs(keep_blank_values=True). */
-    private static Map<String, List<String>> parseQs(String qs) {
+    static Map<String, List<String>> parseQs(String qs) {
         Map<String, List<String>> q = new TreeMap<>();
         if (qs == null) {
             return q;
@@ -125,7 +125,7 @@ public final class PaginaLimitOffset {
     }
 
     /** urlencode do Python (quote_plus): "*" vira %2A e "~" fica. */
-    private static String codifica(String s) {
+    static String codifica(String s) {
         return URLEncoder.encode(s, StandardCharsets.UTF_8).replace("*", "%2A").replace("%7E", "~");
     }
 }
