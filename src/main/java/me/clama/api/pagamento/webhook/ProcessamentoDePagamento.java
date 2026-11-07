@@ -18,7 +18,9 @@ import me.clama.api.pedido.PedidoRepository;
 import me.clama.api.pedido.TransicaoInvalida;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.Assert;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -83,6 +85,9 @@ public class ProcessamentoDePagamento {
 
     /** Evento payment nao terminal, com o data.id ja conferido (nao vazio). Nunca abre transacao antes do GET. */
     public Resultado processar(UUID eventoId, String externalId, String dataId, Runnable naMesmaTransacao) {
+        // o GET ao MP nunca roda dentro de transacao: e o que sustenta o exactly-once do dinheiro
+        Assert.state(!TransactionSynchronizationManager.isActualTransactionActive(),
+                "processar abre as próprias transações");
         MercadoPago.PagamentoMP pagamento;
         try {
             pagamento = mercadoPago.buscarPagamento(dataId);

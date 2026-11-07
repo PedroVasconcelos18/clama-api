@@ -98,6 +98,8 @@ class WebhooksAdminTest {
     @Autowired UsuarioRepository usuarios;
     @Autowired ServicoDeTokens tokens;
     @Autowired SenhasTemporarias senhas;
+    @Autowired ProcessamentoDePagamento processamento;
+    @Autowired org.springframework.transaction.support.TransactionTemplate tx;
 
     final HttpClient http = HttpClient.newHttpClient();
     long adminId;
@@ -302,12 +304,96 @@ class WebhooksAdminTest {
         List<Map<String, Object>> log = jdbc.queryForList("select user_id, object_id, action_flag, change_message "
                 + "from django_admin_log order by id");
         assertThat(log).hasSize(2);
-        for (Map<String, Object> linha : log) {
+        for (int i = 0; i < log.size(); i++) {
+            Map<String, Object> linha = log.get(i);
             assertThat(((Number) linha.get("user_id")).longValue()).isEqualTo(adminId);
             assertThat(linha.get("object_id")).isEqualTo(id.toString());
             assertThat(((Number) linha.get("action_flag")).intValue()).isEqualTo(2);
-            assertThat(linha.get("change_message")).isEqualTo("[{\"changed\":{\"fields\":[\"status\"]}}]");
+            // a 1a tentativa foi ERRO->ERRO (sem mudanca); a 2a, ERRO->PROCESSADO
+            assertThat(linha.get("change_message")).isEqualTo(i == 0 ? "[]"
+                    : "[{\"changed\":{\"fields\":[\"status\"]}}]");
         }
+    }
+
+    /** ERRO->ERRO nao mudou o status: o historico do Django nao pode dizer "Changed status". */
+    @Test
+    void auditoriaVaziaQuandoOStatusNaoMudou() throws Exception {
+        UUID id = eventoMp("ERRO");
+        FALHAS.add(429);
+        assertThat(reprocessar(id).statusCode()).isEqualTo(502);
+        assertThat(status(id)).isEqualTo("ERRO");
+        assertThat(jdbc.queryForObject("select change_message from django_admin_log", String.class)).isEqualTo("[]");
+    }
+
+    @Test
+    void eventoSemDataIdViraIgnorado() throws Exception {
+        for (String inicial : List.of("RECEBIDO", "ERRO")) {
+            UUID id = evento("MERCADO_PAGO", "sem-id-" + inicial, "payment", inicial, "{\"data\": {}}", 0);
+            HttpResponse<String> r = reprocessar(id);
+            assertThat(r.statusCode()).as(r.body()).isEqualTo(200);
+            assertThat(r.body()).isEqualTo("{\"status\":\"ignored\"}");
+            assertThat(status(id)).isEqualTo("IGNORADO");
+            assertThat(jdbc.queryForObject("select error_message from payments_webhookevento where id = ?",
+                    String.class, id)).isEqualTo("data.id ausente no payload");
+        }
+        assertThat(contar("select count(*) from django_admin_log")).isEqualTo(2);
+        assertThat(jdbc.queryForObject("select status from orders_pedido", String.class))
+                .isEqualTo("aguardando_pagamento");
+    }
+
+    @Test
+    void excecaoInesperadaDa500EDeixaOEventoEmErro() throws Exception {
+        UUID id = eventoMp("RECEBIDO");
+        jdbc.execute("create function falha_teste() returns trigger as $$ begin raise exception 'boom'; end; $$ "
+                + "language plpgsql");
+        jdbc.execute("create trigger falha_teste before update on orders_pedido for each row execute function "
+                + "falha_teste()");
+        try {
+            HttpResponse<String> r = reprocessar(id);
+            assertThat(r.statusCode()).as(r.body()).isEqualTo(500);
+            assertThat(codigo(r)).isEqualTo("reprocesso_falhou");
+        } finally {
+            jdbc.execute("drop trigger falha_teste on orders_pedido");
+            jdbc.execute("drop function falha_teste()");
+        }
+        assertThat(status(id)).isEqualTo("ERRO");
+        assertThat(jdbc.queryForObject("select error_message from payments_webhookevento", String.class))
+                .contains("boom");
+        assertThat(jdbc.queryForObject("select status from orders_pedido", String.class))
+                .isEqualTo("aguardando_pagamento");
+        assertThat(contar("select count(*) from instituicoes_repasse")).isZero();
+    }
+
+    /** A auditoria e do mesmo commit do trabalho: se o insert do log falha, o pedido nao fica pago. */
+    @Test
+    void auditoriaQueFalhaDesfazOTrabalho() throws Exception {
+        UUID id = eventoMp("ERRO");
+        jdbc.execute("create function falha_log() returns trigger as $$ begin raise exception 'sem log'; end; $$ "
+                + "language plpgsql");
+        jdbc.execute("create trigger falha_log before insert on django_admin_log for each row execute function "
+                + "falha_log()");
+        try {
+            HttpResponse<String> r = reprocessar(id);
+            assertThat(r.statusCode()).as(r.body()).isEqualTo(500);
+        } finally {
+            jdbc.execute("drop trigger falha_log on django_admin_log");
+            jdbc.execute("drop function falha_log()");
+        }
+        assertThat(jdbc.queryForObject("select status from orders_pedido", String.class))
+                .isEqualTo("aguardando_pagamento");
+        assertThat(contar("select count(*) from instituicoes_repasse")).isZero();
+        assertThat(contar("select count(*) from scheduled_tasks where task_name = 'gerar-oracao'")).isZero();
+        assertThat(status(id)).isEqualTo("ERRO");
+    }
+
+    /** O GET ao MP nunca roda dentro de transacao (exactly-once do dinheiro). */
+    @Test
+    void processarDentroDeTransacaoFalha() {
+        UUID id = eventoMp("ERRO");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> tx.executeWithoutResult(
+                s -> processamento.processar(id, "777", PAGAMENTO, () -> {})))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("próprias transações");
+        assertThat(status(id)).isEqualTo("ERRO");
     }
 
     @Test

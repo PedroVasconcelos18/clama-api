@@ -123,8 +123,11 @@ class WebhooksAdminController {
             throw new PastoralException(409, "webhook_ja_processado", "Webhook event already processed",
                     "Esse evento já foi processado.");
         }
+        // relê o status dentro da transação da escrita: so grava "Changed status" se mudou (ERRO->ERRO nao mudou)
         Runnable auditar = () -> auditoria.registrar(eu.getId(), "payments", "webhookevento", id.toString(),
-                e.provider() + ":" + e.external_event_id(), RegistroDeAuditoria.MUDANCA, MUDOU_STATUS);
+                e.provider() + ":" + e.external_event_id(), RegistroDeAuditoria.MUDANCA,
+                e.status().equals(jdbc.queryForObject("select status from payments_webhookevento where id = ?",
+                        String.class, id)) ? List.of() : MUDOU_STATUS);
         return switch (e.provider()) {
             case WebhookEventoRepository.WORDPRESS -> {
                 // o job rele o payload gravado e pula linha terminal; instancia ja na fila = no-op
