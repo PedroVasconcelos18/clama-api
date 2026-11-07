@@ -75,6 +75,16 @@ public final class TextoPython {
         return v.isString() ? v.asString() : repr(v);
     }
 
+    /** str(v or "") do Python: ausente e falsy (None, False, 0, 0.0, "", [], {}) viram "". */
+    public static String strOuVazio(JsonNode v) {
+        if (v == null || v.isMissingNode() || v.isNull() || (v.isBoolean() && !v.asBoolean())
+                || (v.isNumber() && v.doubleValue() == 0) || (v.isString() && v.asString().isEmpty())
+                || (v.isContainer() && v.size() == 0)) {
+            return "";
+        }
+        return str(v);
+    }
+
     /** repr() do Python sobre o valor que o json.loads devolveria. */
     public static String repr(JsonNode v) {
         if (v.isNull()) {

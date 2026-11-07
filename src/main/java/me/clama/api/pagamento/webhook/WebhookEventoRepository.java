@@ -57,6 +57,12 @@ public class WebhookEventoRepository {
         return marcar(id, WebhookEvento.ERRO, mensagem);
     }
 
+    /** O blog muda so o status (error_message fica ''), de linha nao terminal. */
+    public boolean marcarStatus(UUID id, String status) {
+        return jdbc.update("UPDATE payments_webhookevento SET status = ?, updated_at = now() WHERE id = ? AND status IN "
+                + "('RECEBIDO', 'ERRO')", status, id) == 1;
+    }
+
     private boolean marcar(UUID id, String status, String mensagem) {
         return jdbc.update("UPDATE payments_webhookevento SET status = ?, error_message = ?, updated_at = now() "
                 + "WHERE id = ? AND status IN ('RECEBIDO', 'ERRO')", status, mensagem, id) == 1;

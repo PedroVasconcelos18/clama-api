@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 import me.clama.api.blog.SemBanimento;
+import me.clama.api.blog.webhook.AssinaturaWordPress;
 import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.comum.erro.PastoralExceptionHandler;
 import me.clama.api.identidade.Usuario;
@@ -13,6 +14,7 @@ import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.identidade.token.ServicoDeTokens;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -52,6 +54,14 @@ public class SegurancaConfig {
      */
     static final String[] SENHA_EM_DIA = {"/api/pedidos/", "/api/pedidos/gratuito/"};
 
+    /** O filtro do WordPress roda so dentro da cadeia de seguranca (filtros()), nao de novo como filtro do servlet. */
+    @Bean
+    FilterRegistrationBean<AssinaturaWordPress> assinaturaWordPressSoNaCadeia(AssinaturaWordPress f) {
+        FilterRegistrationBean<AssinaturaWordPress> r = new FilterRegistrationBean<>(f);
+        r.setEnabled(false);
+        return r;
+    }
+
     /** CSRF_COOKIE_PATH=/api, CSRF_COOKIE_HTTPONLY=True, SameSite e idade padrao do Django (1 ano). */
     @Bean
     CookieCsrfTokenRepository csrfTokenRepository(@Value("${AUTH_COOKIE_SECURE:true}") boolean secure) {
@@ -65,6 +75,7 @@ public class SegurancaConfig {
     @Bean
     SecurityFilterChain filtros(HttpSecurity http, ServicoDeTokens tokens, UsuarioRepository usuarios,
             CookieCsrfTokenRepository csrf, ObjectProvider<HandlerMapping> mapeamentos, SemBanimento banimento,
+            AssinaturaWordPress assinaturaWordPress,
             @Value("${DJANGO_CSRF_TRUSTED_ORIGINS:https://clama.me,https://www.clama.me}") String confiaveis,
             @Value("${DJANGO_CORS_ALLOWED_ORIGINS:}") String cors) throws Exception {
         // O CSRF fica no FiltroJwtCookie (como no Django, so pra quem autenticou por cookie), nao no CsrfFilter.
@@ -90,6 +101,8 @@ public class SegurancaConfig {
                 .logout(c -> c.disable())
                 .addFilterBefore(new FiltroJwtCookie(tokens, usuarios, csrf, lista(confiaveis)),
                         AnonymousAuthenticationFilter.class)
+                // o middleware do webhook do WordPress vem antes da autenticacao do DRF (e depois do CORS/headers)
+                .addFilterBefore(assinaturaWordPress, FiltroJwtCookie.class)
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((req, resp, ex) ->
                                 PastoralExceptionHandler.escrever(resp, PastoralException.naoAutenticado()))

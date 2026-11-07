@@ -42,7 +42,9 @@ public class FiltroJwtCookie extends OncePerRequestFilter {
      * como no Django, e logado nao conta no limite anonimo).
      */
     private static final Set<String> ROTAS_ABERTAS = Set.of("/api/planos/", "/api/instituicoes/", "/api/doacoes/",
-            "/api/customer/auth/forgot-password/", "/api/freemium/pedidos/", "/api/freemium/confirmar/");
+            "/api/customer/auth/forgot-password/", "/api/freemium/pedidos/", "/api/freemium/confirmar/",
+            // webhook do WordPress: AllowAny com a autenticacao padrao (cookie invalido = 401), assinado pelo HMAC
+            "/api/webhooks/wordpress/");
     /** GET /api/pedidos/{uuid}/ (conversor uuid do Django: so minusculas). Nao casa /gratuito/ nem /{uuid}/checkout/. */
     private static final Pattern STATUS_PEDIDO =
             Pattern.compile("/api/pedidos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/");

@@ -81,7 +81,7 @@ public class ResolucaoDoEspelho {
     }
 
     /** [:n] do Python conta code points. */
-    static String cortar(String s, int n) {
+    public static String cortar(String s, int n) {
         return s.codePointCount(0, s.length()) <= n ? s : s.substring(0, s.offsetByCodePoints(0, n));
     }
 }
