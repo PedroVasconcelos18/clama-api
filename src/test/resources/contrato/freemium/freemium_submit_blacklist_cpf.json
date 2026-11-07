@@ -1,0 +1,280 @@
+{
+  "cenario": "freemium_submit_blacklist_cpf",
+  "configuracao": {
+    "FRONTEND_URL": "https://clama.me",
+    "FRONTEND_BASE_URL": "https://clama.me",
+    "TURNSTILE_SECRET_KEY": "segredo-turnstile-contrato",
+    "FREEMIUM_IP_BLACKLIST_WINDOW_HOURS": 1,
+    "FREEMIUM_IP_BLACKLIST_THRESHOLD": 3,
+    "relogio": "2026-11-20T15:00:00+00:00"
+  },
+  "usuarios": [],
+  "dados": {
+    "plans_plan": [
+      {
+        "id": "55555555-5555-4555-8555-000000000001",
+        "nome": "Pedido de Oração",
+        "valor_centavos": 2000,
+        "descricao": "Descrição de Pedido de Oração.",
+        "complexidade": "simples",
+        "ordem": 1,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000002",
+        "nome": "Oração + Versículo",
+        "valor_centavos": 5000,
+        "descricao": "Descrição de Oração + Versículo.",
+        "complexidade": "com_versiculo",
+        "ordem": 2,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000003",
+        "nome": "Oração + Profecia + Versículos",
+        "valor_centavos": 10000,
+        "descricao": "Descrição de Oração + Profecia + Versículos.",
+        "complexidade": "com_profecia_e_versiculos",
+        "ordem": 3,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000004",
+        "nome": "Plano Antigo",
+        "valor_centavos": 1500,
+        "descricao": "Descrição de Plano Antigo.",
+        "complexidade": "simples",
+        "ordem": 0,
+        "ativo": false,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000005",
+        "nome": "Gratuito",
+        "valor_centavos": 0,
+        "descricao": "Descrição de Gratuito.",
+        "complexidade": "simples_gratuita",
+        "ordem": 9,
+        "ativo": true,
+        "visivel": false
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000006",
+        "nome": "Livre",
+        "valor_centavos": 1,
+        "descricao": "Descrição de Livre.",
+        "complexidade": "simples",
+        "ordem": 10,
+        "ativo": true,
+        "visivel": false
+      }
+    ],
+    "instituicoes_instituicao": [
+      {
+        "id": "66666666-6666-4666-8666-000000000001",
+        "nome": "Lar Esperança",
+        "logo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+        "ativo": true,
+        "ordem": 1
+      },
+      {
+        "id": "66666666-6666-4666-8666-000000000002",
+        "nome": "Casa Fechada",
+        "logo": "",
+        "ativo": false,
+        "ordem": 2
+      }
+    ],
+    "orders_pedido": [],
+    "freemium_freemiumblacklist": [
+      {
+        "created_at": "2026-10-21T15:00:00+00:00",
+        "updated_at": "2026-10-21T15:00:00+00:00",
+        "id": "b2b2b2b2-b2b2-4b2b-8b2b-000000000001",
+        "cpf_hash": "05c225d3dae0e177d84a304e434ffed8f204c8e9a0ef5fdf15f7682a8b173fb1",
+        "email_hash": "1f60427e61bdb6e09faf043bb41f16577bd8b81cf6bd891885a16624bf24fd30",
+        "telefone_hash": null,
+        "device_hash": null,
+        "ip_hash": null
+      }
+    ],
+    "freemium_freemiumconfirmationtoken": []
+  },
+  "passos": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/freemium/pedidos/",
+        "headers": {
+          "X-Forwarded-For": "203.0.113.9, 10.0.0.1"
+        },
+        "body": {
+          "nome": "Maria Silva",
+          "email": "maria@exemplo.com",
+          "telefone": "+5511999998888",
+          "cpf_cnpj": "529.982.247-25",
+          "idade": 35,
+          "sexo": "feminino",
+          "pedido_oracao": "Peço oração pela minha família.",
+          "consent_aceito": true,
+          "turnstile_token": "XXXX.DUMMY.TOKEN.XXXX",
+          "device_hash": "fp-abc123"
+        }
+      },
+      "response": {
+        "status": 409,
+        "body": {
+          "error": {
+            "code": "freemium_blacklist_hit",
+            "message": "Identificador já usou o pedido gratuito",
+            "pastoral_message": "Você já recebeu sua oração gratuita. Sempre que quiser, pode fazer um novo pedido pela página principal."
+          }
+        },
+        "cookies": []
+      }
+    }
+  ],
+  "turnstile": [
+    {
+      "metodo": "POST",
+      "caminho": "/turnstile/v0/siteverify",
+      "status": 200,
+      "corpo": {
+        "success": true,
+        "error-codes": [],
+        "challenge_ts": "2026-11-20T14:59:30.000Z",
+        "hostname": "clama.me",
+        "action": "",
+        "cdata": ""
+      },
+      "arquivo": "aprovado"
+    }
+  ],
+  "turnstile_requisicoes": [
+    {
+      "metodo": "POST",
+      "caminho": "/turnstile/v0/siteverify",
+      "corpo": "secret=segredo-turnstile-contrato&response=XXXX.DUMMY.TOKEN.XXXX&remoteip=203.0.113.9"
+    }
+  ],
+  "emails": [],
+  "jobs_enfileirados": [],
+  "senhas_temporarias_final": [],
+  "estado_final": {
+    "orders_pedido": {
+      "colunas": [
+        "id",
+        "nome",
+        "email",
+        "telefone",
+        "cpf_cnpj",
+        "idade",
+        "sexo",
+        "pedido_oracao",
+        "oracao_gerada",
+        "plano_id",
+        "valor_centavos",
+        "instituicao_id",
+        "user_email",
+        "eh_gratuito",
+        "canal_entrega",
+        "status",
+        "provider_payment_id",
+        "provider_checkout_url",
+        "pix_qr_code",
+        "pix_qr_code_base64",
+        "retry_count",
+        "last_error",
+        "consent_aceito",
+        "consent_versao",
+        "consent_aceito_at",
+        "consent_ip",
+        "device_hash",
+        "whatsapp_message_id",
+        "whatsapp_delivered_at",
+        "whatsapp_read_at",
+        "oracao_email_sent_at",
+        "created_at"
+      ],
+      "cifradas_decifradas": [
+        "nome",
+        "email",
+        "telefone",
+        "cpf_cnpj",
+        "pedido_oracao",
+        "oracao_gerada"
+      ],
+      "linhas": []
+    },
+    "users_user": {
+      "colunas": [
+        "id",
+        "password_algoritmo",
+        "last_login",
+        "is_superuser",
+        "is_staff",
+        "is_active",
+        "date_joined",
+        "email",
+        "nome_completo",
+        "name",
+        "is_clama_admin",
+        "cpf_cnpj",
+        "telefone",
+        "force_change_password",
+        "nome_format_blog",
+        "email_hash",
+        "cpf_hash",
+        "telefone_hash",
+        "freemium_used_at",
+        "idade",
+        "sexo"
+      ],
+      "cifradas_decifradas": [
+        "cpf_cnpj",
+        "telefone"
+      ],
+      "linhas": []
+    },
+    "freemium_freemiumblacklist": {
+      "colunas": [
+        "id",
+        "cpf_hash",
+        "email_hash",
+        "telefone_hash",
+        "device_hash",
+        "ip_hash",
+        "created_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": [
+        {
+          "id": "b2b2b2b2-b2b2-4b2b-8b2b-000000000001",
+          "cpf_hash": "05c225d3dae0e177d84a304e434ffed8f204c8e9a0ef5fdf15f7682a8b173fb1",
+          "email_hash": "1f60427e61bdb6e09faf043bb41f16577bd8b81cf6bd891885a16624bf24fd30",
+          "telefone_hash": null,
+          "device_hash": null,
+          "ip_hash": null,
+          "created_at": "<ts>"
+        }
+      ]
+    },
+    "freemium_freemiumconfirmationtoken": {
+      "colunas": [
+        "id",
+        "pedido_id",
+        "token",
+        "expires_at",
+        "used_at",
+        "ip_origem",
+        "device_hash",
+        "created_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": []
+    }
+  }
+}

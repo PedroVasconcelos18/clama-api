@@ -1,0 +1,313 @@
+{
+  "cenario": "job_confirmacao_freemium_ok",
+  "configuracao": {
+    "FRONTEND_URL": "https://clama.me",
+    "FRONTEND_BASE_URL": "https://clama.me",
+    "TURNSTILE_SECRET_KEY": "segredo-turnstile-contrato",
+    "FREEMIUM_IP_BLACKLIST_WINDOW_HOURS": 1,
+    "FREEMIUM_IP_BLACKLIST_THRESHOLD": 3,
+    "relogio": "2026-11-20T15:00:00+00:00"
+  },
+  "usuarios": [],
+  "dados": {
+    "plans_plan": [
+      {
+        "id": "55555555-5555-4555-8555-000000000001",
+        "nome": "Pedido de Oração",
+        "valor_centavos": 2000,
+        "descricao": "Descrição de Pedido de Oração.",
+        "complexidade": "simples",
+        "ordem": 1,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000002",
+        "nome": "Oração + Versículo",
+        "valor_centavos": 5000,
+        "descricao": "Descrição de Oração + Versículo.",
+        "complexidade": "com_versiculo",
+        "ordem": 2,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000003",
+        "nome": "Oração + Profecia + Versículos",
+        "valor_centavos": 10000,
+        "descricao": "Descrição de Oração + Profecia + Versículos.",
+        "complexidade": "com_profecia_e_versiculos",
+        "ordem": 3,
+        "ativo": true,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000004",
+        "nome": "Plano Antigo",
+        "valor_centavos": 1500,
+        "descricao": "Descrição de Plano Antigo.",
+        "complexidade": "simples",
+        "ordem": 0,
+        "ativo": false,
+        "visivel": true
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000005",
+        "nome": "Gratuito",
+        "valor_centavos": 0,
+        "descricao": "Descrição de Gratuito.",
+        "complexidade": "simples_gratuita",
+        "ordem": 9,
+        "ativo": true,
+        "visivel": false
+      },
+      {
+        "id": "55555555-5555-4555-8555-000000000006",
+        "nome": "Livre",
+        "valor_centavos": 1,
+        "descricao": "Descrição de Livre.",
+        "complexidade": "simples",
+        "ordem": 10,
+        "ativo": true,
+        "visivel": false
+      }
+    ],
+    "instituicoes_instituicao": [
+      {
+        "id": "66666666-6666-4666-8666-000000000001",
+        "nome": "Lar Esperança",
+        "logo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+        "ativo": true,
+        "ordem": 1
+      },
+      {
+        "id": "66666666-6666-4666-8666-000000000002",
+        "nome": "Casa Fechada",
+        "logo": "",
+        "ativo": false,
+        "ordem": 2
+      }
+    ],
+    "orders_pedido": [
+      {
+        "created_at": "2026-11-01T13:00:00+00:00",
+        "updated_at": "2026-11-01T13:00:00+00:00",
+        "id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000001",
+        "nome": "gAAAAABrAGBwZaB4eqFXmg1dd2IcpOuULCW1_CKCzMPpCQUI1kMLTbfHSA-wD1pMG4RDIbkKshc9XKxzL9yw0yma8EzIECNKTA==",
+        "email": "gAAAAABrAGBws4jkumKmCmlReQua9I_ckBPI8xzI1XcBQ3pkYLP5eauWNNEx_IRTg4hUZ-VKHnuYJAYqbch8GX7ot4mVASjERGwuk0nRFw1XUZ5qLcPDZ_I=",
+        "telefone": "gAAAAABrAGBwDgGRaK7RCfXZN9SQ3AyUE7Dk7qXQm_uSZ1PCxY5SIn42NwF_hkHPfVz120vO9bBC1YNtlZi5jJibyOJPndrzeQ==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABrAGBwTWFKtdH1I4jORJns1BfIkJ95qRt92yzSoW0-Qga2kr-GTwNG4rKbqMzPdaTo-zbQ6T0vAVhG-PNbIrO9pN80nxHM7m_MCpf06CBdk8IZUg_Bs4JY2TnBJhJJ8S9KH6o6",
+        "oracao_gerada": "gAAAAABrAGBwwKqcpUjU0r_KLd7gMn2msX0GqriVaXak8-OF42ht3ScSbv3PEXE82bbuSKvM9ENcpa91OJYhjKhZGio5Km3EiA==",
+        "valor_centavos": 0,
+        "canal_entrega": "email",
+        "status": "aguardando_confirmacao_email",
+        "plano_id": "55555555-5555-4555-8555-000000000005",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.9",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABrAGBwZGZginaz3vaC6uMx3hRTDKBsGSGwUEaPCVF5mCmlYsXhgdnK6UVxwidc628lnMccwyPIE4vyTA-tHjqWJoKzAg==",
+        "user_id": null,
+        "eh_gratuito": true,
+        "device_hash": "fp-abc123",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": null,
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      }
+    ],
+    "freemium_freemiumblacklist": [],
+    "freemium_freemiumconfirmationtoken": [
+      {
+        "created_at": "2026-11-20T14:00:00+00:00",
+        "updated_at": "2026-11-20T14:00:00+00:00",
+        "id": "c3c3c3c3-c3c3-4c3c-8c3c-000000000001",
+        "token": "contrato-ok-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "expires_at": "2026-11-21T14:00:00+00:00",
+        "used_at": null,
+        "ip_origem": "203.0.113.9",
+        "device_hash": "fp-abc123",
+        "pedido_id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000001"
+      }
+    ]
+  },
+  "job": {
+    "tipo": "confirmacao-freemium",
+    "arg": [
+      "a1a1a1a1-a1a1-4a1a-8a1a-000000000001",
+      "contrato-ok-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    ]
+  },
+  "emails": [
+    {
+      "para": "maria@exemplo.com",
+      "assunto": "Confirme sua oração — clama",
+      "texto": "CLAMA.\n\nPaz e bem, Maria.\n\nRecebemos seu pedido de oração com carinho.\n\nPara confirmar e receber sua oração grátis, abra o link abaixo e clique em\n\"Confirmar minha oração\" na página:\n\nhttps://clama.me/confirmar?token=contrato-ok-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\nEsse link expira em 24 horas.\n\n---\n\n\"Vinde a mim, todos os que estais cansados\ne oprimidos, que eu vos aliviarei.\"\n— Mateus 11:28\n\n---\n\nclama.me\n\nSe você não fez este pedido, pode ignorar este e-mail.\nPara contato: contato@clama.me\n",
+      "html": "<!DOCTYPE html>\n<html lang=\"pt-BR\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>Confirme sua oração, Maria</title>\n</head>\n<body style=\"margin:0; padding:0; background:#1a0a2e; font-family:Georgia, 'Times New Roman', serif;\">\n  <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"background:#1a0a2e;\">\n    <tr>\n      <td align=\"center\" style=\"padding:48px 24px;\">\n        <table role=\"presentation\" width=\"600\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\" style=\"max-width:600px; background:#1a0a2e;\">\n          <!-- Header -->\n          <tr>\n            <td align=\"center\" style=\"padding-bottom:32px;\">\n              <h1 style=\"font-family:Georgia, 'Times New Roman', serif; font-size:48px; color:#f0c040; margin:0; letter-spacing:-1px;\">\n                Clama<span style=\"color:#fdf8f0;\">.</span>\n              </h1>\n            </td>\n          </tr>\n\n          <!-- Saudação -->\n          <tr>\n            <td style=\"color:#fdf8f0; font-size:18px; line-height:1.7; padding:0 24px;\">\n              <p style=\"margin:0 0 16px 0;\">Paz e bem, Maria.</p>\n              <p style=\"margin:0 0 16px 0;\">\n                Recebemos seu pedido de oração com carinho.\n              </p>\n              <p style=\"margin:0 0 24px 0;\">\n                Para confirmar e receber sua oração grátis, clique no botão abaixo\n                e finalize com um último clique na página que vai abrir.\n              </p>\n            </td>\n          </tr>\n\n          <!-- Botão de confirmação -->\n          <tr>\n            <td align=\"center\" style=\"padding:8px 24px 32px 24px;\">\n              <table role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\">\n                <tr>\n                  <td align=\"center\" style=\"border-radius:8px; background:#f0c040;\">\n                    <a href=\"https://clama.me/confirmar?token=contrato-ok-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"\n                       style=\"display:inline-block; padding:16px 32px; font-family:Arial, sans-serif; font-size:16px; font-weight:600; color:#1a0a2e; text-decoration:none; border-radius:8px; letter-spacing:0.5px;\">\n                      Confirmar e receber minha oração\n                    </a>\n                  </td>\n                </tr>\n              </table>\n            </td>\n          </tr>\n\n          <!-- Texto secundário com expiração + link plano -->\n          <tr>\n            <td style=\"color:rgba(253, 248, 240, 0.85); font-size:14px; line-height:1.7; padding:0 24px 24px 24px; font-family:Arial, sans-serif;\">\n              <p style=\"margin:0 0 12px 0;\">\n                Este link expira em 24 horas. Se ele não funcionar, copie e cole no seu navegador:\n              </p>\n              <p style=\"margin:0; word-break:break-all; color:#f0c040; font-size:13px;\">\n                https://clama.me/confirmar?token=contrato-ok-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n              </p>\n            </td>\n          </tr>\n\n          <!-- Divider dourado -->\n          <tr>\n            <td style=\"padding:0 24px;\">\n              <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" border=\"0\">\n                <tr>\n                  <td style=\"border-top:1px solid #f0c040; padding-top:24px;\"></td>\n                </tr>\n              </table>\n            </td>\n          </tr>\n\n          <!-- Linha pastoral de fechamento -->\n          <tr>\n            <td align=\"center\" style=\"padding:0 24px 32px 24px;\">\n              <em style=\"color:#f0c040; font-size:14px; font-style:italic; display:block; line-height:1.6;\">\n                \"Vinde a mim, todos os que estais cansados<br>\n                e oprimidos, que eu vos aliviarei.\"\n              </em>\n              <span style=\"color:#fdf8f0; font-size:12px; opacity:0.8; display:block; margin-top:8px;\">\n                — Mateus 11:28\n              </span>\n            </td>\n          </tr>\n\n          <!-- Link para o site -->\n          <tr>\n            <td align=\"center\" style=\"padding:24px;\">\n              <a href=\"https://clama.me\" style=\"color:#f0c040; text-decoration:none; font-size:14px; font-family:Arial, sans-serif;\">\n                clama.me\n              </a>\n            </td>\n          </tr>\n\n          <!-- Footer -->\n          <tr>\n            <td align=\"center\" style=\"padding:24px; border-top:1px solid rgba(240, 192, 64, 0.2);\">\n              <p style=\"color:#fdf8f0; opacity:0.6; font-size:12px; font-family:Arial, sans-serif; margin:0; line-height:1.5;\">\n                Se você não fez este pedido, pode ignorar este e-mail.<br>\n                Para contato, escreva para contato@clama.me\n              </p>\n            </td>\n          </tr>\n        </table>\n      </td>\n    </tr>\n  </table>\n</body>\n</html>\n",
+      "reply_to": [
+        "contato@clama.me"
+      ]
+    }
+  ],
+  "jobs_enfileirados": [],
+  "senhas_temporarias_final": [],
+  "estado_final": {
+    "orders_pedido": {
+      "colunas": [
+        "id",
+        "nome",
+        "email",
+        "telefone",
+        "cpf_cnpj",
+        "idade",
+        "sexo",
+        "pedido_oracao",
+        "oracao_gerada",
+        "plano_id",
+        "valor_centavos",
+        "instituicao_id",
+        "user_email",
+        "eh_gratuito",
+        "canal_entrega",
+        "status",
+        "provider_payment_id",
+        "provider_checkout_url",
+        "pix_qr_code",
+        "pix_qr_code_base64",
+        "retry_count",
+        "last_error",
+        "consent_aceito",
+        "consent_versao",
+        "consent_aceito_at",
+        "consent_ip",
+        "device_hash",
+        "whatsapp_message_id",
+        "whatsapp_delivered_at",
+        "whatsapp_read_at",
+        "oracao_email_sent_at",
+        "created_at"
+      ],
+      "cifradas_decifradas": [
+        "nome",
+        "email",
+        "telefone",
+        "cpf_cnpj",
+        "pedido_oracao",
+        "oracao_gerada"
+      ],
+      "linhas": [
+        {
+          "id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000001",
+          "nome": "Maria Silva",
+          "email": "maria@exemplo.com",
+          "telefone": "+5511999998888",
+          "cpf_cnpj": "52998224725",
+          "idade": 35,
+          "sexo": "feminino",
+          "pedido_oracao": "Peço oração pela minha família.",
+          "oracao_gerada": "",
+          "plano_id": "55555555-5555-4555-8555-000000000005",
+          "valor_centavos": 0,
+          "instituicao_id": null,
+          "user_email": null,
+          "eh_gratuito": true,
+          "canal_entrega": "email",
+          "status": "aguardando_confirmacao_email",
+          "provider_payment_id": null,
+          "provider_checkout_url": null,
+          "pix_qr_code": null,
+          "pix_qr_code_base64": null,
+          "retry_count": 0,
+          "last_error": "",
+          "consent_aceito": true,
+          "consent_versao": "1",
+          "consent_aceito_at": "<ts>",
+          "consent_ip": "203.0.113.9",
+          "device_hash": "fp-abc123",
+          "whatsapp_message_id": "",
+          "whatsapp_delivered_at": null,
+          "whatsapp_read_at": null,
+          "oracao_email_sent_at": null,
+          "created_at": "<ts>"
+        }
+      ]
+    },
+    "users_user": {
+      "colunas": [
+        "id",
+        "password_algoritmo",
+        "last_login",
+        "is_superuser",
+        "is_staff",
+        "is_active",
+        "date_joined",
+        "email",
+        "nome_completo",
+        "name",
+        "is_clama_admin",
+        "cpf_cnpj",
+        "telefone",
+        "force_change_password",
+        "nome_format_blog",
+        "email_hash",
+        "cpf_hash",
+        "telefone_hash",
+        "freemium_used_at",
+        "idade",
+        "sexo"
+      ],
+      "cifradas_decifradas": [
+        "cpf_cnpj",
+        "telefone"
+      ],
+      "linhas": []
+    },
+    "freemium_freemiumblacklist": {
+      "colunas": [
+        "id",
+        "cpf_hash",
+        "email_hash",
+        "telefone_hash",
+        "device_hash",
+        "ip_hash",
+        "created_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": []
+    },
+    "freemium_freemiumconfirmationtoken": {
+      "colunas": [
+        "id",
+        "pedido_id",
+        "token",
+        "expires_at",
+        "used_at",
+        "ip_origem",
+        "device_hash",
+        "created_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": [
+        {
+          "id": "c3c3c3c3-c3c3-4c3c-8c3c-000000000001",
+          "pedido_id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000001",
+          "token": "contrato-ok-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "expires_at": "<ts>",
+          "used_at": null,
+          "ip_origem": "203.0.113.9",
+          "device_hash": "fp-abc123",
+          "created_at": "<ts>"
+        }
+      ]
+    }
+  }
+}

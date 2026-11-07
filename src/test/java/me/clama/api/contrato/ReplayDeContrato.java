@@ -32,6 +32,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import me.clama.api.BancoDeTeste;
+import me.clama.api.comum.agenda.ModoDeExecucao;
+import me.clama.api.comum.agenda.TarefaAgendada;
 import me.clama.api.comum.cripto.CampoCriptografado;
 import me.clama.api.comum.email.CaixaDeSaidaEmMemoria;
 import me.clama.api.comum.email.Email;
@@ -68,15 +70,21 @@ public class ReplayDeContrato {
     private static final Pattern TS = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}:\\d{2}", COMO_PYTHON);
     private static final Pattern REFRESH = Pattern.compile("\\{refresh:(.+)\\}", COMO_PYTHON);
     private static final Pattern UUID_TEXTO = Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
-    /** As SQL do estado final, iguais as do gravador (TABELAS em test_gravar_pagamento_oracao.py). */
+    /** Token de confirmacao gerado (aleatorio) vira "<token>" no estado final; os semeados em "dados" ficam. */
+    private static final String TOKENS = "freemium_freemiumconfirmationtoken";
+    static final String TOKEN = "<token>";
+    /** As SQL do estado final, iguais as do gravador (TABELAS em test_gravar_pagamento_oracao.py e
+     * TABELAS_FREEMIUM em test_gravar_freemium.py). */
     private static final Map<String, String> SQL_ESTADO = Map.of(
             "orders_pedido", "SELECT p.*, u.email AS user_email FROM orders_pedido p"
                     + " LEFT JOIN users_user u ON u.id = p.user_id ORDER BY p.created_at, p.id",
             "users_user", "SELECT u.*, split_part(u.password, '$', 1) AS password_algoritmo FROM users_user u ORDER BY u.id",
             "instituicoes_repasse", "SELECT * FROM instituicoes_repasse ORDER BY created_at, id",
-            "payments_webhookevento", "SELECT * FROM payments_webhookevento ORDER BY created_at, id");
+            "payments_webhookevento", "SELECT * FROM payments_webhookevento ORDER BY created_at, id",
+            "freemium_freemiumblacklist", "SELECT * FROM freemium_freemiumblacklist ORDER BY created_at, id",
+            TOKENS, "SELECT * FROM freemium_freemiumconfirmationtoken ORDER BY created_at, id");
     /** Integracoes HTTP simuladas: o cenario traz "<nome>" (respostas) e "<nome>_requisicoes" (o que o Django mandou). */
-    private static final List<String> INTEGRACOES = List.of("mercadopago", "anthropic");
+    private static final List<String> INTEGRACOES = List.of("mercadopago", "anthropic", "turnstile");
     private static final List<String> CHAVES_DE_ORACAO = List.of("job", "emails", "jobs_enfileirados",
             "senhas_temporarias", "senhas_temporarias_final");
     private static final String FRONTEIRA = "ContratoClamaFronteira";
@@ -95,6 +103,13 @@ public class ReplayDeContrato {
      */
     private static final Map<String, Map<String, String>> JOBS_DIVERGENTES = Map.of(
             "admin_reenviar_reenvia.json", Map.of("enviar-oracao", "reenviar-oracao"));
+    /**
+     * Divergencia de proposito no argumento, por tipo de job (etapa 5, decisao R11): a task do Django
+     * enviar_email_confirmacao_freemium_task recebe (pedido_id, token), gravada como arg [pedido_id, token], no
+     * "job" dos cenarios job_confirmacao_freemium_* e nos "jobs_enfileirados" do submit; o job do Java leva so o
+     * pedidoId (payload so com IDs) e busca o token pelo pedido, que tem um token so.
+     */
+    private static final Set<String> ARG_SO_O_PEDIDO = Set.of("confirmacao-freemium");
 
     private final JdbcTemplate jdbc;
     private final UsuarioRepository usuarios;
@@ -102,6 +117,7 @@ public class ReplayDeContrato {
     private final RateLimiter limiter;
     private final List<String> tabelas;
     private final SenhaDjango senhas = new SenhaDjango();
+    /** Redirect.NEVER (o padrao), como o test client do Django: o 302 e o Location sao comparados como gravados. */
     private final HttpClient http = HttpClient.newHttpClient();
     private Map<String, StubDeIntegracoes> stubs = Map.of();
     private Environment ambiente;
@@ -109,6 +125,7 @@ public class ReplayDeContrato {
     private Collection<? extends TipoDeJob<?>> jobs;
     private GanchosDeOracao ganchos;
     private Consumer<Instant> relogio;
+    private Collection<? extends TarefaAgendada> tarefas;
 
     /**
      * O que o harness precisa do app fora do banco: o cache de senhas temporarias (SenhasTemporarias) e o dedup em
@@ -172,6 +189,15 @@ public class ReplayDeContrato {
         return this;
     }
 
+    /**
+     * Cenarios de tarefa agendada ("tarefa": o nome no Java; "resumo": o dict que a task do Django devolveu): roda a
+     * {@link TarefaAgendada} de mesmo nome com executar(EXECUTAR), na thread do teste, e compara o resumo.
+     */
+    public ReplayDeContrato comTarefas(Collection<? extends TarefaAgendada> tarefas) {
+        this.tarefas = tarefas;
+        return this;
+    }
+
     public void executar(Path cenarioJson, URI base) throws Exception {
         JsonNode cenario = JSON.readTree(cenarioJson.toFile());
         Set<String> fixos = uuidsFixos(cenario);
@@ -184,6 +210,8 @@ public class ReplayDeContrato {
                 .isFalse();
         assertThat(caixa == null && CHAVES_DE_ORACAO.stream().anyMatch(cenario::has))
                 .as("%s e cenario da 4B: use comOracao", arquivo).isFalse();
+        assertThat(tarefas == null && cenario.has("tarefa")).as("%s e cenario de tarefa agendada: use comTarefas",
+                arquivo).isFalse();
         JsonNode instante = cenario.path("configuracao").path(RELOGIO);
         assertThat(!instante.isMissingNode() && relogio == null).as("%s congela o relogio: use comRelogio", arquivo)
                 .isFalse();
@@ -217,7 +245,11 @@ public class ReplayDeContrato {
             ganchos.guardarSenha(s.getKey(), s.getValue().asString());
         }
         if (cenario.has("job")) {
-            executarJob(cenario.get("job").get("tipo").asString(), cenario.get("job").get("arg").asString(), arquivo);
+            String tipo = cenario.get("job").get("tipo").asString();
+            executarJob(tipo, argDoJava(tipo, cenario.get("job").get("arg")), arquivo);
+        }
+        if (cenario.has("tarefa")) {
+            executarTarefa(cenario.get("tarefa").asString(), cenario.get("resumo"), arquivo);
         }
 
         Map<String, String> jar = new LinkedHashMap<>();
@@ -308,7 +340,7 @@ public class ReplayDeContrato {
             conferirEmails(cenario.get("emails"), fixos, arquivo);
         }
         if (cenario.has("jobs_enfileirados")) {
-            conferirJobs(divergentes(cenario.get("jobs_enfileirados"), arquivo), fixos, arquivo);
+            conferirJobs(divergentes(argsDoJava(cenario.get("jobs_enfileirados")), arquivo), fixos, arquivo);
         }
         if (cenario.has("senhas_temporarias_final")) {
             ArrayNode obtidas = NOS.arrayNode();
@@ -330,8 +362,10 @@ public class ReplayDeContrato {
             assertThat((JsonNode) obtidas).as("%s: senhas temporarias no fim", arquivo)
                     .isEqualTo(cenario.get("senhas_temporarias_final"));
         }
+        Set<String> tokensSemeados = new HashSet<>();
+        cenario.path("dados").path(TOKENS).forEach(t -> tokensSemeados.add(t.get("token").asString()));
         for (Map.Entry<String, JsonNode> tabela : cenario.path("estado_final").properties()) {
-            conferirEstadoFinal(tabela.getKey(), tabela.getValue(), fixos, arquivo);
+            conferirEstadoFinal(tabela.getKey(), tabela.getValue(), fixos, tokensSemeados, arquivo);
         }
     }
 
@@ -361,6 +395,36 @@ public class ReplayDeContrato {
         TipoDeJob<?> job = jobs.stream().filter(j -> j.nome().equals(tipo)).findFirst()
                 .orElseThrow(() -> new AssertionError(arquivo + ": job " + tipo + " nao registrado"));
         executar(job, arg);
+    }
+
+    /** O resumo da tarefa e o dict da task do Django (numero compara por valor). */
+    private void executarTarefa(String nome, JsonNode resumo, String arquivo) {
+        TarefaAgendada tarefa = tarefas.stream().filter(t -> t.nome().equals(nome)).findFirst()
+                .orElseThrow(() -> new AssertionError(arquivo + ": tarefa agendada " + nome + " nao registrada"));
+        TarefaAgendada.ResultadoDaTarefa r = tarefa.executar(ModoDeExecucao.EXECUTAR);
+        assertThat(StubDeIntegracoes.numerosPorValor(JSON.valueToTree(r.resumo()))).as("%s: resumo da tarefa %s",
+                arquivo, nome).isEqualTo(StubDeIntegracoes.numerosPorValor(resumo));
+    }
+
+    /** O arg gravado como o job do Java o recebe: {@link #ARG_SO_O_PEDIDO} leva so o pedido_id. */
+    static String argDoJava(String tipo, JsonNode arg) {
+        if (!ARG_SO_O_PEDIDO.contains(tipo)) {
+            return arg.asString();
+        }
+        assertThat(arg.isArray() && arg.size() == 2).as("arg de %s gravado como [pedido_id, token]: %s", tipo, arg)
+                .isTrue();
+        return arg.get(0).asString();
+    }
+
+    /** jobs_enfileirados com o arg de {@link #ARG_SO_O_PEDIDO} trocado pelo pedido_id, na mesma ordem. */
+    static JsonNode argsDoJava(JsonNode esperados) {
+        ArrayNode saida = NOS.arrayNode();
+        esperados.forEach(j -> {
+            String tipo = j.get("tipo").asString();
+            saida.add(ARG_SO_O_PEDIDO.contains(tipo)
+                    ? ((ObjectNode) j.deepCopy()).put("arg", argDoJava(tipo, j.get("arg"))) : j);
+        });
+        return saida;
     }
 
     private static <P> void executar(TipoDeJob<P> job, String arg) throws Exception {
@@ -469,9 +533,10 @@ public class ReplayDeContrato {
     /**
      * _estado_final do gravador: todas as linhas da tabela depois do ultimo passo, nas colunas que o JSON lista, com
      * as cifradas decifradas (CampoCriptografado), json como arvore, normalizadas como as respostas. Numero compara
-     * por valor.
+     * por valor. O token de confirmacao que nao veio de "dados" vira "<token>", como no gravador.
      */
-    private void conferirEstadoFinal(String nome, JsonNode tabela, Set<String> fixos, String arquivo) {
+    private void conferirEstadoFinal(String nome, JsonNode tabela, Set<String> fixos, Set<String> tokensSemeados,
+            String arquivo) {
         String sql = SQL_ESTADO.get(nome);
         assertThat(sql).as("%s: estado final de tabela desconhecida %s", arquivo, nome).isNotNull();
         List<String> colunas = new ArrayList<>();
@@ -486,6 +551,8 @@ public class ReplayDeContrato {
                 Object v = rs.getObject(c);
                 if (v == null) {
                     l.putNull(c);
+                } else if (nome.equals(TOKENS) && c.equals("token") && !tokensSemeados.contains(rs.getString(c))) {
+                    l.put(c, TOKEN);
                 } else if (cifradas.contains(c)) {
                     l.put(c, campo.convertToEntityAttribute(rs.getString(c)));
                 } else if (v instanceof Boolean b) {
@@ -628,6 +695,7 @@ public class ReplayDeContrato {
         StringBuilder texto = new StringBuilder(cenario.path("dados").toString());
         cenario.path("passos").forEach(p -> texto.append(p.path("request")));
         INTEGRACOES.forEach(i -> texto.append(cenario.path(i))); // as respostas simuladas tambem sao do cenario
+        texto.append(cenario.path("job")); // o arg do job (ex.: o pedido inexistente)
         return UUID_TEXTO.matcher(texto).results().map(r -> r.group()).collect(Collectors.toSet());
     }
 

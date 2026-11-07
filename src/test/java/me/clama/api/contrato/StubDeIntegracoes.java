@@ -24,7 +24,7 @@ import tools.jackson.databind.node.ObjectNode;
  * Uma integracao HTTP num HttpServer local, um por integracao (cada uma com a sua fila): serve as respostas do cenario
  * ("mercadopago", "anthropic"), na ordem, e grava toda requisicao recebida para comparar com "<integracao>_requisicoes",
  * o que o Django mandou ao SDK. Requisicao alem das declaradas recebe 500 e aparece na comparacao. O do Mercado Pago
- * tambem atende o Turnstile dos pedidos.
+ * tambem atende o Turnstile dos pedidos. Resposta {"falha": "conexao"} fecha a conexao sem responder.
  */
 public class StubDeIntegracoes {
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -100,6 +100,10 @@ public class StubDeIntegracoes {
         synchronized (this) {
             recebidas.add(req);
             resposta = respostas.poll();
+        }
+        if (resposta != null && resposta.path("falha").asString("").equals("conexao")) {
+            troca.close(); // falha de rede (requests.ConnectionError no gravador): fecha sem resposta
+            return;
         }
         byte[] saida = resposta == null ? "{\"stub\":\"requisicao nao declarada no cenario\"}".getBytes(StandardCharsets.UTF_8)
                 : JSON.writeValueAsBytes(resposta.get("corpo"));
