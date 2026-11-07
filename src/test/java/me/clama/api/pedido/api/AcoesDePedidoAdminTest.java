@@ -10,6 +10,7 @@ import me.clama.api.comum.fila.Fila;
 import me.clama.api.identidade.Usuario;
 import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.identidade.token.ServicoDeTokens;
+import me.clama.api.oracao.JobEnviarOracao;
 import me.clama.api.oracao.JobGerarOracao;
 import me.clama.api.pedido.Pedido;
 import me.clama.api.pedido.PedidoRepository;
@@ -38,6 +39,7 @@ class AcoesDePedidoAdminTest {
     @Autowired PlanoRepository planos;
     @Autowired Fila fila;
     @Autowired JobGerarOracao gerar;
+    @Autowired JobEnviarOracao enviar;
     @Autowired TransactionTemplate tx;
 
     ApiDePedidos api;
@@ -77,6 +79,12 @@ class AcoesDePedidoAdminTest {
         return ApiDePedidos.JSON.readTree(r.body()).get("message").asString();
     }
 
+    /** execution_time contra o relogio da JVM (o do reschedule), nao o now() do container. */
+    private Instant execucao(String instancia) {
+        return jdbc.queryForObject("select execution_time from scheduled_tasks where task_instance = ?",
+                java.sql.Timestamp.class, instancia).toInstant();
+    }
+
     private int linhas(String instancia) {
         return jdbc.queryForObject("select count(*) from scheduled_tasks where task_instance = ?", Integer.class,
                 instancia);
@@ -102,8 +110,7 @@ class AcoesDePedidoAdminTest {
                 Instant.now().plusSeconds(300)));
 
         assertThat(post(id, "reenviar")).isEqualTo("Regeração disparada");
-        assertThat(jdbc.queryForObject("select execution_time <= now() from scheduled_tasks where task_instance = ?",
-                Boolean.class, JobGerarOracao.instancia(id))).isTrue();
+        assertThat(execucao(JobGerarOracao.instancia(id))).isBeforeOrEqualTo(Instant.now());
         assertThat(linhas(JobGerarOracao.instancia(id))).isEqualTo(1);
         Pedido p = pedidos.findById(id).orElseThrow();
         assertThat(p.getStatus()).isEqualTo(StatusPedido.PAGO);
@@ -121,5 +128,28 @@ class AcoesDePedidoAdminTest {
         assertThat(p.getStatus()).isEqualTo(StatusPedido.GERANDO_ORACAO);
         assertThat(p.isEhGratuito()).isTrue();
         assertThat(p.getValorCentavos()).isZero();
+    }
+
+    /** enviar-oracao do pipeline na fila (ou em retentativa): ele faz o envio; nada de segundo job com outra chave. */
+    @Test
+    void reenviarComEnviarPendenteNaoDuplica() throws Exception {
+        UUID id = pedido(StatusPedido.ORACAO_GERADA, "Senhor, acolhe a Maria.");
+        tx.executeWithoutResult(s -> fila.enfileirar(enviar, JobEnviarOracao.instancia(id), id,
+                Instant.now().plusSeconds(60)));
+        assertThat(post(id, "reenviar")).isEqualTo("Reenvio disparado");
+        assertThat(linhas("reenviar-oracao/" + id)).isZero();
+        assertThat(linhas(JobEnviarOracao.instancia(id))).isEqualTo(1);
+        assertThat(pedidos.findById(id).orElseThrow().getStatus()).isEqualTo(StatusPedido.ORACAO_GERADA);
+    }
+
+    /** aguardando_reenvio com o gerar-oracao em +300 s: marcar gratuito o traz para agora. */
+    @Test
+    void marcarGratuitoAntecipaGerarAgendado() throws Exception {
+        UUID id = pedido(StatusPedido.AGUARDANDO_REENVIO, "");
+        tx.executeWithoutResult(s -> fila.enfileirar(gerar, JobGerarOracao.instancia(id), id,
+                Instant.now().plusSeconds(300)));
+        assertThat(post(id, "marcar-gratuito")).isEqualTo("Pedido marcado como gratuito. Gerando oração.");
+        assertThat(execucao(JobGerarOracao.instancia(id))).isBeforeOrEqualTo(Instant.now());
+        assertThat(linhas(JobGerarOracao.instancia(id))).isEqualTo(1);
     }
 }
