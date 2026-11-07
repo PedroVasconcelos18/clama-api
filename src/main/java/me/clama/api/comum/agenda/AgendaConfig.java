@@ -32,7 +32,7 @@ public class AgendaConfig implements SmartInitializingSingleton {
 	@Bean
 	static ThreadPoolTaskScheduler agendaScheduler() {
 		var s = new ThreadPoolTaskScheduler();
-		s.setPoolSize(2);
+		s.setPoolSize(4);
 		s.setThreadNamePrefix("agenda-");
 		// redeploy no Railway: deixa a tarefa em andamento terminar (draining time >= 35 s, Etapa 9)
 		s.setWaitForTasksToCompleteOnShutdown(true);
