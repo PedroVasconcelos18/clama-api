@@ -1,0 +1,114 @@
+{
+  "cenario": "cmd_relatorio_repasse_rotina_auditoria_pela_vida",
+  "configuracao": {
+    "relogio": "2026-10-28T13:00:00+00:00"
+  },
+  "usuarios": [],
+  "dados": {
+    "plans_plan": [
+      {
+        "id": "55555555-5555-4555-8555-000000000001",
+        "nome": "Pedido de Oração",
+        "valor_centavos": 2000,
+        "descricao": "Descrição de Pedido de Oração.",
+        "complexidade": "simples",
+        "ordem": 1,
+        "ativo": true,
+        "visivel": true
+      }
+    ],
+    "instituicoes_instituicao": [
+      {
+        "id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000001",
+        "nome": "Associação dos Doentes Renais Crônicos e Transplantados de Juiz de Fora e Região",
+        "logo": "",
+        "ativo": true,
+        "ordem": 1
+      },
+      {
+        "id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000002",
+        "nome": "Associação Renal de Mar de Espanha e Adjacências",
+        "logo": "",
+        "ativo": true,
+        "ordem": 2
+      },
+      {
+        "id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000003",
+        "nome": "KM’s Pela Vida | NÃO DESISTA",
+        "logo": "",
+        "ativo": true,
+        "ordem": 3
+      },
+      {
+        "id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000004",
+        "nome": "Casa \"Bom Pastor\"; Acolhida",
+        "logo": "",
+        "ativo": true,
+        "ordem": 4
+      },
+      {
+        "id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000005",
+        "nome": "Casa Fechada",
+        "logo": "",
+        "ativo": false,
+        "ordem": 5
+      }
+    ],
+    "orders_pedido": [],
+    "instituicoes_repasse": []
+  },
+  "comando": "relatorio_repasse",
+  "args": [
+    "--instituicao",
+    "Pela Vida",
+    "--desde",
+    "2026-09-28",
+    "--ate",
+    "2026-10-27",
+    "--auditoria",
+    "--saida",
+    "{saida}/auditoria-INTERNA-pela-vida-2026-10-28.csv"
+  ],
+  "stdin": null,
+  "exit": 0,
+  "stdout": [
+    "",
+    "RELATÓRIO DE REPASSE — KM’s Pela Vida | NÃO DESISTA",
+    "Período: 28/09/2026 a 27/10/2026",
+    "",
+    "Doador  Data              Doação       Repasse",
+    "──────────────────────────────────────────────",
+    "TOTAL (0)                   R$ 0,00       R$ 0,00",
+    "",
+    "ARQUIVO INTERNO: contém nome completo, e-mail e id de pagamento. Não entregar à instituição.",
+    "Nenhum repasse no período.",
+    "",
+    "CSV gravado em: <caminho>"
+  ],
+  "stderr": null,
+  "arquivos": {
+    "auditoria-INTERNA-pela-vida-2026-10-28.csv": "77u/QVVESVRPUklBIElOVEVSTkEgZGUgcmVwYXNzZSDigJQgS03igJlzIFBlbGEgVmlkYSB8IE7Dg08gREVTSVNUQQ0KUGVyw61vZG86IDI4LzA5LzIwMjYgYSAyNy8xMC8yMDI2DQpVU08gSU5URVJOTyDigJQgY29udMOpbSBkYWRvIHBlc3NvYWwuIE7Do28gZW50cmVnYXIgw6AgaW5zdGl0dWnDp8Ojby4NCg0KRG9hZG9yIChub21lIGNvbXBsZXRvKTtFLW1haWw7SUQgZG8gcGVkaWRvO0lEIGRvIHBhZ2FtZW50byBubyBnYXRld2F5O1N0YXR1cyBkbyBwZWRpZG87RGF0YSBkbyBwZWRpZG87RGF0YSBkYSBjb25maXJtYcOnw6NvO1ZhbG9yIG5vIGxlZGdlciAoUiQpO1ZhbG9yIGF0dWFsIGRvIHBlZGlkbyAoUiQpO1BlcmNlbnR1YWw7UmVwYXNzZSAoUiQpO1N0YXR1cyBkbyByZXBhc3NlO1RyYW5zZmVyaWRvIGVtO0NvbXByb3ZhbnRlO0RpdmVyZ8OqbmNpYQ0KDQpUT1RBTCAoMCBkb2HDp8O1ZXMpOzs7Ozs7OzAsMDA7OzswLDAwOzs7Ow0K"
+  },
+  "estado_final": {
+    "instituicoes_repasse": {
+      "colunas": [
+        "id",
+        "pedido_id",
+        "instituicao_id",
+        "valor_base_centavos",
+        "percentual",
+        "valor_centavos",
+        "status",
+        "transferido_em",
+        "comprovante",
+        "created_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "transferido_em"
+      ]
+    }
+  },
+  "referencia_relatorio_repasse_sha256": "f1813d9d1a87c9c0cbf9a401d77c007a79b37da46cd1153bdcc107f32c7cb51c"
+}

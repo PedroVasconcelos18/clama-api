@@ -1,0 +1,180 @@
+{
+  "cenario": "cmd_adotar_pedidos_orfaos_sem_orfaos",
+  "configuracao": {
+    "relogio": "2026-10-28T13:00:00+00:00"
+  },
+  "usuarios": [
+    {
+      "email": "maria@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Maria Silva",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    },
+    {
+      "email": "joao@gmail.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "João Souza",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    },
+    {
+      "email": "rita@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Rita Lima",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    }
+  ],
+  "dados": {
+    "plans_plan": [
+      {
+        "id": "55555555-5555-4555-8555-000000000001",
+        "nome": "Pedido de Oração",
+        "valor_centavos": 2000,
+        "descricao": "Descrição de Pedido de Oração.",
+        "complexidade": "simples",
+        "ordem": 1,
+        "ativo": true,
+        "visivel": true
+      }
+    ],
+    "orders_pedido": [
+      {
+        "created_at": "2026-10-05T12:00:00+00:00",
+        "updated_at": "2026-10-05T12:00:00+00:00",
+        "id": "e5e5e5e5-e5e5-4e5e-8e5e-000000000006",
+        "nome": "gAAAAABq4fHQGATVdcFiRfv3Zhys6Po82EqaX_WYtGIgp5xXQq9a_EKFpc_U5SK2sGpQ_9kuVDxaY-hRwDYFZJyrEybuHueufg==",
+        "email": "gAAAAABq4fHQ6MOKUR66FC3HPk9CTMtksFU9QmDeOyDnLh5wudiP8yTrua9gIr8V-eH2mDM1ONMByhw-y0pVSDj_28miEmAElcmNrRQeS4RJmJrf3Mw09IU=",
+        "telefone": "gAAAAABq4fHQ7v2Y8HMYGYDtLyV01fogn2sbXyv68zC1VEigQEUo31dkSxP0toVL09MoXX5oKd4zFzjF19mYQwYqhspo1DPgmA==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq4fHQ7RtZXw6uegpCYJCYe5yGmgCSh9R9qKgsJcti1rctWF6Kp2uvLmxmXm6mam_TmzchhGEj3MiQReZMLxapBWHBYpfHpRiSdNetyldz4F36J_AZJyDTGWXMhsJFyeSjd5uM",
+        "oracao_gerada": "gAAAAABq4fHQ9NgR7b6-OJfCfW67bPLlFAEyYfIoGy2Aa-ApX1cyj3u6EyOKnZRO32he3QWYgKPeuUq4OWuX0jC0Xfvyd4Yrsg==",
+        "valor_centavos": 3000,
+        "canal_entrega": "email",
+        "status": "enviada",
+        "plano_id": "55555555-5555-4555-8555-000000000001",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq4fHQf39k7_Pr9CuDKmGIqt_xx4KfA1v5IItA-AH5vChgza9v9M2ia5A3Crb4bmJQFUk9qpg3JDfxTwReM4xhiTplhg==",
+        "user_id": 3,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": "mp-2005",
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": null
+      }
+    ]
+  },
+  "comando": "adotar_pedidos_orfaos",
+  "args": [],
+  "stdin": null,
+  "exit": 0,
+  "stdout": [
+    "Pedidos órfãos com e-mail: 0"
+  ],
+  "stderr": null,
+  "arquivos": {},
+  "estado_final": {
+    "orders_pedido": {
+      "colunas": [
+        "id",
+        "nome",
+        "email",
+        "telefone",
+        "cpf_cnpj",
+        "idade",
+        "sexo",
+        "pedido_oracao",
+        "oracao_gerada",
+        "plano_id",
+        "valor_centavos",
+        "instituicao_id",
+        "user_email",
+        "eh_gratuito",
+        "canal_entrega",
+        "status",
+        "provider_payment_id",
+        "provider_checkout_url",
+        "pix_qr_code",
+        "pix_qr_code_base64",
+        "retry_count",
+        "last_error",
+        "consent_aceito",
+        "consent_versao",
+        "consent_aceito_at",
+        "consent_ip",
+        "device_hash",
+        "whatsapp_message_id",
+        "whatsapp_delivered_at",
+        "whatsapp_read_at",
+        "oracao_email_sent_at",
+        "created_at"
+      ],
+      "cifradas_decifradas": [
+        "nome",
+        "email",
+        "telefone",
+        "cpf_cnpj",
+        "pedido_oracao",
+        "oracao_gerada"
+      ],
+      "linhas": [
+        {
+          "id": "e5e5e5e5-e5e5-4e5e-8e5e-000000000006",
+          "nome": "Maria Silva",
+          "email": "rita@exemplo.com",
+          "telefone": "(11) 99999-8888",
+          "cpf_cnpj": "52998224725",
+          "idade": 35,
+          "sexo": "feminino",
+          "pedido_oracao": "Peço oração pela minha família.",
+          "oracao_gerada": "",
+          "plano_id": "55555555-5555-4555-8555-000000000001",
+          "valor_centavos": 3000,
+          "instituicao_id": null,
+          "user_email": "rita@exemplo.com",
+          "eh_gratuito": false,
+          "canal_entrega": "email",
+          "status": "enviada",
+          "provider_payment_id": "mp-2005",
+          "provider_checkout_url": null,
+          "pix_qr_code": null,
+          "pix_qr_code_base64": null,
+          "retry_count": 0,
+          "last_error": "",
+          "consent_aceito": true,
+          "consent_versao": "1",
+          "consent_aceito_at": "<ts>",
+          "consent_ip": "203.0.113.7",
+          "device_hash": "",
+          "whatsapp_message_id": "",
+          "whatsapp_delivered_at": null,
+          "whatsapp_read_at": null,
+          "oracao_email_sent_at": null,
+          "created_at": "<ts>"
+        }
+      ]
+    }
+  }
+}

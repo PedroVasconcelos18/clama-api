@@ -9,6 +9,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.PreparedStatement;
 import java.sql.Types;
@@ -33,7 +34,9 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import me.clama.api.BancoDeTeste;
+import me.clama.api.MidiaDeTeste;
 import me.clama.api.blog.JanelaFixa;
 import me.clama.api.comum.agenda.ModoDeExecucao;
 import me.clama.api.comum.agenda.TarefaAgendada;
@@ -139,6 +142,11 @@ public class ReplayDeContrato {
      * da Resend em todo e-mail. Divergencia aceita, so neste grupo de cenarios.
      */
     private static final String SEM_REPLY_TO = "tarefa_alerta_comentarios_";
+    /** Nos "args" de um cenario de comando: o diretorio de saida (o de trabalho do comando). */
+    static final String SAIDA = "{saida}";
+    /** D10 (etapa 8): o caminho absoluto destas linhas do stdout nao e contrato; o gravador grava este marcador. */
+    static final String CAMINHO = "<caminho>";
+    private static final List<String> LINHAS_COM_CAMINHO = List.of("CSV gravado em: ", "CSV: ");
 
     private final JdbcTemplate jdbc;
     private final UsuarioRepository usuarios;
@@ -160,6 +168,7 @@ public class ReplayDeContrato {
     private JanelaFixa janela;
     private Set<String> repeticoesToleradas = Set.of();
     private Runnable limpeza = () -> { };
+    private ExecutorDeComando comandos;
 
     /**
      * O que o harness precisa do app fora do banco: o cache de senhas temporarias (SenhasTemporarias) e o dedup em
@@ -268,6 +277,13 @@ public class ReplayDeContrato {
         return this;
     }
 
+    /** Cenarios de comando (etapa 8): "comando" + "args" vao para o executor; ver {@link #conferirComando}. */
+    public ReplayDeContrato comComandos(ExecutorDeComando executor) {
+        this.comandos = executor;
+        return this;
+    }
+
+    /** base: a URL do app, so para os "passos" HTTP (null num cenario de comando). */
     public void executar(Path cenarioJson, URI base) throws Exception {
         JsonNode cenario = JSON.readTree(cenarioJson.toFile());
         Set<String> fixos = uuidsFixos(cenario);
@@ -276,13 +292,16 @@ public class ReplayDeContrato {
             assertThat(cenario.has(integracao) && !stubs.containsKey(integracao))
                     .as("%s declara %s: use comStubs", arquivo, integracao).isFalse();
         }
-        assertThat(cenario.has("configuracao") && stubs.isEmpty()).as("%s declara configuracao: use comStubs", arquivo)
-                .isFalse();
+        // so o relogio (comRelogio) nao precisa do ambiente; o resto da configuracao e conferido contra ele
+        assertThat(cenario.path("configuracao").properties().stream().anyMatch(c -> !c.getKey().equals(RELOGIO))
+                && stubs.isEmpty()).as("%s declara configuracao: use comStubs", arquivo).isFalse();
         assertThat(caixa == null && CHAVES_DE_ORACAO.stream().anyMatch(cenario::has))
                 .as("%s e cenario da 4B: use comOracao", arquivo).isFalse();
         assertThat(tarefas == null && (cenario.has("tarefa") || cenario.has("tarefas")))
                 .as("%s e cenario de tarefa agendada: use comTarefas", arquivo).isFalse();
         assertThat(sentry == null && cenario.has("sentry")).as("%s grava o Sentry: use comSentry", arquivo).isFalse();
+        assertThat(comandos == null && cenario.has("comando")).as("%s e cenario de comando: use comComandos", arquivo)
+                .isFalse();
         Map<String, String> bases = new LinkedHashMap<>();
         stubs.forEach((nome, stub) -> {
             if (cenario.path(nome + "_base").isString()) {
@@ -339,6 +358,9 @@ public class ReplayDeContrato {
         // varias tarefas em sequencia (o contador de divergencia da reconciliacao vive entre rodadas)
         for (JsonNode t : cenario.path("tarefas")) {
             executarTarefa(t.get("tarefa").asString(), t.get("resumo"), bases, arquivo);
+        }
+        if (cenario.has("comando")) {
+            executarComando(cenario, arquivo);
         }
 
         Map<String, String> jar = new LinkedHashMap<>();
@@ -509,6 +531,93 @@ public class ReplayDeContrato {
         TipoDeJob<?> job = jobs.stream().filter(j -> j.nome().equals(tipo)).findFirst()
                 .orElseThrow(() -> new AssertionError(arquivo + ": job " + tipo + " nao registrado"));
         executar(job, arg);
+    }
+
+    /**
+     * Cenario de comando (test_gravar_comandos.py): roda [comando, args...] com {@link #SAIDA} trocado por um diretorio
+     * novo (o de trabalho do comando), com o stdin gravado, e confere o resultado e os arquivos que ficaram nele.
+     */
+    private void executarComando(JsonNode cenario, String arquivo) throws Exception {
+        Files.createDirectories(Path.of("target"));
+        Path dir = Files.createTempDirectory(Path.of("target").toAbsolutePath(), "contrato-comando");
+        try {
+            List<String> args = new ArrayList<>();
+            args.add(cenario.get("comando").asString());
+            cenario.get("args").forEach(a -> args.add(a.asString().replace(SAIDA, dir.toString())));
+            String stdin = cenario.path("stdin").isString() ? cenario.get("stdin").asString() : null;
+            conferirComando(cenario, comandos.executar(args.toArray(String[]::new), stdin, dir), dir, arquivo);
+        } finally {
+            MidiaDeTeste.apagar(dir);
+        }
+    }
+
+    /**
+     * D10: stdout linha a linha ({@link #LINHAS_COM_CAMINHO} com o caminho trocado por {@link #CAMINHO}); stderr so a
+     * 1a linha, e so quando o gravado nao e null (o CommandError; null = log ou traceback, fora do contrato); exit;
+     * todo arquivo do diretorio de saida, byte a byte (o BOM e o \r\n do CSV), nem um a mais nem a menos.
+     * "comparar_stdout": "contagem_de_linhas" (cmd_instituicoes_): o Django imprime o numero (a linha do shell -c do
+     * script), o Java uma linha por instituicao; o numero de linhas tem de bater, e as linhas sao as de "stdout_java".
+     */
+    static void conferirComando(JsonNode cenario, ExecutorDeComando.Resultado r, Path dir, String arquivo)
+            throws Exception {
+        List<String> obtidas = linhas(r.stdout());
+        List<String> esperadas = textos(cenario.get("stdout"));
+        if ("contagem_de_linhas".equals(cenario.path("comparar_stdout").asString(""))) {
+            assertThat(esperadas).as("%s: stdout gravado do shell -c", arquivo).hasSize(1);
+            assertThat(obtidas).as("%s: uma linha por instituicao (o script conta com wc -l)", arquivo)
+                    .hasSize(Integer.parseInt(esperadas.getFirst()));
+            esperadas = textos(cenario.get("stdout_java"));
+        } else {
+            obtidas = semCaminho(obtidas);
+        }
+        assertThat(obtidas).as("%s: stdout", arquivo).isEqualTo(esperadas);
+        if (cenario.get("stderr").isString()) {
+            assertThat(linhas(r.stderr()).stream().findFirst().orElse(null)).as("%s: 1a linha do stderr", arquivo)
+                    .isEqualTo(cenario.get("stderr").asString());
+        }
+        assertThat(r.exit()).as("%s: exit", arquivo).isEqualTo(cenario.get("exit").asInt());
+        Map<String, byte[]> gravados = new LinkedHashMap<>();
+        try (Stream<Path> s = Files.walk(dir)) {
+            for (Path p : s.filter(Files::isRegularFile).sorted().toList()) {
+                gravados.put(dir.relativize(p).toString().replace(java.io.File.separatorChar, '/'),
+                        Files.readAllBytes(p));
+            }
+        }
+        Map<String, byte[]> esperados = new LinkedHashMap<>();
+        cenario.get("arquivos").properties().forEach(a -> esperados.put(a.getKey(),
+                Base64.getDecoder().decode(a.getValue().asString())));
+        assertThat(gravados.keySet()).as("%s: arquivos gravados", arquivo)
+                .containsExactlyInAnyOrderElementsOf(esperados.keySet());
+        for (Map.Entry<String, byte[]> e : esperados.entrySet()) {
+            byte[] g = gravados.get(e.getKey());
+            // texto primeiro (diff legivel), bytes depois (o que vale)
+            assertThat(new String(g, StandardCharsets.UTF_8)).as("%s: %s", arquivo, e.getKey())
+                    .isEqualTo(new String(e.getValue(), StandardCharsets.UTF_8));
+            assertThat(g).as("%s: bytes de %s", arquivo, e.getKey()).isEqualTo(e.getValue());
+        }
+    }
+
+    /** Linhas como o gravador: split em "\n", sem a vazia depois do "\n" final; texto vazio = nenhuma. */
+    static List<String> linhas(String texto) {
+        if (texto == null || texto.isEmpty()) {
+            return List.of();
+        }
+        List<String> l = new ArrayList<>(List.of(texto.split("\n", -1)));
+        if (l.getLast().isEmpty()) {
+            l.removeLast();
+        }
+        return l;
+    }
+
+    static List<String> textos(JsonNode lista) {
+        List<String> saida = new ArrayList<>();
+        lista.forEach(l -> saida.add(l.asString()));
+        return saida;
+    }
+
+    static List<String> semCaminho(List<String> linhas) {
+        return linhas.stream().map(l -> LINHAS_COM_CAMINHO.stream().filter(l::startsWith).findFirst()
+                .map(p -> p + CAMINHO).orElse(l)).toList();
     }
 
     /** {@link #MENSAGEM_R12} gravada: a message obtida (que tem de existir) vira o marcador antes de comparar. */

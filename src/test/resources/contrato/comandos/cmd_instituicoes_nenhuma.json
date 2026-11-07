@@ -1,0 +1,25 @@
+{
+  "cenario": "cmd_instituicoes_nenhuma",
+  "configuracao": {
+    "relogio": "2026-10-28T13:00:00+00:00"
+  },
+  "usuarios": [],
+  "dados": {},
+  "comando": "instituicoes",
+  "args": [],
+  "stdin": null,
+  "exit": 0,
+  "stdout": [
+    "0"
+  ],
+  "stderr": null,
+  "arquivos": {},
+  "estado_final": {},
+  "django_argv": [
+    "shell",
+    "-c",
+    "from clama.instituicoes.models import Instituicao; print(Instituicao.objects.count())"
+  ],
+  "comparar_stdout": "contagem_de_linhas",
+  "stdout_java": []
+}

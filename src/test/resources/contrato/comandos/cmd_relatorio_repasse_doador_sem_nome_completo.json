@@ -1,0 +1,298 @@
+{
+  "cenario": "cmd_relatorio_repasse_doador_sem_nome_completo",
+  "configuracao": {
+    "relogio": "2026-10-28T13:00:00+00:00"
+  },
+  "usuarios": [],
+  "dados": {
+    "plans_plan": [
+      {
+        "id": "55555555-5555-4555-8555-000000000001",
+        "nome": "Pedido de Oração",
+        "valor_centavos": 2000,
+        "descricao": "Descrição de Pedido de Oração.",
+        "complexidade": "simples",
+        "ordem": 1,
+        "ativo": true,
+        "visivel": true
+      }
+    ],
+    "instituicoes_instituicao": [
+      {
+        "id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000001",
+        "nome": "Associação dos Doentes Renais Crônicos e Transplantados de Juiz de Fora e Região",
+        "logo": "",
+        "ativo": true,
+        "ordem": 1
+      },
+      {
+        "id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000002",
+        "nome": "Associação Renal de Mar de Espanha e Adjacências",
+        "logo": "",
+        "ativo": true,
+        "ordem": 2
+      },
+      {
+        "id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000003",
+        "nome": "KM’s Pela Vida | NÃO DESISTA",
+        "logo": "",
+        "ativo": true,
+        "ordem": 3
+      },
+      {
+        "id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000004",
+        "nome": "Casa \"Bom Pastor\"; Acolhida",
+        "logo": "",
+        "ativo": true,
+        "ordem": 4
+      },
+      {
+        "id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000005",
+        "nome": "Casa Fechada",
+        "logo": "",
+        "ativo": false,
+        "ordem": 5
+      }
+    ],
+    "orders_pedido": [
+      {
+        "created_at": "2026-10-05T11:30:00+00:00",
+        "updated_at": "2026-10-05T11:30:00+00:00",
+        "id": "b2b2b2b2-b2b2-4b2b-8b2b-000000000002",
+        "nome": "gAAAAABq4fHQkM89-JhKjatLfZGsPxSFwDE4f_KoNpCKjNtc5rBgD-SCZOgDfuHiY2e428TZOGpRxd_3EJ8qMfsKJShLoWnfsg==",
+        "email": "gAAAAABq4fHQuFPp-CBx6snynKWFMFHdWxvN2n7eapxApKbMmRdi4RbwVaCSwXBFZ1EKUxAnN25bjzC0GnYzZ-LoUQT49cdtuUY3KY7EYewqO07HSiNclkg=",
+        "telefone": "gAAAAABq4fHQOi2wflNniSXD2hSmM4F6t6btmLP4EbEuDnr93Uxe6EskMVuvMw9uSmwmtlnqxbMy8b8h7Sy4F63AXnKJKOWo4Q==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq4fHQW0b9VJcr4tuK1e0mV8Yg5bEOJoDI4XVpcswYq7512kfUS-ZVZKs-Ks2YEJW2JMLERxKIPd7vXFBPSuZx-vKBlve7dDlc5GrSCx52I3n2l3s8Ol992u0-75-AsnIEFmno",
+        "oracao_gerada": "gAAAAABq4fHQQG3Q6x3mOgUOgEd9XRxJjNk7sKU34ROQB2cAVX4j3C7fBswCX67bg1o4QIoUvjNDA-wMtiwyrFLJwu_b3PBFcQ==",
+        "valor_centavos": 5000,
+        "canal_entrega": "email",
+        "status": "enviada",
+        "plano_id": "55555555-5555-4555-8555-000000000001",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq4fHQGchuSv6PpZYhgtCB9Ot6KAZChkQB0g6CQYUfjadtxhuoL2VoiqbsOAwVK5Kdk7hYCG4rpEnRtgfXZTfnqzdi9A==",
+        "user_id": null,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": "mp-1001",
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000001"
+      },
+      {
+        "created_at": "2026-10-06T11:30:00+00:00",
+        "updated_at": "2026-10-06T11:30:00+00:00",
+        "id": "b2b2b2b2-b2b2-4b2b-8b2b-000000000003",
+        "nome": "gAAAAABq4fHQeAirIQ9PLgf8c9iHOx4me-9s6hL9-MTEoZhRvmS1ASo8Sxgxg0wpDi5J4DWKa4nIGVotxUHLRAenI2ISQE8T_g==",
+        "email": "gAAAAABq4fHQvX9zynkC-xUgZhvy9YRmPlXU5FWVYCeaKAQC3MJ0dL2aC0cCwd0k5eQSsQjmhhO0YUmATAnqV4VgguUdeOFF3g7wSUPCGfYIAlfEh9KpDjY=",
+        "telefone": "gAAAAABq4fHQqdbA1wBRiYGknLgw4rcbhW66lv1PqKcChw9FIzIzUJQxFLxgRnkQ0ZwHmfmQmTKvlP3oIMTa2zcHT-2Gu-rCCw==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq4fHQYjcJ-sBezBR3kKcdZY88_0VzDo0fSB0VSY5XegcvD1N_66Y0p8uy4D-zEeX6Y-tfMI9CGzgr4OhVzaylCyOPxxSwCSOFpSZnVN-VIdFNAr6mYTT4KOE6XiccO5kd96t2",
+        "oracao_gerada": "gAAAAABq4fHQSGCTWmyxD0fB9ZCryczLn4g9voZ4wzPA-Q325ymDVqJffp_LMMKmj6Ono4WdDsIzO6DD8bUSXNizlyqym2wOUQ==",
+        "valor_centavos": 3000,
+        "canal_entrega": "email",
+        "status": "enviada",
+        "plano_id": "55555555-5555-4555-8555-000000000001",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq4fHQWnSnUntWarPuCLtZcGl1KIbk4ZhgvpPJ5C4AdnIEnFs2OXPlyzZwsBAnzTQwMkKvG_8F7EOVWhUbFHQJh-udXA==",
+        "user_id": null,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": "mp-1002",
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000001"
+      },
+      {
+        "created_at": "2026-10-07T11:30:00+00:00",
+        "updated_at": "2026-10-07T11:30:00+00:00",
+        "id": "b2b2b2b2-b2b2-4b2b-8b2b-000000000004",
+        "nome": "gAAAAABq4fHQiHEj9VIMivhLQjY6YabC2npG8OlhKK4OmWHuA7Osix6ebkQm56ZnpdK-1aJK2euqSo9N9t1JPdF1Lq8V5AvXaQ==",
+        "email": "gAAAAABq4fHQ141wxGwXuJSpt8Eq2qLsn_Jysol9NYXTT_ZxFNtKJ6YNdq-2O9czBpAo__aVPeM-VhqnF_DM4sb5qeyYZR8gsU6AJQq4CdsfkN32D5gN5TE=",
+        "telefone": "gAAAAABq4fHQ1WuzLJsFxt-ZqRyGSK7tnEm4-cfO6gpzR_sGIeVOC8oMNkNpiO8Q-0UGRS_gwlIyoRn8mfkIv_Rvvxty1__Qzw==",
+        "idade": 35,
+        "sexo": "feminino",
+        "pedido_oracao": "gAAAAABq4fHQNgBkNmnMjLjUOTSP9S1fJbyOT9_k5th0qcnIZtbQXb17f54PAZSqBdLnALNWcdujlTEIbq4yho72mYKejQgr7PnPNV0mNF7ToEfkPrWXVw-r662LIhzBFwTWtVE6pYAM",
+        "oracao_gerada": "gAAAAABq4fHQFazITS1-w_4I4goNE3Wj9zaHMXDwK7oM5W97elMu1PqMugBX06z7ykIMrlHCEeJ2ICsYnUL57RcOv2HCHFCtvg==",
+        "valor_centavos": 2000,
+        "canal_entrega": "email",
+        "status": "enviada",
+        "plano_id": "55555555-5555-4555-8555-000000000001",
+        "consent_aceito": true,
+        "consent_aceito_at": "2026-11-01T13:00:00+00:00",
+        "consent_ip": "203.0.113.7",
+        "consent_versao": "1",
+        "last_error": "",
+        "retry_count": 0,
+        "whatsapp_delivered_at": null,
+        "whatsapp_message_id": "",
+        "whatsapp_read_at": null,
+        "cpf_cnpj": "gAAAAABq4fHQKWVPic_fBMP1jhPbE3t2nZiHatmm2CWGXOE5Mm2-BQtocD8OX9bpzfFXUQwBmQZJifVm9-_rVeC2iMoES-dzJQ==",
+        "user_id": null,
+        "eh_gratuito": false,
+        "device_hash": "",
+        "oracao_email_sent_at": null,
+        "provider_payment_id": "mp-1003",
+        "provider_checkout_url": null,
+        "pix_qr_code": null,
+        "pix_qr_code_base64": null,
+        "instituicao_id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000001"
+      }
+    ],
+    "instituicoes_repasse": [
+      {
+        "created_at": "2026-10-05T12:00:00+00:00",
+        "updated_at": "2026-10-05T12:00:00+00:00",
+        "id": "c3c3c3c3-c3c3-4c3c-8c3c-000000000002",
+        "valor_base_centavos": 5000,
+        "percentual": 20,
+        "valor_centavos": 1000,
+        "status": "registrado",
+        "pedido_id": "b2b2b2b2-b2b2-4b2b-8b2b-000000000002",
+        "instituicao_id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000001",
+        "comprovante": "",
+        "transferido_em": null
+      },
+      {
+        "created_at": "2026-10-06T12:00:00+00:00",
+        "updated_at": "2026-10-06T12:00:00+00:00",
+        "id": "c3c3c3c3-c3c3-4c3c-8c3c-000000000003",
+        "valor_base_centavos": 3000,
+        "percentual": 20,
+        "valor_centavos": 600,
+        "status": "registrado",
+        "pedido_id": "b2b2b2b2-b2b2-4b2b-8b2b-000000000003",
+        "instituicao_id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000001",
+        "comprovante": "",
+        "transferido_em": null
+      },
+      {
+        "created_at": "2026-10-07T12:00:00+00:00",
+        "updated_at": "2026-10-07T12:00:00+00:00",
+        "id": "c3c3c3c3-c3c3-4c3c-8c3c-000000000004",
+        "valor_base_centavos": 2000,
+        "percentual": 20,
+        "valor_centavos": 400,
+        "status": "registrado",
+        "pedido_id": "b2b2b2b2-b2b2-4b2b-8b2b-000000000004",
+        "instituicao_id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000001",
+        "comprovante": "",
+        "transferido_em": null
+      }
+    ]
+  },
+  "comando": "relatorio_repasse",
+  "args": [
+    "--instituicao",
+    "Juiz de Fora",
+    "--mes",
+    "2026-10",
+    "--identificacao",
+    "completo",
+    "--saida",
+    "{saida}/relatorio.csv"
+  ],
+  "stdin": null,
+  "exit": 0,
+  "stdout": [
+    "",
+    "RELATÓRIO DE REPASSE — Associação dos Doentes Renais Crônicos e Transplantados de Juiz de Fora e Região",
+    "Período: 01/10/2026 a 31/10/2026",
+    "",
+    "Doador      Data              Doação       Repasse",
+    "(sem nome)  05/10/2026      R$ 50,00      R$ 10,00",
+    "            06/10/2026      R$ 30,00       R$ 6,00",
+    "Maria       07/10/2026      R$ 20,00       R$ 4,00",
+    "──────────────────────────────────────────────────",
+    "TOTAL (3)                  R$ 100,00      R$ 20,00",
+    "",
+    "ATENÇÃO: nome completo dos doadores. A Política de Privacidade vigente não lista instituições parceiras como destinatárias de dados pessoais — atualize a política antes de entregar.",
+    "",
+    "CSV gravado em: <caminho>"
+  ],
+  "stderr": null,
+  "arquivos": {
+    "relatorio.csv": "77u/UmVsYXTDs3JpbyBkZSByZXBhc3NlIOKAlCBBc3NvY2lhw6fDo28gZG9zIERvZW50ZXMgUmVuYWlzIENyw7RuaWNvcyBlIFRyYW5zcGxhbnRhZG9zIGRlIEp1aXogZGUgRm9yYSBlIFJlZ2nDo28NClBlcsOtb2RvOiAwMS8xMC8yMDI2IGEgMzEvMTAvMjAyNg0KDQpEb2Fkb3I7UmVmZXLDqm5jaWEgZG8gcGVkaWRvO0RhdGEgZGEgZG9hw6fDo287VmFsb3IgZG9hZG8gKFIkKTtQZXJjZW50dWFsIGRlIHJlcGFzc2U7VmFsb3IgYSByZWNlYmVyIChSJCkNCihzZW0gbm9tZSk7I2IyYjLigKYwMDAyOzA1LzEwLzIwMjY7NTAsMDA7MjAlOzEwLDAwDQogICA7I2IyYjLigKYwMDAzOzA2LzEwLzIwMjY7MzAsMDA7MjAlOzYsMDANCk1hcmlhOyNiMmIy4oCmMDAwNDswNy8xMC8yMDI2OzIwLDAwOzIwJTs0LDAwDQoNClRPVEFMICgzIGRvYcOnw7Vlcyk7OzsxMDAsMDA7OzIwLDAwDQo="
+  },
+  "estado_final": {
+    "instituicoes_repasse": {
+      "colunas": [
+        "id",
+        "pedido_id",
+        "instituicao_id",
+        "valor_base_centavos",
+        "percentual",
+        "valor_centavos",
+        "status",
+        "transferido_em",
+        "comprovante",
+        "created_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": [
+        {
+          "id": "c3c3c3c3-c3c3-4c3c-8c3c-000000000002",
+          "pedido_id": "b2b2b2b2-b2b2-4b2b-8b2b-000000000002",
+          "instituicao_id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000001",
+          "valor_base_centavos": 5000,
+          "percentual": 20,
+          "valor_centavos": 1000,
+          "status": "registrado",
+          "transferido_em": null,
+          "comprovante": "",
+          "created_at": "<ts>"
+        },
+        {
+          "id": "c3c3c3c3-c3c3-4c3c-8c3c-000000000003",
+          "pedido_id": "b2b2b2b2-b2b2-4b2b-8b2b-000000000003",
+          "instituicao_id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000001",
+          "valor_base_centavos": 3000,
+          "percentual": 20,
+          "valor_centavos": 600,
+          "status": "registrado",
+          "transferido_em": null,
+          "comprovante": "",
+          "created_at": "<ts>"
+        },
+        {
+          "id": "c3c3c3c3-c3c3-4c3c-8c3c-000000000004",
+          "pedido_id": "b2b2b2b2-b2b2-4b2b-8b2b-000000000004",
+          "instituicao_id": "a1a1a1a1-a1a1-4a1a-8a1a-000000000001",
+          "valor_base_centavos": 2000,
+          "percentual": 20,
+          "valor_centavos": 400,
+          "status": "registrado",
+          "transferido_em": null,
+          "comprovante": "",
+          "created_at": "<ts>"
+        }
+      ],
+      "deslocadas_do_relogio": [
+        "transferido_em"
+      ]
+    }
+  },
+  "referencia_relatorio_repasse_sha256": "f1813d9d1a87c9c0cbf9a401d77c007a79b37da46cd1153bdcc107f32c7cb51c"
+}
