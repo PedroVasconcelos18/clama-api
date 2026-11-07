@@ -130,6 +130,12 @@ public final class CamposDrf {
 
     /** msgMin: error_messages["min_value"] do campo (o texto padrao do DRF pt-BR tem o erro "Certifque"). */
     public Integer inteiro(String campo, boolean obrigatorio, int min, int max, String msgMin) {
+        Long n = longo(campo, obrigatorio, min, max, msgMin);
+        return n == null ? null : n.intValue();
+    }
+
+    /** O mesmo IntegerField, com limites em long (ids bigint). */
+    public Long longo(String campo, boolean obrigatorio, long min, long max, String msgMin) {
         JsonNode v = corpo.get(campo);
         if (v == null) {
             if (obrigatorio) {
@@ -161,7 +167,7 @@ public final class CamposDrf {
             erro(campo, "Certifique-se de que este valor seja inferior ou igual a " + max + ".");
             return null;
         }
-        return n.intValue();
+        return n.longValue();
     }
 
     private static final java.util.Set<String> VERDADEIROS = java.util.Set.of("t", "T", "y", "Y", "yes", "Yes", "YES",

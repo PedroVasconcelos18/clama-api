@@ -82,12 +82,14 @@ class BanimentosAdminController {
     @PostMapping(ROTA)
     ResponseEntity<Item> banir(@RequestBody(required = false) JsonNode corpo, @AuthenticationPrincipal Usuario eu) {
         CamposDrf campos = new CamposDrf(corpo);
-        Integer customerId = campos.inteiro("customer_id", true, Integer.MIN_VALUE, Integer.MAX_VALUE);
+        // bigint: um id acima do int32 chega ao 404 customer_nao_encontrado, como no Django
+        Long customerId = campos.longo("customer_id", true, Long.MIN_VALUE, Long.MAX_VALUE,
+                "Certifque-se de que este valor seja maior ou igual a " + Long.MIN_VALUE + ".");
         String motivo = campos.texto("motivo",
                 m -> m.codePointCount(0, m.length()) < 3 ? List.of(MOTIVO_CURTO) : List.of());
         campos.validar();
         return tx.execute(s -> {
-            Usuario alvo = usuarios.findById((long) customerId).orElseThrow(() -> new RespostaDeErro(404,
+            Usuario alvo = usuarios.findById(customerId).orElseThrow(() -> new RespostaDeErro(404,
                     new ErroPlano("customer_nao_encontrado", "Customer não encontrado.")));
             if (alvo.isClamaAdmin()) {
                 throw new RespostaDeErro(400, new ErroPlano("cannot_ban_admin", "Admins não podem ser banidos. Para "

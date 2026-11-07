@@ -65,6 +65,15 @@ class BanimentosAdminTest {
         return "{\"customer_id\": " + u.getId() + ", \"motivo\": \"Spam nos comentários\"}";
     }
 
+    /** customer_id acima do int32 e so um customer que nao existe: 404 como no Django, nao o 400 de valor maximo. */
+    @Test
+    void customerIdAcimaDoInt32E404() throws Exception {
+        HttpResponse<String> r = api.enviar("POST", "/api/blog/admin/banned-customers/",
+                "{\"customer_id\": 5000000000, \"motivo\": \"Spam nos comentários\"}", sessaoAdmin);
+        assertThat(r.statusCode()).as(r.body()).isEqualTo(404);
+        assertThat(r.body()).contains("\"code\":\"customer_nao_encontrado\"");
+    }
+
     @Test
     void naoBaneAdmin400() throws Exception {
         Usuario outro = api.usuario("Outro Admin", true);
