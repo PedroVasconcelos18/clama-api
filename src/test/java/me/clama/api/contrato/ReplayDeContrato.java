@@ -2,6 +2,7 @@ package me.clama.api.contrato;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.sentry.SentryEvent;
 import java.io.ByteArrayOutputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -76,8 +77,9 @@ public class ReplayDeContrato {
     static final String TOKEN = "<token>";
     /** secrets.token_urlsafe(48): 64 caracteres url-safe. So isso vira "<token>"; qualquer outra coisa falha. */
     private static final Pattern TOKEN_GERADO = Pattern.compile("^[A-Za-z0-9_-]{64}$");
-    /** As SQL do estado final, iguais as do gravador (TABELAS em test_gravar_pagamento_oracao.py e
-     * TABELAS_FREEMIUM em test_gravar_freemium.py). */
+    /** As SQL do estado final, iguais as do gravador (TABELAS em test_gravar_pagamento_oracao.py,
+     * TABELAS_FREEMIUM em test_gravar_freemium.py e TABELAS_BLOG em test_gravar_blog.py). As do blog desempatam linhas
+     * criadas no mesmo instante congelado (id aleatorio) pelo conteudo ou pelo customer. */
     private static final Map<String, String> SQL_ESTADO = Map.of(
             "orders_pedido", "SELECT p.*, u.email AS user_email FROM orders_pedido p"
                     + " LEFT JOIN users_user u ON u.id = p.user_id ORDER BY p.created_at, p.id",
@@ -85,9 +87,18 @@ public class ReplayDeContrato {
             "instituicoes_repasse", "SELECT * FROM instituicoes_repasse ORDER BY created_at, id",
             "payments_webhookevento", "SELECT * FROM payments_webhookevento ORDER BY created_at, id",
             "freemium_freemiumblacklist", "SELECT * FROM freemium_freemiumblacklist ORDER BY created_at, id",
-            TOKENS, "SELECT * FROM freemium_freemiumconfirmationtoken ORDER BY created_at, id");
-    /** Integracoes HTTP simuladas: o cenario traz "<nome>" (respostas) e "<nome>_requisicoes" (o que o Django mandou). */
-    private static final List<String> INTEGRACOES = List.of("mercadopago", "anthropic", "turnstile");
+            TOKENS, "SELECT * FROM freemium_freemiumconfirmationtoken ORDER BY created_at, id",
+            "blog_postespelho", "SELECT * FROM blog_postespelho ORDER BY wp_post_id",
+            "blog_comentario", "SELECT * FROM blog_comentario ORDER BY created_at, conteudo COLLATE \"C\", id",
+            "blog_reacao", "SELECT * FROM blog_reacao ORDER BY created_at, customer_id, id",
+            "blog_customerbanido", "SELECT * FROM blog_customerbanido ORDER BY banido_em, customer_id, id");
+    /**
+     * Integracoes HTTP simuladas: o cenario traz "<nome>" (respostas) e "<nome>_requisicoes" (o que o Django mandou).
+     * "<nome>_base" (etapa 6: wordpress, monitores) e a URL que o Django usou; no Java a base aponta para o stub, e o
+     * replay troca a URL do stub por ela no resumo das tarefas e nas mensagens do Sentry.
+     */
+    private static final List<String> INTEGRACOES = List.of("mercadopago", "anthropic", "turnstile", "wordpress",
+            "monitores");
     private static final List<String> CHAVES_DE_ORACAO = List.of("job", "emails", "jobs_enfileirados",
             "senhas_temporarias", "senhas_temporarias_final");
     private static final String FRONTEIRA = "ContratoClamaFronteira";
@@ -113,6 +124,17 @@ public class ReplayDeContrato {
      * pedidoId (payload so com IDs) e busca o token pelo pedido, que tem um token so.
      */
     private static final Set<String> ARG_SO_O_PEDIDO = Set.of("confirmacao-freemium");
+    /**
+     * R12 (etapa 6): a "message" do wordpress_indisponivel leva no Django o texto da excecao do requests (host e porta
+     * do WordPress interno); o Java usa texto fixo. O gravador troca a gravada por este marcador, e o replay compara o
+     * resto do corpo (a chave tem de existir).
+     */
+    static final String MENSAGEM_R12 = "<omitida R12>";
+    /**
+     * O alerta diario de comentarios do blog usa send_mail, sem reply-to (o gravado e []); o Java manda o reply-to fixo
+     * da Resend em todo e-mail. Divergencia aceita, so neste grupo de cenarios.
+     */
+    private static final String SEM_REPLY_TO = "tarefa_alerta_comentarios_";
 
     private final JdbcTemplate jdbc;
     private final UsuarioRepository usuarios;
@@ -129,6 +151,7 @@ public class ReplayDeContrato {
     private GanchosDeOracao ganchos;
     private Consumer<Instant> relogio;
     private Collection<? extends TarefaAgendada> tarefas;
+    private List<SentryEvent> sentry;
 
     /**
      * O que o harness precisa do app fora do banco: o cache de senhas temporarias (SenhasTemporarias) e o dedup em
@@ -201,6 +224,15 @@ public class ReplayDeContrato {
         return this;
     }
 
+    /**
+     * "sentry" do cenario (etapa 6): toda chamada a capture_message do Django, na ordem ({nivel, mensagem}). A lista
+     * e a do transporte em memoria que o teste instalou no Sentry.init; o replay a zera antes do cenario.
+     */
+    public ReplayDeContrato comSentry(List<SentryEvent> eventos) {
+        this.sentry = eventos;
+        return this;
+    }
+
     public void executar(Path cenarioJson, URI base) throws Exception {
         JsonNode cenario = JSON.readTree(cenarioJson.toFile());
         Set<String> fixos = uuidsFixos(cenario);
@@ -213,8 +245,15 @@ public class ReplayDeContrato {
                 .isFalse();
         assertThat(caixa == null && CHAVES_DE_ORACAO.stream().anyMatch(cenario::has))
                 .as("%s e cenario da 4B: use comOracao", arquivo).isFalse();
-        assertThat(tarefas == null && cenario.has("tarefa")).as("%s e cenario de tarefa agendada: use comTarefas",
-                arquivo).isFalse();
+        assertThat(tarefas == null && (cenario.has("tarefa") || cenario.has("tarefas")))
+                .as("%s e cenario de tarefa agendada: use comTarefas", arquivo).isFalse();
+        assertThat(sentry == null && cenario.has("sentry")).as("%s grava o Sentry: use comSentry", arquivo).isFalse();
+        Map<String, String> bases = new LinkedHashMap<>();
+        stubs.forEach((nome, stub) -> {
+            if (cenario.path(nome + "_base").isString()) {
+                bases.put(stub.url(), cenario.get(nome + "_base").asString());
+            }
+        });
         JsonNode instante = cenario.path("configuracao").path(RELOGIO);
         Instant agoraGravado = instante.isMissingNode() ? null : OffsetDateTime.parse(instante.asString()).toInstant();
         assertThat(!instante.isMissingNode() && relogio == null).as("%s congela o relogio: use comRelogio", arquivo)
@@ -230,6 +269,9 @@ public class ReplayDeContrato {
                     c.getValue().asString()).isEqualTo(c.getValue().asString());
         }
         stubs.forEach((nome, stub) -> stub.preparar(cenario.path(nome)));
+        if (sentry != null) {
+            sentry.clear();
+        }
         BancoDeTeste.exigirContainer(jdbc); // o TRUNCATE ... CASCADE apagaria pedidos, blog e tokens de um banco real
         jdbc.execute("TRUNCATE " + String.join(", ", tabelas) + " RESTART IDENTITY CASCADE");
         limiter.limpar(); // cache.clear() do gravador
@@ -253,7 +295,11 @@ public class ReplayDeContrato {
             executarJob(tipo, argDoJava(tipo, cenario.get("job").get("arg")), arquivo);
         }
         if (cenario.has("tarefa")) {
-            executarTarefa(cenario.get("tarefa").asString(), cenario.get("resumo"), arquivo);
+            executarTarefa(cenario.get("tarefa").asString(), cenario.get("resumo"), bases, arquivo);
+        }
+        // varias tarefas em sequencia (o contador de divergencia da reconciliacao vive entre rodadas)
+        for (JsonNode t : cenario.path("tarefas")) {
+            executarTarefa(t.get("tarefa").asString(), t.get("resumo"), bases, arquivo);
         }
 
         Map<String, String> jar = new LinkedHashMap<>();
@@ -277,6 +323,9 @@ public class ReplayDeContrato {
             } else if (req.has("multipart")) {
                 corpo = multipart(req.get("multipart"));
                 tipo = "multipart/form-data; boundary=" + FRONTEIRA;
+            } else if (req.has("corpo_cru")) { // os bytes exatos (o webhook do WordPress assina o corpo cru)
+                corpo = req.get("corpo_cru").get("texto").asString().getBytes(StandardCharsets.UTF_8);
+                tipo = req.get("corpo_cru").get("tipo").asString();
             }
             HttpRequest.Builder b = HttpRequest.newBuilder(base.resolve(req.get("path").asString()))
                     .method(metodo, corpo == null ? HttpRequest.BodyPublishers.noBody()
@@ -335,11 +384,21 @@ public class ReplayDeContrato {
                     }
                 }
             }
+            semMensagemR12(obtido, passo.get("response"));
             assertThat(canaisComoConjunto(obtido)).as("%s passo %d: %s %s", cenarioJson.getFileName(), i, metodo,
                     req.get("path")).isEqualTo(canaisComoConjunto(passo.get("response")));
             i++;
         }
         stubs.forEach((nome, stub) -> stub.conferir(cenario.path(nome + "_requisicoes"), arquivo));
+        if (cenario.has("sentry")) {
+            ArrayNode obtidos = NOS.arrayNode();
+            for (SentryEvent e : sentry) {
+                String nivel = e.getLevel() == null ? null : e.getLevel().name().toLowerCase(Locale.ROOT);
+                obtidos.addObject().put("nivel", nivel)
+                        .put("mensagem", e.getMessage() == null ? null : comBases(e.getMessage().getFormatted(), bases));
+            }
+            assertThat((JsonNode) obtidos).as("%s: mensagens do Sentry", arquivo).isEqualTo(cenario.get("sentry"));
+        }
         if (cenario.has("emails")) {
             conferirEmails(cenario.get("emails"), fixos, arquivo);
         }
@@ -401,14 +460,35 @@ public class ReplayDeContrato {
         executar(job, arg);
     }
 
-    /** O resumo da tarefa e o dict da task do Django (numero compara por valor). */
-    private void executarTarefa(String nome, JsonNode resumo, String arquivo) {
+    /** {@link #MENSAGEM_R12} gravada: a message obtida (que tem de existir) vira o marcador antes de comparar. */
+    static void semMensagemR12(ObjectNode obtido, JsonNode esperado) {
+        if (MENSAGEM_R12.equals(esperado.path("body").path("error").path("message").asString(""))
+                && obtido.path("body").path("error") instanceof ObjectNode erro && erro.has("message")) {
+            erro.put("message", MENSAGEM_R12);
+        }
+    }
+
+    /** A URL de cada stub trocada pela base que o Django usou ("<integracao>_base"), em todo texto do no. */
+    static JsonNode comBases(JsonNode no, Map<String, String> bases) {
+        return JSON.readTree(comBases(JSON.writeValueAsString(no), bases));
+    }
+
+    static String comBases(String texto, Map<String, String> bases) {
+        for (Map.Entry<String, String> b : bases.entrySet()) {
+            texto = texto == null ? null : texto.replace(b.getKey(), b.getValue());
+        }
+        return texto;
+    }
+
+    /** O resumo da tarefa e o dict da task do Django (numero compara por valor), com as bases do Django. */
+    private void executarTarefa(String nome, JsonNode resumo, Map<String, String> bases, String arquivo) {
         assertThat(resumo).as("%s: cenario de tarefa sem \"resumo\" (o dict que a task do Django devolveu)", arquivo)
                 .isNotNull();
         TarefaAgendada tarefa = tarefas.stream().filter(t -> t.nome().equals(nome)).findFirst()
                 .orElseThrow(() -> new AssertionError(arquivo + ": tarefa agendada " + nome + " nao registrada"));
         TarefaAgendada.ResultadoDaTarefa r = tarefa.executar(ModoDeExecucao.EXECUTAR);
-        assertThat(StubDeIntegracoes.numerosPorValor(JSON.valueToTree(r.resumo()))).as("%s: resumo da tarefa %s",
+        JsonNode obtido = comBases(JSON.valueToTree(r.resumo()), bases);
+        assertThat(StubDeIntegracoes.numerosPorValor(obtido)).as("%s: resumo da tarefa %s",
                 arquivo, nome).isEqualTo(StubDeIntegracoes.numerosPorValor(resumo));
     }
 
@@ -460,8 +540,9 @@ public class ReplayDeContrato {
      * fixo do ResendEnviador.
      */
     private void conferirEmails(JsonNode esperados, Set<String> fixos, String arquivo) {
-        esperados.forEach(e -> assertThat(e.get("reply_to")).as("%s: reply_to gravado", arquivo)
-                .isEqualTo(NOS.arrayNode().add(ResendEnviador.REPLY_TO)));
+        JsonNode replyTo = arquivo.startsWith(SEM_REPLY_TO) ? NOS.arrayNode()
+                : NOS.arrayNode().add(ResendEnviador.REPLY_TO);
+        esperados.forEach(e -> assertThat(e.get("reply_to")).as("%s: reply_to gravado", arquivo).isEqualTo(replyTo));
         boolean senhaTemporaria = esperados.toString().contains(SENHA_TEMPORARIA);
         ArrayNode obtidos = NOS.arrayNode();
         for (Email e : caixa.enviados()) {
@@ -620,6 +701,9 @@ public class ReplayDeContrato {
         u.setForceChangePassword(d.get("force_change_password").asBoolean());
         u.setCpfCnpj(d.get("cpf_cnpj").isNull() ? null : d.get("cpf_cnpj").asString());
         u.setTelefone(d.get("telefone").isNull() ? null : d.get("telefone").asString());
+        if (d.has("nome_format_blog")) {
+            u.setNomeFormatBlog(d.get("nome_format_blog").asString());
+        }
         if (d.hasNonNull("freemium_used_at")) {
             u.setFreemiumUsedAt(OffsetDateTime.parse(d.get("freemium_used_at").asString()));
         }

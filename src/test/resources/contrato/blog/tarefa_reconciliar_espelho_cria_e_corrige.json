@@ -1,0 +1,377 @@
+{
+  "cenario": "tarefa_reconciliar_espelho_cria_e_corrige",
+  "configuracao": {
+    "WORDPRESS_API_USER": "clama-django-sync",
+    "WORDPRESS_API_APP_PASSWORD": "abcd EFGH ijkl MNOP qrst UVWX",
+    "WORDPRESS_WEBHOOK_SECRET": "segredo-wordpress-contrato",
+    "ADMIN_ALERT_EMAIL": "alertas@clama.me",
+    "INDEXNOW_KEY": "",
+    "relogio": "2026-11-20T15:00:00+00:00"
+  },
+  "usuarios": [
+    {
+      "email": "admin@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Admin Clama",
+      "is_clama_admin": true,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    },
+    {
+      "email": "ana@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Ana Maria Souza",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    },
+    {
+      "email": "beto@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Beto",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    },
+    {
+      "email": "carla@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "  Carla  Dias  ",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000",
+      "nome_format_blog": "completo"
+    },
+    {
+      "email": "duda@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "   ",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    }
+  ],
+  "dados": {
+    "blog_postespelho": [
+      {
+        "created_at": "2026-11-10T15:00:00+00:00",
+        "updated_at": "2026-11-10T15:00:00+00:00",
+        "id": "e1e1e1e1-e1e1-4e1e-8e1e-000000000001",
+        "wp_post_id": 101,
+        "slug": "salmo-23",
+        "titulo": "Salmo 23",
+        "status": "publicado",
+        "published_at": "2026-11-10T15:00:00+00:00",
+        "url": "https://clama.me/blog/salmo-23",
+        "post_legado_id": null
+      },
+      {
+        "created_at": "2026-11-18T15:00:00+00:00",
+        "updated_at": "2026-11-18T15:00:00+00:00",
+        "id": "e1e1e1e1-e1e1-4e1e-8e1e-000000000002",
+        "wp_post_id": 102,
+        "slug": "rascunho-oculto",
+        "titulo": "Rascunho oculto",
+        "status": "rascunho",
+        "published_at": null,
+        "url": "https://clama.me/blog/rascunho-oculto",
+        "post_legado_id": null
+      },
+      {
+        "created_at": "2026-11-10T15:00:00+00:00",
+        "updated_at": "2026-11-10T15:00:00+00:00",
+        "id": "e1e1e1e1-e1e1-4e1e-8e1e-000000000003",
+        "wp_post_id": 103,
+        "slug": "oracao-da-manha",
+        "titulo": "Oração da manhã",
+        "status": "publicado",
+        "published_at": "2026-11-17T15:00:00+00:00",
+        "url": "https://clama.me/blog/oracao-da-manha",
+        "post_legado_id": null
+      }
+    ],
+    "blog_comentario": [],
+    "blog_reacao": [],
+    "blog_customerbanido": [],
+    "payments_webhookevento": []
+  },
+  "tarefa": "reconciliar-espelho",
+  "resumo": {
+    "paginas_lidas": 2,
+    "posts_vistos": 5,
+    "criados": 1,
+    "atualizados": 1,
+    "sem_mudanca": 2,
+    "divergentes": [
+      {
+        "wp_post_id": 102,
+        "slug": "rascunho-oculto",
+        "campos": [
+          "status",
+          "published_at"
+        ]
+      }
+    ],
+    "rodadas_divergentes": 1,
+    "abortada": false,
+    "motivo": ""
+  },
+  "wordpress": [
+    {
+      "metodo": "GET",
+      "caminho": "/wp-json/wp/v2/posts",
+      "status": 200,
+      "corpo": [
+        {
+          "id": 101,
+          "slug": "salmo-23",
+          "title": {
+            "raw": "Salmo 23",
+            "rendered": "Salmo 23"
+          },
+          "status": "publish",
+          "date_gmt": "2026-11-10T15:00:00",
+          "link": "https://clama.me/blog/salmo-23",
+          "password": ""
+        },
+        {
+          "id": 102,
+          "slug": "rascunho-oculto",
+          "title": {
+            "raw": "Rascunho oculto",
+            "rendered": "Rascunho oculto"
+          },
+          "status": "publish",
+          "date_gmt": "2026-11-19T12:00:00",
+          "link": "https://clama.me/blog/rascunho-oculto",
+          "password": ""
+        }
+      ],
+      "headers": {
+        "X-WP-Total": "2",
+        "X-WP-TotalPages": "2"
+      }
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/wp-json/wp/v2/posts",
+      "status": 200,
+      "corpo": [
+        {
+          "id": 103,
+          "slug": "oracao-da-manha",
+          "title": {
+            "rendered": "Oração da manhã"
+          },
+          "status": "publish",
+          "date_gmt": "2026-11-17T15:00:00",
+          "link": "https://clama.me/blog/oracao-da-manha",
+          "password": ""
+        },
+        {
+          "id": 105,
+          "slug": "texto-novo",
+          "title": {
+            "raw": "Texto novo",
+            "rendered": "Texto novo"
+          },
+          "status": "publish",
+          "date_gmt": "2026-11-19T12:00:00",
+          "link": "https://clama.me/blog/texto-novo",
+          "password": ""
+        },
+        {
+          "id": "abc",
+          "slug": "sem-id",
+          "title": {
+            "raw": "Sem id",
+            "rendered": "Sem id"
+          },
+          "status": "publish",
+          "date_gmt": "2026-11-19T12:00:00",
+          "link": "https://clama.me/blog/sem-id",
+          "password": ""
+        }
+      ],
+      "headers": {
+        "X-WP-Total": "3",
+        "X-WP-TotalPages": "2"
+      }
+    }
+  ],
+  "wordpress_requisicoes": [
+    {
+      "metodo": "GET",
+      "caminho": "/wp-json/wp/v2/posts?page=1&per_page=100&status=any&context=edit&_fields=id%2Cslug%2Ctitle%2Cstatus%2Cdate_gmt%2Clink%2Cpassword",
+      "autorizacao": "Basic Y2xhbWEtZGphbmdvLXN5bmM6YWJjZEVGR0hpamtsTU5PUHFyc3RVVldY",
+      "accept": "application/json"
+    },
+    {
+      "metodo": "GET",
+      "caminho": "/wp-json/wp/v2/posts?page=2&per_page=100&status=any&context=edit&_fields=id%2Cslug%2Ctitle%2Cstatus%2Cdate_gmt%2Clink%2Cpassword",
+      "autorizacao": "Basic Y2xhbWEtZGphbmdvLXN5bmM6YWJjZEVGR0hpamtsTU5PUHFyc3RVVldY",
+      "accept": "application/json"
+    }
+  ],
+  "wordpress_base": "https://wp.clama.test",
+  "monitores_base": "https://clama.me",
+  "sentry": [],
+  "emails": [],
+  "jobs_enfileirados": [],
+  "estado_final": {
+    "blog_postespelho": {
+      "colunas": [
+        "id",
+        "wp_post_id",
+        "slug",
+        "titulo",
+        "status",
+        "published_at",
+        "url",
+        "post_legado_id",
+        "created_at",
+        "updated_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": [
+        {
+          "id": "e1e1e1e1-e1e1-4e1e-8e1e-000000000001",
+          "wp_post_id": 101,
+          "slug": "salmo-23",
+          "titulo": "Salmo 23",
+          "status": "publicado",
+          "published_at": "-240:00:00",
+          "url": "https://clama.me/blog/salmo-23",
+          "post_legado_id": null,
+          "created_at": "-240:00:00",
+          "updated_at": "-240:00:00"
+        },
+        {
+          "id": "e1e1e1e1-e1e1-4e1e-8e1e-000000000002",
+          "wp_post_id": 102,
+          "slug": "rascunho-oculto",
+          "titulo": "Rascunho oculto",
+          "status": "publicado",
+          "published_at": "-27:00:00",
+          "url": "https://clama.me/blog/rascunho-oculto",
+          "post_legado_id": null,
+          "created_at": "-48:00:00",
+          "updated_at": "+00:00:00"
+        },
+        {
+          "id": "e1e1e1e1-e1e1-4e1e-8e1e-000000000003",
+          "wp_post_id": 103,
+          "slug": "oracao-da-manha",
+          "titulo": "Oração da manhã",
+          "status": "publicado",
+          "published_at": "-72:00:00",
+          "url": "https://clama.me/blog/oracao-da-manha",
+          "post_legado_id": null,
+          "created_at": "-240:00:00",
+          "updated_at": "-240:00:00"
+        },
+        {
+          "id": "<uuid>",
+          "wp_post_id": 105,
+          "slug": "texto-novo",
+          "titulo": "Texto novo",
+          "status": "publicado",
+          "published_at": "-27:00:00",
+          "url": "https://clama.me/blog/texto-novo",
+          "post_legado_id": null,
+          "created_at": "+00:00:00",
+          "updated_at": "+00:00:00"
+        }
+      ],
+      "deslocadas_do_relogio": [
+        "published_at",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "blog_comentario": {
+      "colunas": [
+        "id",
+        "post_id",
+        "post_espelho_id",
+        "customer_id",
+        "conteudo",
+        "ip_address",
+        "is_suspeito",
+        "created_at",
+        "updated_at"
+      ],
+      "cifradas_decifradas": [
+        "ip_address"
+      ],
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "blog_reacao": {
+      "colunas": [
+        "id",
+        "post_id",
+        "post_espelho_id",
+        "customer_id",
+        "tipo",
+        "created_at",
+        "updated_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "blog_customerbanido": {
+      "colunas": [
+        "id",
+        "customer_id",
+        "motivo",
+        "banido_em",
+        "banido_por_id",
+        "revogado_em",
+        "revogado_por_id",
+        "created_at",
+        "updated_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "banido_em",
+        "revogado_em",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "payments_webhookevento": {
+      "colunas": [
+        "id",
+        "provider",
+        "external_event_id",
+        "event_type",
+        "payload",
+        "status",
+        "pedido_id",
+        "error_message",
+        "created_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": []
+    }
+  }
+}

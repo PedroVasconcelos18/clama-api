@@ -24,7 +24,9 @@ import tools.jackson.databind.node.ObjectNode;
  * Uma integracao HTTP num HttpServer local, um por integracao (cada uma com a sua fila): serve as respostas do cenario
  * ("mercadopago", "anthropic"), na ordem, e grava toda requisicao recebida para comparar com "<integracao>_requisicoes",
  * o que o Django mandou ao SDK. Requisicao alem das declaradas recebe 500 e aparece na comparacao. O do Mercado Pago
- * tambem atende o Turnstile dos pedidos. Resposta {"falha": "conexao"} fecha a conexao sem responder.
+ * tambem atende o Turnstile dos pedidos. Resposta {"falha": "conexao"} fecha a conexao sem responder. Resposta pode
+ * trazer "headers" (X-WP-TotalPages, Location, X-Robots-Tag, Content-Type) e "corpo_texto" no lugar do "corpo" JSON
+ * (robots.txt, HTML, corpo que nao e JSON).
  */
 public class StubDeIntegracoes {
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -105,10 +107,23 @@ public class StubDeIntegracoes {
             troca.close(); // falha de rede (requests.ConnectionError no gravador): fecha sem resposta
             return;
         }
-        byte[] saida = resposta == null ? "{\"stub\":\"requisicao nao declarada no cenario\"}".getBytes(StandardCharsets.UTF_8)
-                : JSON.writeValueAsBytes(resposta.get("corpo"));
-        troca.getResponseHeaders().add("Content-Type", "application/json");
-        troca.sendResponseHeaders(resposta == null ? 500 : resposta.get("status").asInt(), saida.length);
+        byte[] saida;
+        if (resposta == null) {
+            saida = "{\"stub\":\"requisicao nao declarada no cenario\"}".getBytes(StandardCharsets.UTF_8);
+        } else if (resposta.has("corpo_texto")) {
+            saida = resposta.get("corpo_texto").asString().getBytes(StandardCharsets.UTF_8);
+        } else {
+            saida = JSON.writeValueAsBytes(resposta.get("corpo"));
+        }
+        troca.getResponseHeaders().set("Content-Type", resposta != null && resposta.has("corpo_texto")
+                ? "text/plain; charset=utf-8" : "application/json");
+        if (resposta != null) {
+            resposta.path("headers").properties().forEach(h -> troca.getResponseHeaders().set(h.getKey(),
+                    h.getValue().asString()));
+        }
+        // -1: sem corpo (0 seria chunked)
+        troca.sendResponseHeaders(resposta == null ? 500 : resposta.get("status").asInt(),
+                saida.length == 0 ? -1 : saida.length);
         troca.getResponseBody().write(saida);
         troca.close();
     }

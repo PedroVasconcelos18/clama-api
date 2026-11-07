@@ -1,0 +1,226 @@
+{
+  "cenario": "blog_comentarios_lista_espelho_rascunho_409",
+  "configuracao": {
+    "WORDPRESS_API_USER": "clama-django-sync",
+    "WORDPRESS_API_APP_PASSWORD": "abcd EFGH ijkl MNOP qrst UVWX",
+    "WORDPRESS_WEBHOOK_SECRET": "segredo-wordpress-contrato",
+    "ADMIN_ALERT_EMAIL": "alertas@clama.me",
+    "INDEXNOW_KEY": "",
+    "relogio": "2026-11-20T15:00:00+00:00"
+  },
+  "usuarios": [
+    {
+      "email": "admin@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Admin Clama",
+      "is_clama_admin": true,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    },
+    {
+      "email": "ana@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Ana Maria Souza",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    },
+    {
+      "email": "beto@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Beto",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    },
+    {
+      "email": "carla@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "  Carla  Dias  ",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000",
+      "nome_format_blog": "completo"
+    },
+    {
+      "email": "duda@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "   ",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    }
+  ],
+  "dados": {
+    "blog_postespelho": [
+      {
+        "created_at": "2026-11-18T15:00:00+00:00",
+        "updated_at": "2026-11-18T15:00:00+00:00",
+        "id": "e1e1e1e1-e1e1-4e1e-8e1e-000000000002",
+        "wp_post_id": 102,
+        "slug": "rascunho-oculto",
+        "titulo": "Rascunho oculto",
+        "status": "rascunho",
+        "published_at": null,
+        "url": "https://clama.me/blog/rascunho-oculto",
+        "post_legado_id": null
+      }
+    ],
+    "blog_comentario": [],
+    "blog_reacao": [],
+    "blog_customerbanido": [],
+    "payments_webhookevento": []
+  },
+  "passos": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/blog/posts/rascunho-oculto/comments/",
+        "headers_resposta": [
+          "Cache-Control",
+          "X-Robots-Tag"
+        ]
+      },
+      "response": {
+        "status": 409,
+        "body": {
+          "error": {
+            "code": "post_nao_aceita_interacao",
+            "message": "Post não está publicado.",
+            "pastoral_message": "Este texto saiu do ar enquanto você escrevia. Copiamos o que você digitou — guarde, e tente de novo quando ele voltar."
+          }
+        },
+        "cookies": [],
+        "headers": {
+          "Cache-Control": "public, max-age=10",
+          "X-Robots-Tag": null
+        }
+      }
+    }
+  ],
+  "wordpress_base": "https://wp.clama.test",
+  "monitores_base": "https://clama.me",
+  "sentry": [],
+  "emails": [],
+  "jobs_enfileirados": [],
+  "estado_final": {
+    "blog_postespelho": {
+      "colunas": [
+        "id",
+        "wp_post_id",
+        "slug",
+        "titulo",
+        "status",
+        "published_at",
+        "url",
+        "post_legado_id",
+        "created_at",
+        "updated_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": [
+        {
+          "id": "e1e1e1e1-e1e1-4e1e-8e1e-000000000002",
+          "wp_post_id": 102,
+          "slug": "rascunho-oculto",
+          "titulo": "Rascunho oculto",
+          "status": "rascunho",
+          "published_at": null,
+          "url": "https://clama.me/blog/rascunho-oculto",
+          "post_legado_id": null,
+          "created_at": "-48:00:00",
+          "updated_at": "-48:00:00"
+        }
+      ],
+      "deslocadas_do_relogio": [
+        "published_at",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "blog_comentario": {
+      "colunas": [
+        "id",
+        "post_id",
+        "post_espelho_id",
+        "customer_id",
+        "conteudo",
+        "ip_address",
+        "is_suspeito",
+        "created_at",
+        "updated_at"
+      ],
+      "cifradas_decifradas": [
+        "ip_address"
+      ],
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "blog_reacao": {
+      "colunas": [
+        "id",
+        "post_id",
+        "post_espelho_id",
+        "customer_id",
+        "tipo",
+        "created_at",
+        "updated_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "blog_customerbanido": {
+      "colunas": [
+        "id",
+        "customer_id",
+        "motivo",
+        "banido_em",
+        "banido_por_id",
+        "revogado_em",
+        "revogado_por_id",
+        "created_at",
+        "updated_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "banido_em",
+        "revogado_em",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "payments_webhookevento": {
+      "colunas": [
+        "id",
+        "provider",
+        "external_event_id",
+        "event_type",
+        "payload",
+        "status",
+        "pedido_id",
+        "error_message",
+        "created_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": []
+    }
+  }
+}

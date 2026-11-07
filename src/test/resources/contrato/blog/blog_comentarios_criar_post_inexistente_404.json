@@ -1,0 +1,286 @@
+{
+  "cenario": "blog_comentarios_criar_post_inexistente_404",
+  "configuracao": {
+    "WORDPRESS_API_USER": "clama-django-sync",
+    "WORDPRESS_API_APP_PASSWORD": "abcd EFGH ijkl MNOP qrst UVWX",
+    "WORDPRESS_WEBHOOK_SECRET": "segredo-wordpress-contrato",
+    "ADMIN_ALERT_EMAIL": "alertas@clama.me",
+    "INDEXNOW_KEY": "",
+    "relogio": "2026-11-20T15:00:00+00:00"
+  },
+  "usuarios": [
+    {
+      "email": "admin@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Admin Clama",
+      "is_clama_admin": true,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    },
+    {
+      "email": "ana@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Ana Maria Souza",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    },
+    {
+      "email": "beto@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "Beto",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    },
+    {
+      "email": "carla@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "  Carla  Dias  ",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000",
+      "nome_format_blog": "completo"
+    },
+    {
+      "email": "duda@exemplo.com",
+      "senha": "Clama-forte-2026",
+      "nome_completo": "   ",
+      "is_clama_admin": false,
+      "is_active": true,
+      "force_change_password": false,
+      "cpf_cnpj": "123.456.789-09",
+      "telefone": "+5511999990000"
+    }
+  ],
+  "dados": {
+    "blog_postespelho": [],
+    "blog_comentario": [],
+    "blog_reacao": [],
+    "blog_customerbanido": [],
+    "payments_webhookevento": []
+  },
+  "passos": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/customer/auth/login/",
+        "body": {
+          "email": "ana@exemplo.com",
+          "password": "Clama-forte-2026"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "user": {
+            "id": "<id>",
+            "email": "ana@exemplo.com",
+            "nome_completo": "Ana Maria Souza",
+            "force_change_password": false,
+            "freemium_used_at": null,
+            "nome_format_blog": "compacto",
+            "cpf_cnpj": "123.456.789-09",
+            "telefone": "+5511999990000",
+            "idade": null,
+            "sexo": ""
+          }
+        },
+        "cookies": [
+          {
+            "name": "clama_access",
+            "value": "<jwt>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 900
+          },
+          {
+            "name": "clama_refresh",
+            "value": "<jwt>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 604800
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/csrf/"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "csrf_token": "<csrf>"
+        },
+        "cookies": [
+          {
+            "name": "csrftoken",
+            "value": "<csrf>",
+            "path": "/api",
+            "httponly": true,
+            "samesite": "Lax",
+            "max_age": 31449600
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/blog/posts/nao-existe/comments/",
+        "headers": {
+          "X-CSRFToken": "{csrf}",
+          "X-Forwarded-For": "203.0.113.9, 10.0.0.1"
+        },
+        "body": {
+          "conteudo": "Amém!"
+        }
+      },
+      "response": {
+        "status": 404,
+        "body": {
+          "error": {
+            "code": "post_nao_encontrado",
+            "message": "Post não encontrado.",
+            "pastoral_message": "Não encontramos este texto. Ele pode ter saído do ar."
+          }
+        },
+        "cookies": []
+      }
+    }
+  ],
+  "wordpress": [
+    {
+      "metodo": "GET",
+      "caminho": "/wp-json/wp/v2/posts",
+      "status": 200,
+      "corpo": [],
+      "headers": {
+        "X-WP-Total": "0",
+        "X-WP-TotalPages": "1"
+      }
+    }
+  ],
+  "wordpress_requisicoes": [
+    {
+      "metodo": "GET",
+      "caminho": "/wp-json/wp/v2/posts?slug=nao-existe&status=any&context=edit&per_page=1&_fields=id%2Cslug%2Ctitle%2Cstatus%2Cdate_gmt%2Clink%2Cpassword",
+      "autorizacao": "Basic Y2xhbWEtZGphbmdvLXN5bmM6YWJjZEVGR0hpamtsTU5PUHFyc3RVVldY",
+      "accept": "application/json"
+    }
+  ],
+  "wordpress_base": "https://wp.clama.test",
+  "monitores_base": "https://clama.me",
+  "sentry": [],
+  "emails": [],
+  "jobs_enfileirados": [],
+  "estado_final": {
+    "blog_postespelho": {
+      "colunas": [
+        "id",
+        "wp_post_id",
+        "slug",
+        "titulo",
+        "status",
+        "published_at",
+        "url",
+        "post_legado_id",
+        "created_at",
+        "updated_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "published_at",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "blog_comentario": {
+      "colunas": [
+        "id",
+        "post_id",
+        "post_espelho_id",
+        "customer_id",
+        "conteudo",
+        "ip_address",
+        "is_suspeito",
+        "created_at",
+        "updated_at"
+      ],
+      "cifradas_decifradas": [
+        "ip_address"
+      ],
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "blog_reacao": {
+      "colunas": [
+        "id",
+        "post_id",
+        "post_espelho_id",
+        "customer_id",
+        "tipo",
+        "created_at",
+        "updated_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "blog_customerbanido": {
+      "colunas": [
+        "id",
+        "customer_id",
+        "motivo",
+        "banido_em",
+        "banido_por_id",
+        "revogado_em",
+        "revogado_por_id",
+        "created_at",
+        "updated_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": [],
+      "deslocadas_do_relogio": [
+        "banido_em",
+        "revogado_em",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "payments_webhookevento": {
+      "colunas": [
+        "id",
+        "provider",
+        "external_event_id",
+        "event_type",
+        "payload",
+        "status",
+        "pedido_id",
+        "error_message",
+        "created_at"
+      ],
+      "cifradas_decifradas": [],
+      "linhas": []
+    }
+  }
+}
