@@ -23,6 +23,10 @@ spring:
     baseline-on-migrate: true
     baseline-version: "0"
 clama:
+  agenda:
+    pedidos-presos:
+      cron: "0 */10 * * * *"
+      janela: PT20M
   # MEDIA_ROOT do Django (FileSystemStorage): documents/<uuid>/<nome>
   media-root: ./media
   documentos:

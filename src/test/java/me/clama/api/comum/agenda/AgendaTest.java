@@ -125,7 +125,18 @@ class AgendaTest {
 	void shutdownEsperaATarefaEmAndamento() {
 		var s = AgendaConfig.agendaScheduler();
 		assertThat(ReflectionTestUtils.getField(s, "waitForTasksToCompleteOnShutdown")).isEqualTo(true);
-		assertThat(ReflectionTestUtils.getField(s, "awaitTerminationMillis")).isEqualTo(25_000L);
+		assertThat(ReflectionTestUtils.getField(s, "awaitTerminationMillis")).isEqualTo(10_000L);
+	}
+
+	@Test
+	void agendaNaoEsperaTarefasFuturasNoShutdown() {
+		var s = AgendaConfig.agendaScheduler();
+		s.initialize();
+		try {
+			assertThat(s.getScheduledThreadPoolExecutor().getExecuteExistingDelayedTasksAfterShutdownPolicy()).isFalse();
+		} finally {
+			s.shutdown();
+		}
 	}
 
 	@Test

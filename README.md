@@ -66,4 +66,4 @@ A fila e at-least-once: um job pode rodar de novo depois de ja ter enviado (proc
 
 ## Shutdown no redeploy (Etapa 9)
 
-No SIGTERM, a fila (db-scheduler, `shutdownMaxWait` 25 s) e a agenda (`ThreadPoolTaskScheduler`, `awaitTermination` 25 s) esperam o que esta rodando terminar. **No Railway, o draining time do servico precisa ser >= 30 s**, senao o SIGKILL chega antes. Se a fila e a agenda estiverem ocupadas ao mesmo tempo, as esperas podem somar. Um job morto no meio (heartbeat de 20 s, 6 perdidos) e retomado por outra instancia em cerca de 2 min.
+No SIGTERM, a fila (db-scheduler, `shutdownMaxWait` 25 s) espera 25 s pelo que esta rodando, e a agenda (`ThreadPoolTaskScheduler`, `awaitTermination` 10 s) espera so a tarefa em andamento: tarefa futura nao roda no shutdown. **No Railway, o draining time do servico precisa ser >= 35 s**, senao o SIGKILL chega antes (orcamento: 25 s para a fila + 10 s para a agenda, que podem somar). Um job morto no meio (heartbeat de 20 s, 6 perdidos) e retomado por outra instancia em cerca de 2 min.
