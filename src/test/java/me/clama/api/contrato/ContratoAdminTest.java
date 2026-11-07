@@ -55,9 +55,9 @@ class ContratoAdminTest {
     static final int GRAVADOS = 38;
     /** Grupos ligados, por prefixo do arquivo. Cada task move o seu prefixo de PENDENTES para LIGADOS. */
     static final List<String> LIGADOS = List.of("customer_pedidos_", "forgot_", "admin_pedidos_",
-            "admin_pedido_detalhe", "metrics_", "admin_reenviar_", "admin_marcar_gratuito_");
+            "admin_pedido_detalhe", "metrics_", "admin_reenviar_", "admin_marcar_gratuito_", "admin_customers_", "admin_customer_");
     /** Gravados mas ainda sem implementacao. */
-    static final List<String> PENDENTES = List.of("admin_customers_", "admin_customer_", "prompt_preview_");
+    static final List<String> PENDENTES = List.of("prompt_preview_");
     static final List<String> TABELAS = List.of("users_user", "token_blacklist_outstandingtoken",
             "token_blacklist_blacklistedtoken", "plans_plan", "instituicoes_instituicao", "orders_pedido",
             "prompts_prompttemplate", "documents_documentocontexto", "instituicoes_repasse", "payments_webhookevento",
