@@ -16,13 +16,20 @@ public class ModelosDeEmail {
 
     private final RenderizadorDeTemplate renderizador = new RenderizadorDeTemplate();
     private final String loginUrl;
+    private final String frontendBase;
 
     @Autowired
     public ModelosDeEmail(@Value("${FRONTEND_BASE_URL:}") String frontendBaseUrl,
             @Value("${FRONTEND_URL:}") String frontendUrl) {
         String base = !frontendBaseUrl.isEmpty() ? frontendBaseUrl
                 : !frontendUrl.isEmpty() ? frontendUrl : "http://localhost:5173";
-        this.loginUrl = base.replaceAll("/+$", "") + "/login";
+        this.frontendBase = base.replaceAll("/+$", "");
+        this.loginUrl = frontendBase + "/login";
+    }
+
+    /** {FRONTEND_BASE_URL or FRONTEND_URL or http://localhost:5173} sem a barra final. */
+    public String frontendBase() {
+        return frontendBase;
     }
 
     /** {FRONTEND_BASE_URL or FRONTEND_URL or http://localhost:5173}/login, como as tasks do Django montam. */
