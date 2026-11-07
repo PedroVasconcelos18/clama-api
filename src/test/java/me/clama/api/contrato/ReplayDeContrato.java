@@ -34,6 +34,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import me.clama.api.BancoDeTeste;
+import me.clama.api.blog.JanelaFixa;
 import me.clama.api.comum.agenda.ModoDeExecucao;
 import me.clama.api.comum.agenda.TarefaAgendada;
 import me.clama.api.comum.cripto.CampoCriptografado;
@@ -152,6 +153,7 @@ public class ReplayDeContrato {
     private Consumer<Instant> relogio;
     private Collection<? extends TarefaAgendada> tarefas;
     private List<SentryEvent> sentry;
+    private JanelaFixa janela;
 
     /**
      * O que o harness precisa do app fora do banco: o cache de senhas temporarias (SenhasTemporarias) e o dedup em
@@ -233,6 +235,12 @@ public class ReplayDeContrato {
         return this;
     }
 
+    /** O rate limit de janela fixa do widget do blog (etapa 6): zerado antes de cada cenario, como o limiter. */
+    public ReplayDeContrato comJanelaFixa(JanelaFixa janela) {
+        this.janela = janela;
+        return this;
+    }
+
     public void executar(Path cenarioJson, URI base) throws Exception {
         JsonNode cenario = JSON.readTree(cenarioJson.toFile());
         Set<String> fixos = uuidsFixos(cenario);
@@ -275,6 +283,9 @@ public class ReplayDeContrato {
         BancoDeTeste.exigirContainer(jdbc); // o TRUNCATE ... CASCADE apagaria pedidos, blog e tokens de um banco real
         jdbc.execute("TRUNCATE " + String.join(", ", tabelas) + " RESTART IDENTITY CASCADE");
         limiter.limpar(); // cache.clear() do gravador
+        if (janela != null) {
+            janela.limpar();
+        }
         if (caixa != null) {
             caixa.limpar();
             ganchos.limpar();

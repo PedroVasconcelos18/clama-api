@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+import me.clama.api.blog.SemBanimento;
 import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.comum.erro.PastoralExceptionHandler;
 import me.clama.api.identidade.Usuario;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.authorization.AuthorizationResult;
@@ -27,6 +29,7 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.header.writers.CacheControlHeadersWriter;
 import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
@@ -61,18 +64,25 @@ public class SegurancaConfig {
 
     @Bean
     SecurityFilterChain filtros(HttpSecurity http, ServicoDeTokens tokens, UsuarioRepository usuarios,
-            CookieCsrfTokenRepository csrf, ObjectProvider<HandlerMapping> mapeamentos,
+            CookieCsrfTokenRepository csrf, ObjectProvider<HandlerMapping> mapeamentos, SemBanimento banimento,
             @Value("${DJANGO_CSRF_TRUSTED_ORIGINS:https://clama.me,https://www.clama.me}") String confiaveis,
             @Value("${DJANGO_CORS_ALLOWED_ORIGINS:}") String cors) throws Exception {
         // O CSRF fica no FiltroJwtCookie (como no Django, so pra quem autenticou por cookie), nao no CsrfFilter.
         // no-cache/no-store fica em tudo (PII), menos nas metricas, que mandam o proprio Cache-Control (cache_page(60)),
         // e no /confirmar/ do freemium: o 302 e o 200 levam no-store, os erros saem sem Cache-Control (como no Django).
         // Referrer-Policy: same-origin do SecurityMiddleware, so onde a resposta nao trouxe a sua (setdefault)
+        // O GET/HEAD de comentarios do blog leva "public, max-age=10" em toda resposta, inclusive 401, 404, 409 e 429
+        // (finalize_response da view); escrito aqui, no commit da resposta, pega tambem os erros dos filtros.
         PathPatternRequestMatcher.Builder rotas = PathPatternRequestMatcher.withDefaults();
+        RequestMatcher leituraDeComentarios = req -> ("GET".equals(req.getMethod()) || "HEAD".equals(req.getMethod()))
+                && FiltroJwtCookie.COMENTARIOS.matcher(req.getRequestURI()).matches();
         return http.csrf(c -> c.disable())
                 .headers(h -> h.cacheControl(c -> c.disable()).addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(
                         new NegatedRequestMatcher(new OrRequestMatcher(rotas.matcher("/api/admin/metrics/**"),
-                                rotas.matcher("/api/freemium/confirmar/**"))), new CacheControlHeadersWriter()))
+                                rotas.matcher("/api/freemium/confirmar/**"), leituraDeComentarios)),
+                        new CacheControlHeadersWriter()))
+                        .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(leituraDeComentarios,
+                                new StaticHeadersWriter("Cache-Control", "public, max-age=10")))
                         .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.SAME_ORIGIN)))
                 .cors(c -> c.configurationSource(cors(lista(cors))))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -86,6 +96,8 @@ public class SegurancaConfig {
                         .accessDeniedHandler((req, resp, ex) -> {
                             if (ex instanceof SenhaTemporaria) {
                                 PastoralExceptionHandler.escrever(resp, PastoralException.senhaTemporaria());
+                            } else if (ex instanceof SemBanimento.Suspenso) {
+                                PastoralExceptionHandler.escrever(resp, 403, SemBanimento.CORPO);
                             } else {
                                 PastoralExceptionHandler.escrever(resp, 403, Map.of("detail",
                                         req.getRequestURI().startsWith("/api/admin/") ? SO_ADMIN : SEM_PERMISSAO));
@@ -99,6 +111,10 @@ public class SegurancaConfig {
                         .requestMatchers("/api/admin/**").hasAuthority(FiltroJwtCookie.ADMIN)
                         .requestMatchers(SENHA_EM_DIA).access(SegurancaConfig::senhaEmDia)
                         .requestMatchers("/api/customer/**").authenticated()
+                        // escritas do widget: IsUnbannedCustomer (o GET de comentarios esta nas ABERTAS)
+                        .requestMatchers(rotas.matcher(HttpMethod.POST, "/api/blog/posts/*/comments/"),
+                                rotas.matcher("/api/blog/posts/*/like/")).access(banimento::decidir)
+                        .requestMatchers("/api/blog/comments/*/").authenticated()
                         .anyRequest().denyAll())
                 .build();
     }

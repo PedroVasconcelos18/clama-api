@@ -35,6 +35,18 @@ public final class ClienteIp {
     }
 
     /**
+     * _client_ip do blog (views.py:59-63): 1o item do X-Forwarded-For (strip), senao REMOTE_ADDR, senao "". Texto cru,
+     * sem validar se e IP (o comentario grava o que vier, cifrado).
+     */
+    public static String cru(HttpServletRequest req) {
+        String xff = xff(req);
+        if (!xff.isEmpty()) {
+            return TextoPython.strip(xff.split(",", -1)[0]);
+        }
+        return req.getRemoteAddr() == null ? "" : req.getRemoteAddr();
+    }
+
+    /**
      * validate_ipv46_address do Django: IPv4 sem zeros a esquerda; IPv6 do ipaddress (ate 39 caracteres).
      * ponytail: IPv6 com zona ("fe80::1%eth0") e recusado (o Python aceita, o inet do Postgres nao).
      */

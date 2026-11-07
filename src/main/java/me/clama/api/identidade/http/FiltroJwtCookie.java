@@ -49,8 +49,16 @@ public class FiltroJwtCookie extends OncePerRequestFilter {
     /** POST /api/pedidos/{uuid}/checkout/: entrada propria, o padrao de status nao a cobre. */
     private static final Pattern CHECKOUT =
             Pattern.compile("/api/pedidos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/checkout/");
+    /** /api/blog/posts/{slug}/comments/ (conversor slug do Django). */
+    static final Pattern COMENTARIOS = Pattern.compile("/api/blog/posts/[-a-zA-Z0-9_]+/comments/");
+    /**
+     * ComentarioListCreateView.get_permissions: so o POST e IsUnbannedCustomer; o resto (GET, HEAD e os 405) e AllowAny.
+     */
+    static final RequestMatcher COMENTARIOS_ABERTOS = req -> !"POST".equals(req.getMethod())
+            && COMENTARIOS.matcher(req.getRequestURI()).matches();
     static final RequestMatcher ABERTAS = req -> ROTAS_ABERTAS.contains(req.getRequestURI())
-            || STATUS_PEDIDO.matcher(req.getRequestURI()).matches() || CHECKOUT.matcher(req.getRequestURI()).matches();
+            || STATUS_PEDIDO.matcher(req.getRequestURI()).matches() || CHECKOUT.matcher(req.getRequestURI()).matches()
+            || COMENTARIOS_ABERTOS.matches(req);
     /** IsClamaAdmin. */
     static final String ADMIN = "ADMIN";
     private static final Set<String> METODOS_SEGUROS = Set.of("GET", "HEAD", "OPTIONS", "TRACE");

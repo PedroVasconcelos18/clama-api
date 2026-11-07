@@ -44,8 +44,18 @@ public abstract class EntidadeDoBlog {
         }
 
         private OffsetDateTime agora() {
-            return OffsetDateTime.now(relogio).withOffsetSameInstant(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+            return EntidadeDoBlog.agora(relogio);
         }
+    }
+
+    /** O "agora" das colunas do blog (UTC, microssegundos), tambem para quem grava por SQL. */
+    public static OffsetDateTime agora(Clock relogio) {
+        return OffsetDateTime.now(relogio).withOffsetSameInstant(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    }
+
+    /** save() do Django grava sempre (auto_now): marca a linha como alterada mesmo sem campo novo. */
+    public void marcarAlterada() {
+        updatedAt = null; // o @PreUpdate do Carimbo poe o agora do relogio
     }
 
     @Id
