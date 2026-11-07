@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import me.clama.api.contrato.StubDeIntegracoes;
+import me.clama.api.documento.DocumentoRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -193,6 +194,57 @@ class ClienteClaudeTest {
                     esperas::add);
             assertThatThrownBy(() -> producao.gerar(MontagemDoPromptTest.pedido("simples", "Maria", null, null, "x")))
                     .isExactlyInstanceOf(ErroDeGeracao.class).hasMessageContaining("ANTHROPIC_API_KEY");
+        }
+        conferir();
+    }
+
+    String previa(ClienteClaude c) {
+        return c.gerarPrevia("Você é o Clama.", "Pedido: paz");
+    }
+
+    /** _generate_raw: mesmo payload, mas nunca consulta documentos (o repositorio falha se tocado) nem poe o beta. */
+    @Test
+    void previaSemHeaderBetaESemDocumentos() {
+        respostas(OK);
+        DocumentoRepository docs = org.mockito.Mockito.mock(DocumentoRepository.class);
+        org.mockito.Mockito.when(docs.ativosSincronizados()).thenThrow(new AssertionError("previa nao usa documentos"));
+        ClienteClaude c = new ClienteClaude("sk-ant-teste", stub.url(), false, null, docs, Duration.ofSeconds(30),
+                esperas::add);
+        assertThat(previa(c)).isEqualTo("Senhor, acolhe a Maria.\n\nAmém.");
+        conferir(SEM_DOCS);
+        org.mockito.Mockito.verifyNoInteractions(docs);
+    }
+
+    @Test
+    void previaNaoRetenta() {
+        respostas(SOBRECARGA, OK);
+        assertThatThrownBy(() -> previa(cliente(stub.url(), Duration.ofSeconds(30))))
+                .isExactlyInstanceOf(ErroDeGeracao.class).hasMessageStartingWith("Erro ao gerar preview: ")
+                .hasMessageContaining("529");
+        conferir(SEM_DOCS);
+        assertThat(esperas).isEmpty();
+    }
+
+    @Test
+    void previaSemCreditosELevantaCreditosEsgotados() {
+        respostas(SEM_CREDITOS);
+        assertThatThrownBy(() -> previa(cliente(stub.url(), Duration.ofSeconds(30))))
+                .isInstanceOf(CreditosEsgotados.class);
+        conferir(SEM_DOCS);
+    }
+
+    @Test
+    void previaSemChaveForaDeTest500() {
+        respostas();
+        for (String chave : new String[] {"", "test_api_key_for_local_development"}) {
+            ClienteClaude producao = new ClienteClaude(chave, stub.url(), false, null, null, Duration.ofSeconds(30),
+                    esperas::add);
+            assertThatThrownBy(() -> previa(producao)).isExactlyInstanceOf(ErroDeGeracao.class)
+                    .hasMessage("ANTHROPIC_API_KEY ausente");
+            ClienteClaude mock = new ClienteClaude(chave, stub.url(), true, null, null, Duration.ofSeconds(30),
+                    esperas::add);
+            assertThat(previa(mock)).startsWith("Senhor, venho diante de Ti em nome de irmã.");
+            assertThat(mock.gerarPrevia("s", "m", "Joana Lima")).contains("em nome de Joana.");
         }
         conferir();
     }

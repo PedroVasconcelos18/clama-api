@@ -235,7 +235,7 @@ public final class CamposDrf {
         }
     }
 
-    private static String tipoPython(JsonNode n) {
+    public static String tipoPython(JsonNode n) {
         if (n.isArray()) {
             return "list";
         }

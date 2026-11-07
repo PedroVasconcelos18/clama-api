@@ -1,5 +1,6 @@
 package me.clama.api.prompt;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.UUID;
 import me.clama.api.comum.api.DatasDrf;
 import tools.jackson.databind.JsonNode;
@@ -21,4 +22,13 @@ public final class PromptDtos {
     }
 
     public record Ativado(String status, String message) {}
+
+    public record Previa(String oracao_preview, TemplateDaPrevia template) {}
+
+    public record TemplateDaPrevia(UUID id, String nome, int versao) {}
+
+    /** {"error": {"code"?, "message"}}: o code so existe nos creditos esgotados. */
+    public record Erro(Detalhe error) {
+        public record Detalhe(@JsonInclude(JsonInclude.Include.NON_NULL) String code, String message) {}
+    }
 }

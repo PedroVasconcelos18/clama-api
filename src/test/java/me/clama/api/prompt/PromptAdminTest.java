@@ -137,12 +137,10 @@ class PromptAdminTest {
     }
 
     @Test
-    void jsonbRedondaJsonArbitrarioEPreviewAindaNaoExiste() throws Exception {
+    void jsonbRedondaJsonArbitrario() throws Exception {
         HttpResponse<String> r = post("/api/admin/prompts/",
                 "{\"nome\":\"j\",\"system_prompt\":\"s\",\"instrucoes_por_complexidade\":[1,{\"b\":null,\"a\":[true,\"é\"]}]}");
         assertThat(r.statusCode()).isEqualTo(201);
         assertThat(r.body()).contains("\"instrucoes_por_complexidade\":[1,{\"b\":null,\"a\":[true,\"é\"]}]");
-        UUID id = jdbc.queryForObject("select id from prompts_prompttemplate", UUID.class);
-        assertThat(post("/api/admin/prompts/" + id + "/preview/", "{}").statusCode()).isEqualTo(404);
     }
 }

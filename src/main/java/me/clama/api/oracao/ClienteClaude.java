@@ -109,10 +109,8 @@ public class ClienteClaude {
             if (!mockPermitido) {
                 throw new ErroDeGeracao("ANTHROPIC_API_KEY não configurada: geração de oração indisponível");
             }
-            // ponytail: nome so de espaco cai em "irmã" (no Django seria IndexError); so existe no perfil test
-            List<String> partes = p.getNome() == null ? List.of() : TextoPython.split(p.getNome());
             LOG.info("Retornando oração mock (event=anthropic_mock_prayer, pedido_id={})", p.getId());
-            return ORACAO_MOCK.replace("{nome}", partes.isEmpty() ? "irmã" : partes.get(0));
+            return mock(p.getNome());
         }
         PromptTemplate template = prompts.obter();
         List<String> fileIds = documentos.ativosSincronizados().stream().map(DocumentoContexto::getAnthropicFileId)
@@ -125,9 +123,56 @@ public class ClienteClaude {
                 p.getPlano().getComplexidade());
     }
 
-    String gerar(String system, String mensagem, List<String> fileIds, String complexidade) {
-        MessageCreateParams.Builder b = MessageCreateParams.builder().model(MODELO).maxTokens(MAX_TOKENS)
+    // ponytail: nome so de espaco cai em "irmã" (no Django seria IndexError); so existe no perfil test
+    private static String mock(String nome) {
+        List<String> partes = nome == null ? List.of() : TextoPython.split(nome);
+        return ORACAO_MOCK.replace("{nome}", partes.isEmpty() ? "irmã" : partes.get(0));
+    }
+
+    private static MessageCreateParams.Builder base(String system) {
+        return MessageCreateParams.builder().model(MODELO).maxTokens(MAX_TOKENS)
                 .systemOfTextBlockParams(List.of(TextBlockParam.builder().text(system).cacheControl(EFEMERO).build()));
+    }
+
+    /** _generate_raw (previa do admin): "irmã" no mock, como o default do Django. */
+    public String gerarPrevia(String system, String mensagemDoUsuario) {
+        return gerarPrevia(system, mensagemDoUsuario, "irmã");
+    }
+
+    /**
+     * Uma tentativa so, sem documentos, sem header beta e sem retentativa. Sem chave fora do perfil test:
+     * {@link ErroDeGeracao} "ANTHROPIC_API_KEY ausente". 400 de credito vira {@link CreditosEsgotados}; o resto,
+     * {@link ErroDeGeracao} "Erro ao gerar preview: ...".
+     */
+    public String gerarPrevia(String system, String mensagemDoUsuario, String nome) {
+        if (cliente == null) {
+            if (!mockPermitido) {
+                throw new ErroDeGeracao("ANTHROPIC_API_KEY ausente");
+            }
+            LOG.info("Retornando preview mock (event=anthropic_mock_preview)");
+            return mock(nome);
+        }
+        long inicio = System.nanoTime();
+        try {
+            Message m = cliente.messages().create(base(system).addUserMessage(mensagemDoUsuario).build());
+            LOG.info("Anthropic preview request completed (event=anthropic_preview, model={}, duration_ms={}, "
+                    + "tokens_used={})", MODELO, (System.nanoTime() - inicio) / 1_000_000, m.usage().outputTokens());
+            return m.content().get(0).asText().text();
+        } catch (AnthropicServiceException e) {
+            LOG.warn("Anthropic preview request failed (event=anthropic_preview, model={}, error=HTTP {})", MODELO,
+                    e.statusCode());
+            if (e.statusCode() == 400 && e.getMessage().toLowerCase(Locale.ROOT).contains("credit balance")) {
+                throw new CreditosEsgotados("Anthropic sem créditos: " + e.getMessage(), e);
+            }
+            throw new ErroDeGeracao("Erro ao gerar preview: " + e.getMessage(), e);
+        } catch (RuntimeException e) {
+            LOG.warn("Anthropic preview request failed (event=anthropic_preview, model={}, error={})", MODELO, e.toString());
+            throw new ErroDeGeracao("Erro ao gerar preview: " + e, e);
+        }
+    }
+
+    String gerar(String system, String mensagem, List<String> fileIds, String complexidade) {
+        MessageCreateParams.Builder b = base(system);
         if (fileIds.isEmpty()) {
             b.addUserMessage(mensagem);
         } else {

@@ -1,12 +1,17 @@
 package me.clama.api.prompt;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import me.clama.api.comum.api.CamposDrf;
 import me.clama.api.comum.erro.NaoEncontrado;
+import me.clama.api.oracao.ClienteClaude;
+import me.clama.api.oracao.CreditosEsgotados;
+import me.clama.api.oracao.MontagemDoPrompt;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.JsonNode;
 
 /**
- * AdminPromptTemplateViewSet: get e post apenas (o 405 vem do Spring). O preview fica para a Etapa 4 (404 ate la).
+ * AdminPromptTemplateViewSet: get e post apenas (o 405 vem do Spring). O preview chama a Claude (ClienteClaude.gerarPrevia).
  * Acesso admin: SegurancaConfig (/api/admin/**).
  */
 @RestController
@@ -28,9 +33,12 @@ class PromptsAdminController {
     private final PromptTemplateRepository prompts;
     private final TransactionTemplate tx;
 
-    PromptsAdminController(PromptTemplateRepository prompts, TransactionTemplate tx) {
+    private final ClienteClaude claude;
+
+    PromptsAdminController(PromptTemplateRepository prompts, TransactionTemplate tx, ClienteClaude claude) {
         this.prompts = prompts;
         this.tx = tx;
+        this.claude = claude;
     }
 
     @GetMapping("/api/admin/prompts/")
@@ -94,4 +102,40 @@ class PromptsAdminController {
         });
     }
 
+
+    /**
+     * Previa sem persistir, sem documentos e sem throttle (o de 5/min do Django nunca valeu). O 404 vem antes da
+     * validacao do corpo; pedido_exemplo e DictField(child=CharField), com o erro aninhado por chave.
+     */
+    @PostMapping("/api/admin/prompts/" + ID + "preview/")
+    ResponseEntity<Object> previa(@PathVariable("id") String rota, @RequestBody(required = false) JsonNode corpo) {
+        PromptTemplate t = prompts.findById(NaoEncontrado.uuidDaRota(rota))
+                .orElseThrow(() -> new NaoEncontrado("PromptTemplate"));
+        JsonNode ex = new CamposDrf(corpo).get("pedido_exemplo");
+        if (ex == null || !ex.isObject()) {
+            throw new CamposDrf.Invalidos(Map.of("pedido_exemplo", List.of(ex == null ? CamposDrf.OBRIGATORIO
+                    : ex.isNull() ? CamposDrf.NULO : "Esperava um dicionário de itens, mas recebeu tipo \""
+                            + CamposDrf.tipoPython(ex) + "\".")));
+        }
+        CamposDrf itens = new CamposDrf(ex);
+        Map<String, String> exemplo = new LinkedHashMap<>();
+        ex.propertyNames().forEach(k -> exemplo.put(k, itens.texto(k)));
+        try {
+            itens.validar();
+        } catch (CamposDrf.Invalidos e) { // erro aninhado por chave, como o DictField
+            return ResponseEntity.badRequest().body(Map.of("pedido_exemplo", e.erros()));
+        }
+        try {
+            return ResponseEntity.ok(new PromptDtos.Previa(claude.gerarPrevia(t.getSystemPrompt(),
+                    MontagemDoPrompt.mensagemDePrevia(exemplo, t), exemplo.getOrDefault("nome", "Maria")),
+                    new PromptDtos.TemplateDaPrevia(t.getId(), t.getNome(), t.getVersao())));
+        } catch (CreditosEsgotados e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new PromptDtos.Erro(
+                    new PromptDtos.Erro.Detalhe("anthropic_no_credits", "A API da Anthropic está sem créditos. "
+                            + "Recarregue os créditos para gerar previews.")));
+        } catch (RuntimeException e) { // como o except Exception do Django: vaza a mensagem
+            return ResponseEntity.internalServerError().body(new PromptDtos.Erro(
+                    new PromptDtos.Erro.Detalhe(null, String.valueOf(e.getMessage()))));
+        }
+    }
 }
