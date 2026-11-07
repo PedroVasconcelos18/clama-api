@@ -32,9 +32,24 @@ public class ExclusaoDeUsuario {
         jdbc.queryForObject("select pg_advisory_xact_lock(hashtext('admins'))", Object.class);
     }
 
-    /** users.objects.clama_admins() sem o id: is_clama_admin e is_active. */
-    public boolean haOutroAdminAtivo(long id) {
-        return existe("select 1 from users_user where id <> ? and is_clama_admin and is_active", id);
+    /**
+     * Guardas de ultimo admin, para quando o alvo deixa de ser admin ativo (rebaixar, desativar, excluir). Chamar sob
+     * travarAdmins(), com a linha do alvo travada. So conta quem entra no painel: is_clama_admin e is_active (o
+     * clama_admins() do Django); superusuario sem is_clama_admin nao conta.
+     */
+    public void exigirOutroAdmin(Usuario u) {
+        if (!u.isClamaAdmin() || !u.isActive()) {
+            return;
+        }
+        if (u.isSuperuser() && !existe("select 1 from users_user where id <> ? and is_superuser and is_clama_admin "
+                + "and is_active", u.getId())) {
+            throw conflito("ultimo_superusuario", "Last active superuser",
+                    "Essa é a última conta de superusuário ativa no painel. Torne outra conta superusuária antes.");
+        }
+        if (!existe("select 1 from users_user where id <> ? and is_clama_admin and is_active", u.getId())) {
+            throw conflito("ultimo_admin", "Last active admin",
+                    "Essa é a última conta de admin ativa. Crie outro admin antes.");
+        }
     }
 
     /** Comentario.customer e Reacao.customer (CASCADE). O usuario, os pedidos e os bans ficam. */
@@ -52,14 +67,7 @@ public class ExclusaoDeUsuario {
         if (u == null) {
             return false;
         }
-        if (u.isSuperuser() && !existe("select 1 from users_user where id <> ? and is_superuser and is_active", id)) {
-            throw conflito("ultimo_superusuario", "Last superuser",
-                    "Essa é a última conta de superusuário ativa. Crie outra antes de excluir esta.");
-        }
-        if (u.isClamaAdmin() && u.isActive() && !haOutroAdminAtivo(id)) {
-            throw conflito("ultimo_admin", "Last active admin",
-                    "Essa é a última conta de admin ativa. Crie outra antes de excluir esta.");
-        }
+        exigirOutroAdmin(u);
         // PROTECT: CustomerBanido.banido_por e Post.autor
         if (existe("select 1 from blog_customerbanido where banido_por_id = ?", id)) {
             throw conflito("usuario_baniu_alguem", "User is banido_por of a ban",

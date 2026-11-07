@@ -191,13 +191,16 @@ class UsuariosAdminTest {
             assertThat(a.get("user_id")).isEqualTo(superId);
         });
 
-        // e-mail repetido, comparado em minusculas (inclusive o de um customer: promover e pelo PATCH)
+        // e-mail repetido, comparado em minusculas ou pelo hash canonico (inclusive o de um customer: promover e pelo
+        // PATCH); a variante Gmail com ponto e +tag de um doador cairia na mesma conta no provisionamento
         usuario("Cliente@Exemplo.com", false);
-        for (String email : List.of("NOVO.ADMIN@exemplo.com", "cliente@exemplo.com")) {
+        usuario("mariasilva@gmail.com", false);
+        for (String email : List.of("NOVO.ADMIN@exemplo.com", "cliente@exemplo.com", "Maria.Silva+x@gmail.com")) {
             JsonNode e = corpo(superusuario("POST", "", "{\"email\": \"" + email + "\", \"password\": \"" + SENHA_BOA
                     + "\"}"), 400);
-            assertThat(e.get("email").get(0).asString()).isEqualTo("Usuário com este E-mail já existe.");
+            assertThat(e.get("email").get(0).asString()).as(email).isEqualTo("Usuário com este E-mail já existe.");
         }
+        assertThat(jdbc.queryForObject("select count(*) from users_user", Integer.class)).isEqualTo(5);
         // campos: obrigatorio, e-mail invalido
         JsonNode e = corpo(superusuario("POST", "", "{\"email\": \"nao-e-email\"}"), 400);
         assertThat(e.get("email").get(0).asString()).isEqualTo("Insira um endereço de email válido.");
@@ -333,6 +336,47 @@ class UsuariosAdminTest {
         usuarios.saveAndFlush(s2);
         corpo(superusuario("PATCH", s2.getId() + "/", "{\"is_clama_admin\": false, \"is_superuser\": false}"), 200);
         assertThat(linha(s2.getId()).get("is_superuser")).isEqualTo(true);
+    }
+
+    /**
+     * Dois superusuarios rebaixando um ao outro ao mesmo tempo: o teste segura o lock "admins" ate os dois PATCH
+     * pararem nele. O primeiro passa; o segundo ja ve o outro rebaixado e leva ultimo_superusuario (sem a guarda, os
+     * dois passariam e ninguem mais geriria usuarios). Ha outro admin comum ativo, entao nao e o ultimo_admin.
+     */
+    @Test
+    void superusuariosSeRebaixandoAoMesmoTempo() throws Exception {
+        Usuario s2 = usuario("super2@exemplo.com", true);
+        s2.setSuperuser(true);
+        s2 = usuarios.saveAndFlush(s2);
+        String cookieSuper2 = cookie(s2);
+        long id2 = s2.getId();
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        try (java.sql.Connection trava = jdbc.getDataSource().getConnection()) {
+            trava.setAutoCommit(false);
+            trava.createStatement().execute("select pg_advisory_xact_lock(hashtext('admins'))");
+            String corpo = "{\"is_clama_admin\": false}";
+            List<java.util.concurrent.Future<HttpResponse<String>>> fs = List.of(
+                    pool.submit(() -> chamar("PATCH", id2 + "/", corpo, cookieSuper, true)),
+                    pool.submit(() -> chamar("PATCH", superId + "/", corpo, cookieSuper2, true)));
+            long limite = System.nanoTime() + 10_000_000_000L;
+            while (jdbc.queryForObject("select count(*) from pg_stat_activity where wait_event_type = 'Lock'"
+                    + " and wait_event = 'advisory' and query ilike '%pg_advisory_xact_lock%'", Long.class) < 2) {
+                assertThat(System.nanoTime()).as("os dois PATCH nao pararam no advisory lock").isLessThan(limite);
+                Thread.sleep(20);
+            }
+            trava.commit();
+            List<HttpResponse<String>> rs = new java.util.ArrayList<>();
+            for (var f : fs) {
+                rs.add(f.get(10, java.util.concurrent.TimeUnit.SECONDS));
+            }
+            assertThat(rs).extracting(HttpResponse::statusCode).containsExactlyInAnyOrder(200, 409);
+            assertThat(codigo409(rs.stream().filter(r -> r.statusCode() == 409).findFirst().orElseThrow()))
+                    .isEqualTo("ultimo_superusuario");
+        } finally {
+            pool.shutdownNow();
+        }
+        assertThat(jdbc.queryForObject("select count(*) from users_user where is_superuser and is_clama_admin and "
+                + "is_active", Integer.class)).isOne();
     }
 
     @Test

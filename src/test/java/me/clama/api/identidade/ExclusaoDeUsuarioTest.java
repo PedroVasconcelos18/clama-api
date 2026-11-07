@@ -225,6 +225,9 @@ class ExclusaoDeUsuarioTest {
     void ultimoSuperusuarioRecusa409() {
         long superusuario = usuario("super@exemplo.com", true, true);
         assertThat(codigo(() -> exclusao.excluir(superusuario))).isEqualTo("ultimo_superusuario");
+        // superusuario sem is_clama_admin nao entra no painel: nao conta como "outro"
+        usuario("super-sem-painel@exemplo.com", false, true);
+        assertThat(codigo(() -> exclusao.excluir(superusuario))).isEqualTo("ultimo_superusuario");
         // com outro superusuario ativo, passa
         usuario("super2@exemplo.com", true, true);
         excluir(superusuario);
@@ -235,6 +238,20 @@ class ExclusaoDeUsuarioTest {
         jdbc.update("update users_user set is_active = false where id = ?", admin);
         long unico = usuario("unico@exemplo.com", true, false);
         assertThat(codigo(() -> exclusao.excluir(unico))).isEqualTo("ultimo_admin");
+    }
+
+    /** A guarda que o PATCH usa ao rebaixar ou desativar (o HTTP so a alcanca em corrida; ver UsuariosAdminTest). */
+    @Test
+    void exigirOutroAdminDoPatch() {
+        long unico = usuario("unico@exemplo.com", true, false);
+        jdbc.update("update users_user set is_active = false where id = ?", admin);
+        assertThat(codigo(() -> exclusao.exigirOutroAdmin(usuarios.findById(unico).orElseThrow())))
+                .isEqualTo("ultimo_admin");
+        // alvo que ja nao e admin ativo nao reduz nada: passa
+        tx.executeWithoutResult(s -> exclusao.exigirOutroAdmin(usuarios.findById(admin).orElseThrow()));
+        // com outro admin ativo, passa
+        jdbc.update("update users_user set is_active = true where id = ?", admin);
+        tx.executeWithoutResult(s -> exclusao.exigirOutroAdmin(usuarios.findById(unico).orElseThrow()));
     }
 
     @Test

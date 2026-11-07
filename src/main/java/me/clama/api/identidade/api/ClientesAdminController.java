@@ -14,6 +14,7 @@ import me.clama.api.comum.api.DatasDrf;
 import me.clama.api.comum.api.PaginaLimitOffset;
 import me.clama.api.comum.api.ParametrosDeQuery;
 import me.clama.api.comum.auditoria.RegistroDeAuditoria;
+import me.clama.api.comum.cripto.HashIdentificador;
 import me.clama.api.comum.email.ValidadorDeEmail;
 import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.comum.texto.TextoPython;
@@ -71,10 +72,11 @@ class ClientesAdminController {
     private final ExclusaoDeUsuario exclusao;
     private final RegistroDeAuditoria auditoria;
     private final Clock relogio;
+    private final HashIdentificador hash;
 
     ClientesAdminController(JdbcTemplate jdbc, TransactionTemplate tx, UsuarioRepository usuarios, SenhaDjango senhas,
             ValidadorDeSenha validador, ServicoDeTokens tokens, ProvisionamentoDeConta contas,
-            ExclusaoDeUsuario exclusao, RegistroDeAuditoria auditoria, Clock relogio) {
+            ExclusaoDeUsuario exclusao, RegistroDeAuditoria auditoria, Clock relogio, HashIdentificador hash) {
         this.jdbc = jdbc;
         this.tx = tx;
         this.usuarios = usuarios;
@@ -85,6 +87,7 @@ class ClientesAdminController {
         this.exclusao = exclusao;
         this.auditoria = auditoria;
         this.relogio = relogio;
+        this.hash = hash;
     }
 
     record Item(long id, String email, String nome_completo, String date_joined, String freemium_used_at,
@@ -206,8 +209,10 @@ class ClientesAdminController {
         campos.validar();
         long novo = tx.execute(st -> {
             contas.travarConta(email);
-            // unico do model e sensivel a caixa; aqui em minusculas: customer existente se promove pelo PATCH
-            if (!usuarios.idsPorEmailIgnorandoCaixa(email).isEmpty()) {
+            // o unico do model e sensivel a caixa; aqui vale o e-mail em minusculas ou o hash canonico (Gmail sem
+            // pontos/+tag), o mesmo casamento do provisionamento: senao a doacao do doador cairia na conta do admin.
+            // Customer existente se promove pelo PATCH.
+            if (!usuarios.buscarPorEmailOuHash(email, hash.hashEmail(email)).isEmpty()) {
                 throw new CamposDrf.Invalidos(Map.of("email", List.of("Usuário com este E-mail já existe.")));
             }
             Usuario u = new Usuario();
@@ -261,10 +266,8 @@ class ClientesAdminController {
                             "Essa pessoa está banida do blog. Revogue o ban antes de torná-la admin.");
                 }
             }
-            boolean eraAdminAtivo = u.isClamaAdmin() && u.isActive();
-            if (eraAdminAtivo && !(novoAdmin && novoAtivo) && !exclusao.haOutroAdminAtivo(n)) {
-                throw conflito("ultimo_admin", "Last active admin",
-                        "Essa é a última conta de admin ativa. Crie outra antes.");
+            if (!(novoAdmin && novoAtivo)) {
+                exclusao.exigirOutroAdmin(u); // ultimo_superusuario / ultimo_admin
             }
             // ordem do changed_data do UserChangeForm (fieldsets); rotulos sem traducao (construct_change_message)
             List<String> mudou = new ArrayList<>();
