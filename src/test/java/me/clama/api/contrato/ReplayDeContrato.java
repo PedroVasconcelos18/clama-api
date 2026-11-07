@@ -156,6 +156,7 @@ public class ReplayDeContrato {
     private Consumer<Instant> relogio;
     private Collection<? extends TarefaAgendada> tarefas;
     private List<SentryEvent> sentry;
+    private java.util.function.BiConsumer<String, ObjectNode> normalizacao = (arquivo, obtido) -> { };
     private JanelaFixa janela;
     private Set<String> repeticoesToleradas = Set.of();
     private Runnable limpeza = () -> { };
@@ -241,6 +242,12 @@ public class ReplayDeContrato {
     }
 
     /** O rate limit de janela fixa do widget do blog (etapa 6): zerado antes de cada cenario, como o limiter. */
+    /** Ajuste do passo obtido (arquivo, status/body/cookies) antes de comparar; vale para o replay inteiro desta instancia. */
+    public ReplayDeContrato comNormalizacao(java.util.function.BiConsumer<String, ObjectNode> normalizacao) {
+        this.normalizacao = normalizacao;
+        return this;
+    }
+
     public ReplayDeContrato comJanelaFixa(JanelaFixa janela) {
         this.janela = janela;
         return this;
@@ -417,6 +424,7 @@ public class ReplayDeContrato {
                 }
             }
             semMensagemR12(obtido, passo.get("response"));
+            normalizacao.accept(cenarioJson.getFileName().toString(), obtido);
             assertThat(canaisComoConjunto(obtido)).as("%s passo %d: %s %s", cenarioJson.getFileName(), i, metodo,
                     req.get("path")).isEqualTo(canaisComoConjunto(passo.get("response")));
             i++;

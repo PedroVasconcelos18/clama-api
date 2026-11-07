@@ -59,6 +59,7 @@ class ApiDoBlog {
         e.setWpPostId(wp++);
         e.setSlug(slug);
         e.setTitulo(slug);
+        e.setUrl("https://clama.me/blog/" + slug);
         e.setStatus(status);
         return espelhos.save(e);
     }

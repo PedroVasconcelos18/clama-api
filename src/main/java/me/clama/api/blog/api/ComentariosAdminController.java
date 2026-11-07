@@ -2,10 +2,12 @@ package me.clama.api.blog.api;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import me.clama.api.blog.Comentario;
 import me.clama.api.blog.ComentarioRepository;
 import me.clama.api.blog.NomePublico;
+import me.clama.api.blog.PostEspelho;
 import me.clama.api.comum.api.DatasDrf;
 import me.clama.api.comum.api.PaginaPorPagina;
 import me.clama.api.comum.api.ParametrosDeQuery;
@@ -21,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * AdminCommentsViewSet (views.py:424-443), so /api/blog/admin/** com hasAuthority(ADMIN) no SegurancaConfig. GET
  * (lista e item), DELETE; o resto e o 405 do handler. ?post= filtra pela FK legada post_id, que o R1 deixa sempre nula:
- * qualquer valor nao vazio nao casa nada.
+ * qualquer valor nao vazio nao casa nada. ?post_espelho=<slug> (D14, so Java) filtra pelo slug do espelho.
  */
 @RestController
 class ComentariosAdminController {
@@ -38,14 +40,18 @@ class ComentariosAdminController {
 
     /**
      * AdminComentarioSerializer. post e o UUID legado (sempre null, R1); post_slug e post_titulo somem com post nulo
-     * (SkipField do DRF), entao nem existem aqui.
+     * (SkipField do DRF), entao nem existem aqui. post_espelho_* (D14) sao aditivas, depois de updated_at, e so existem
+     * no Java; null se o espelho faltasse (o CHECK do banco impede).
      */
     record Item(UUID id, UUID post, Long customer, String customer_email, String customer_nome, String conteudo,
-            boolean is_suspeito, String ip_address, String created_at, String updated_at) {
+            boolean is_suspeito, String ip_address, String created_at, String updated_at,
+            String post_espelho_slug, String post_espelho_titulo, String post_espelho_url) {
         static Item de(Comentario c) {
+            PostEspelho e = c.getPostEspelho();
             return new Item(c.getId(), null, c.getCustomer().getId(), c.getCustomer().getEmail(),
                     NomePublico.de(c.getCustomer()), c.getConteudo(), c.isSuspeito(), c.getIpAddress(),
-                    DatasDrf.dataHora(c.getCreatedAt()), DatasDrf.dataHora(c.getUpdatedAt()));
+                    DatasDrf.dataHora(c.getCreatedAt()), DatasDrf.dataHora(c.getUpdatedAt()),
+                    e == null ? null : e.getSlug(), e == null ? null : e.getTitulo(), e == null ? null : e.getUrl());
         }
     }
 
@@ -54,10 +60,11 @@ class ComentariosAdminController {
         boolean suspeitos = "suspeitos".equals(ParametrosDeQuery.ultimo(req, "status"));
         String post = ParametrosDeQuery.ultimo(req, "post");
         boolean legado = post != null && !post.isEmpty(); // post__slug: so a FK legada, que nunca casa (R1)
+        String slug = Objects.requireNonNullElse(ParametrosDeQuery.ultimo(req, "post_espelho"), "");
         return tx.execute(s -> {
-            PaginaPorPagina p = PaginaPorPagina.de(req, legado ? 0 : comentarios.contarDoAdmin(suspeitos));
+            PaginaPorPagina p = PaginaPorPagina.de(req, legado ? 0 : comentarios.contarDoAdmin(suspeitos, slug));
             return p.resposta(legado ? java.util.List.of() : comentarios
-                    .doAdmin(suspeitos, PageRequest.of((int) (p.offset() / p.limit()), p.limit())).stream()
+                    .doAdmin(suspeitos, slug, PageRequest.of((int) (p.offset() / p.limit()), p.limit())).stream()
                     .map(Item::de).toList());
         });
     }

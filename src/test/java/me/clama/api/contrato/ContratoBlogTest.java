@@ -415,6 +415,28 @@ class ContratoBlogTest {
         }
     }
 
+    /** A normalizacao do D14 e so do admin de comentarios: outro cenario ou status nao mexe, e chave faltando falha. */
+    @Test
+    void normalizacaoDoEspelhoTemEscopoEstreito() throws Exception {
+        String lista = "{\"status\": 200, \"body\": {\"count\": 1, \"results\": [{\"id\": \"a\","
+                + " \"post_espelho_slug\": \"s\", \"post_espelho_titulo\": \"t\", \"post_espelho_url\": \"u\"}]}}";
+        ObjectNode admin = (ObjectNode) JSON.readTree(lista);
+        semChavesDoEspelho("blog_admin_comentarios_lista.json", admin);
+        assertThat((JsonNode) admin).isEqualTo(JSON.readTree("{\"status\": 200, \"body\": {\"count\": 1,"
+                + " \"results\": [{\"id\": \"a\"}]}}"));
+        for (String outro : new String[] {"blog_admin_banidos_lista.json", "blog_comentarios_lista.json"}) {
+            ObjectNode intacto = (ObjectNode) JSON.readTree(lista);
+            semChavesDoEspelho(outro, intacto);
+            assertThat((JsonNode) intacto).isEqualTo(JSON.readTree(lista));
+        }
+        ObjectNode erro = (ObjectNode) JSON.readTree("{\"status\": 403, \"body\": {\"detail\": \"x\"}}");
+        semChavesDoEspelho("blog_admin_comentarios_nao_admin_403.json", erro);
+        assertThat(erro.get("body").has("detail")).isTrue();
+        ObjectNode semChave = (ObjectNode) JSON.readTree("{\"status\": 200, \"body\": {\"results\": [{\"id\": \"a\"}]}}");
+        assertThatThrownBy(() -> semChavesDoEspelho("blog_admin_comentarios_lista.json", semChave))
+                .isInstanceOf(AssertionError.class);
+    }
+
     /** R12: a message gravada como marcador vira o marcador no obtido (se existir); sem marcador, nada muda. */
     @Test
     void mensagemR12ComparaORestoDoCorpo() throws Exception {
@@ -449,9 +471,36 @@ class ContratoBlogTest {
         return new ReplayDeContrato(c.getBean(JdbcTemplate.class), c.getBean(UsuarioRepository.class),
                 c.getBean(ServicoDeTokens.class), c.getBean(RateLimiter.class), TABELAS)
                 .comJanelaFixa(c.getBean(JanelaFixa.class)).comLimpeza(c.getBean(ContadorDeDivergencia.class)::limpar)
-                .comRepeticoesToleradas(REDE_CAIDA)
+                .comRepeticoesToleradas(REDE_CAIDA).comNormalizacao(ContratoBlogTest::semChavesDoEspelho)
                 .comStubs(Map.of("wordpress", WORDPRESS, "monitores", MONITORES), c.getEnvironment())
                 .comOracao(c.getBean(CaixaDeSaidaEmMemoria.class), jobs(c), ContratoOracaoTest.ganchos(c));
+    }
+
+    static final String ADMIN_COMENTARIOS = "blog_admin_comentarios_";
+    static final List<String> CHAVES_DO_ESPELHO = List.of("post_espelho_slug", "post_espelho_titulo", "post_espelho_url");
+
+    /**
+     * D14: o admin de comentarios do Java tem tres chaves aditivas (post_espelho_*) que o Django nao tem. So nos
+     * cenarios blog_admin_comentarios_* e so no corpo 200: exige que existam (strings nao vazias) e as tira antes de
+     * comparar. Qualquer outro cenario ou chave extra continua falhando na comparacao exata.
+     */
+    static void semChavesDoEspelho(String arquivo, ObjectNode obtido) {
+        if (!arquivo.startsWith(ADMIN_COMENTARIOS) || obtido.path("status").asInt() != 200) {
+            return;
+        }
+        JsonNode corpo = obtido.path("body");
+        if (!corpo.isObject()) {
+            return;
+        }
+        // lista paginada ou item de comentario; outras respostas 200 do cenario (o login, por exemplo) ficam como estao
+        List<JsonNode> itens = corpo.has("results") ? corpo.get("results").valueStream().toList()
+                : corpo.has("customer_email") ? List.of(corpo) : List.of();
+        for (JsonNode item : itens) {
+            for (String chave : CHAVES_DO_ESPELHO) {
+                assertThat(item.path(chave).asString("")).as("%s: %s", arquivo, chave).isNotEmpty();
+            }
+            ((ObjectNode) item).remove(CHAVES_DO_ESPELHO);
+        }
     }
 
     private ReplayDeContrato replay() {
