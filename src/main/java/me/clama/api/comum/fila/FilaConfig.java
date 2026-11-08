@@ -31,8 +31,11 @@ import tools.jackson.databind.ObjectMapper;
 @Configuration(proxyBeanMethods = false)
 public class FilaConfig {
 	private static final Logger LOG = LoggerFactory.getLogger(FilaConfig.class);
-	/** Redeploy no Railway: o SIGKILL vem depois do draining time, que precisa ser >= 30 s (Etapa 9). */
-	static final Duration ESPERA_NO_SHUTDOWN = Duration.ofSeconds(25);
+	/**
+	 * Redeploy no Railway: o db-scheduler espera isto, interrompe e espera de novo (ate 2x). Com o Tomcat (15 s) antes e
+	 * a agenda (10 s) depois: 15 + 2x15 + 10 = 55 s, dentro do draining de 60 s (Etapa 9, ensaio do deploy).
+	 */
+	static final Duration ESPERA_NO_SHUTDOWN = Duration.ofSeconds(15);
 
 	/** Unico observador: loga e manda pro Sentry (que e no-op sem DSN). */
 	@Bean

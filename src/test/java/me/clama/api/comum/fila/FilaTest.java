@@ -334,10 +334,19 @@ class FilaTest {
 		}
 	}
 
+	/**
+	 * O db-scheduler espera shutdownMaxWait, interrompe e espera de novo ("Will wait up to 2xPT25S", ensaio da Etapa 9:
+	 * um job de 28 s segurou o SIGTERM por 27 s com 25 s configurados). Antes vem a fase graceful do Tomcat e depois a
+	 * agenda (10 s, AgendaTest): tudo tem de caber no draining de 60 s do Railway, com folga.
+	 */
 	@Test
-	void shutdownEsperaOsJobsEmAndamento(@Autowired com.github.kagkarlsson.scheduler.Scheduler scheduler) {
-		assertThat(org.springframework.test.util.ReflectionTestUtils.getField(scheduler, "shutdownMaxWait"))
-				.isEqualTo(Duration.ofSeconds(25));
+	void shutdownEsperaOsJobsEmAndamentoECabeNoDraining(@Autowired com.github.kagkarlsson.scheduler.Scheduler scheduler,
+			@org.springframework.beans.factory.annotation.Value("${spring.lifecycle.timeout-per-shutdown-phase}")
+			Duration tomcat) {
+		Duration espera = (Duration) org.springframework.test.util.ReflectionTestUtils.getField(scheduler,
+				"shutdownMaxWait");
+		assertThat(espera).isEqualTo(Duration.ofSeconds(15));
+		assertThat(tomcat.plus(espera.multipliedBy(2)).plusSeconds(10)).isLessThanOrEqualTo(Duration.ofSeconds(55));
 	}
 
 	@Test
