@@ -29,7 +29,33 @@
 	<properties>
 		<java.version>27</java.version>
 	</properties>
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.modulith</groupId>
+				<artifactId>spring-modulith-bom</artifactId>
+				<version>2.1.2</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<!-- o ArchUnit 1.4.2 do Modulith nao le class files do Java 27 (major 71): ignora as classes e o ModulosTest falha -->
+			<dependency>
+				<groupId>com.tngtech.archunit</groupId>
+				<artifactId>archunit</artifactId>
+				<version>1.5.1</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 	<dependencies>
+		<dependency>
+			<groupId>org.springframework.modulith</groupId>
+			<artifactId>spring-modulith-starter-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.modulith</groupId>
+			<artifactId>spring-modulith-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
@@ -59,28 +85,10 @@
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
-		<!-- core, nao o starter: o starter 17.0.0 e para Boot 3 -->
-		<dependency>
-			<groupId>com.github.kagkarlsson</groupId>
-			<artifactId>db-scheduler</artifactId>
-			<version>17.0.0</version>
-		</dependency>
 		<dependency>
 			<groupId>io.sentry</groupId>
 			<artifactId>sentry-spring-boot-4</artifactId>
 			<version>8.63.0</version>
-		</dependency>
-		<dependency>
-			<groupId>org.bouncycastle</groupId>
-			<artifactId>bcprov-jdk18on</artifactId>
-			<version>1.84</version>
-		</dependency>
-		<!-- SDK oficial so na chamada de geracao de oracao: o Spring AI 2.0.2 nao manda documento por file_id nem
-			 cache_control sem ttl (ver relatorio da 4B tarefa 3) -->
-		<dependency>
-			<groupId>com.anthropic</groupId>
-			<artifactId>anthropic-java</artifactId>
-			<version>3.6.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.postgresql</groupId>

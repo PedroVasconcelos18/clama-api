@@ -1,6 +1,0 @@
-{
-  "message": "Internal server error",
-  "error": "internal_server_error",
-  "status": 500,
-  "cause": []
-}
