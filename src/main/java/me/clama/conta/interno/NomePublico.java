@@ -1,4 +1,4 @@
-package me.clama.conta;
+package me.clama.conta.interno;
 
 import java.util.Arrays;
 import java.util.regex.Pattern;

@@ -1,4 +1,4 @@
-package me.clama.conta;
+package me.clama.conta.interno;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;

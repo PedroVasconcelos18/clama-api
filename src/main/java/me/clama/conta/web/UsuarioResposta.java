@@ -1,7 +1,7 @@
 package me.clama.conta.web;
 
-import me.clama.conta.Papel;
-import me.clama.conta.Usuario;
+import me.clama.conta.interno.Papel;
+import me.clama.conta.interno.Usuario;
 
 record UsuarioResposta(Long id, String email, String nomeCompleto, String nomeFormatoBlog, Papel papel) {
 

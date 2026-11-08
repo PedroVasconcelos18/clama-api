@@ -1,4 +1,4 @@
-package me.clama.conta;
+package me.clama.conta.interno;
 
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;

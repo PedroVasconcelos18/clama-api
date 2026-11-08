@@ -1,4 +1,4 @@
-package me.clama.conta;
+package me.clama.conta.interno;
 
 /** Publicado quando {@link ContaApi} cria uma conta; o e-mail "definir senha" sai depois do commit. */
-record ContaCriada(Long id) {}
+public record ContaCriada(Long id) {}

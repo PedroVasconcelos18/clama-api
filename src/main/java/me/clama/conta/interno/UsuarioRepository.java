@@ -1,4 +1,4 @@
-package me.clama.conta;
+package me.clama.conta.interno;
 
 import jakarta.persistence.LockModeType;
 import java.util.Optional;

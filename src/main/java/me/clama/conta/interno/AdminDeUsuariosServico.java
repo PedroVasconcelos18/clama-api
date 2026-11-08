@@ -1,11 +1,11 @@
-package me.clama.conta;
+package me.clama.conta.interno;
 
 import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import me.clama.conta.senha.ValidadorDeSenha;
+import me.clama.conta.interno.senha.ValidadorDeSenha;
 import me.clama.infra.auditoria.Acao;
 import me.clama.infra.auditoria.Auditoria;
 import me.clama.infra.web.ErroDeCampo;

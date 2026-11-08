@@ -1,4 +1,4 @@
-package me.clama.conta;
+package me.clama.conta.interno;
 
 import java.util.Map;
 import me.clama.infra.email.EnvioAssincrono;

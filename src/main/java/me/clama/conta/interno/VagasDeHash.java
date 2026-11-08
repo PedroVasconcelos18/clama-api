@@ -1,4 +1,4 @@
-package me.clama.conta;
+package me.clama.conta.interno;
 
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;

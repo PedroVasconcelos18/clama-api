@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.util.Map;
-import me.clama.conta.RedefinicaoDeSenha;
+import me.clama.conta.interno.RedefinicaoDeSenha;
 import me.clama.infra.seguranca.ClienteIp;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;

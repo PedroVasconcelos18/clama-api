@@ -52,6 +52,10 @@ spring:
     locale: pt_BR
     locale-resolver: fixed
 
+springdoc:
+  api-docs:
+    enabled: false # liga em application-local.yml e nos testes; /v3/api-docs fora disso cai no denyAll
+
 management:
   endpoints:
     web:

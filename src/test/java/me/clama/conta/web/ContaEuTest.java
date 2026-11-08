@@ -6,8 +6,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
 import me.clama.BancoDeTeste;
-import me.clama.conta.Papel;
-import me.clama.conta.UsuarioRepository;
+import me.clama.conta.interno.Papel;
+import me.clama.conta.interno.UsuarioRepository;
 import me.clama.infra.seguranca.LimiteDeTaxa;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -2,6 +2,9 @@ package me.clama.conta;
 
 import java.time.Clock;
 import java.util.Locale;
+import me.clama.conta.interno.ContaCriada;
+import me.clama.conta.interno.EmailCanonico;
+import me.clama.conta.interno.UsuarioRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;

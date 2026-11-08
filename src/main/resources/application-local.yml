@@ -9,3 +9,7 @@ logging:
   structured:
     format:
       console: ""
+
+springdoc:
+  api-docs:
+    enabled: true

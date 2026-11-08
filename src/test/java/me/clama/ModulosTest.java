@@ -5,6 +5,12 @@ import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import me.clama.conta.ContaApi;
+import me.clama.conta.UsuarioResumo;
+import me.clama.conta.interno.LoginServico;
+import me.clama.conta.interno.UsuarioRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.modulith.core.ApplicationModules;
 import org.springframework.modulith.docs.Documenter;
@@ -29,6 +35,19 @@ class ModulosTest {
 								&& !c.getPackageName().startsWith("me.clama.infra")
 								&& !c.getName().equals("me.clama.ClamaApplication")))
 				.check(classes);
+	}
+
+	/**
+	 * O conta so mostra ContaApi e UsuarioResumo; o resto mora em conta.interno e conta.web. O ApplicationModules ignora
+	 * classes de teste, entao um modulo ficticio nao quebraria o verify(): a prova e perguntar ao Modulith o que e exposto.
+	 */
+	@Test
+	void contaExpoeSoContaApiEUsuarioResumo() {
+		var conta = MODULOS.getModuleByName("conta").orElseThrow();
+		assertThat(conta.isExposed(ContaApi.class)).isTrue();
+		assertThat(conta.isExposed(UsuarioResumo.class)).isTrue();
+		assertThat(conta.isExposed(UsuarioRepository.class)).isFalse();
+		assertThat(conta.isExposed(LoginServico.class)).isFalse();
 	}
 
 	@Test

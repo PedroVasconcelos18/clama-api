@@ -1,4 +1,4 @@
-package me.clama.conta;
+package me.clama.conta.interno;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -8,6 +8,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.UUID;
 import me.clama.BancoDeTeste;
+import me.clama.conta.ContaApi;
+import me.clama.conta.UsuarioResumo;
 import me.clama.CaixaDeSaidaEmMemoria;
 import me.clama.EmailDeTeste;
 import org.junit.jupiter.api.BeforeEach;

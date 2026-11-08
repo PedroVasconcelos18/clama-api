@@ -1,4 +1,4 @@
-package me.clama.conta.senha;
+package me.clama.conta.interno.senha;
 
 import static org.junit.jupiter.api.Assertions.*;
 

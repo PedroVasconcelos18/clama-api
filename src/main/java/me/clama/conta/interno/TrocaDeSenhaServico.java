@@ -1,7 +1,7 @@
-package me.clama.conta;
+package me.clama.conta.interno;
 
 import java.time.Duration;
-import me.clama.conta.senha.ValidadorDeSenha;
+import me.clama.conta.interno.senha.ValidadorDeSenha;
 import me.clama.infra.seguranca.LimiteDeTaxa;
 import me.clama.infra.seguranca.LimiteDeTaxa.Cota;
 import me.clama.infra.web.ErroDeCampo;
