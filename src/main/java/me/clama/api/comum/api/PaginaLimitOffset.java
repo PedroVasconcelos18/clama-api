@@ -47,7 +47,7 @@ public final class PaginaLimitOffset {
     }
 
     /** Primeiro valor da lista (proxies em cadeia), sem caixa. */
-    static boolean https(String proto) {
+    public static boolean https(String proto) {
         return proto != null && proto.split(",", 2)[0].trim().equalsIgnoreCase("https");
     }
 

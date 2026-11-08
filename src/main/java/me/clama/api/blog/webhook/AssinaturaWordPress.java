@@ -42,7 +42,7 @@ public class AssinaturaWordPress extends OncePerRequestFilter {
     /** Atributo do request com os bytes do corpo ja lidos e conferidos: o controller le daqui, sem copiar de novo. */
     public static final String CORPO = "me.clama.api.blog.webhook.AssinaturaWordPress.corpo";
     /** A pagina 400 padrao do Django (sem 400.html no projeto). */
-    private static final String BAD_REQUEST = "\n<!doctype html>\n<html lang=\"en\">\n<head>\n"
+    public static final String BAD_REQUEST = "\n<!doctype html>\n<html lang=\"en\">\n<head>\n"
             + "  <title>Bad Request (400)</title>\n</head>\n<body>\n  <h1>Bad Request (400)</h1><p></p>\n</body>\n"
             + "</html>\n";
 

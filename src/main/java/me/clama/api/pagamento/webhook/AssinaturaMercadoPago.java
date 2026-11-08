@@ -13,6 +13,8 @@ import java.util.HexFormat;
 import java.util.Locale;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import me.clama.api.blog.webhook.AssinaturaWordPress;
+import me.clama.api.comum.api.FormularioDjango;
 import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.comum.erro.PastoralExceptionHandler;
 import me.clama.api.comum.texto.TextoPython;
@@ -58,6 +60,16 @@ public class AssinaturaMercadoPago extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse resp, FilterChain chain)
             throws ServletException, IOException {
+        // Endurecimento alem do Django (que nao limita o corpo do MP): corpo acima de DATA_UPLOAD_MAX_MEMORY_SIZE (o
+        // teto do webhook do WordPress) leva o mesmo 400, antes do HMAC. O MP manda poucos bytes.
+        // ponytail: so pelo Content-Length; chunked passa (o corpo real do MP nunca vem assim). Contar bytes se virar vetor.
+        if (req.getContentLengthLong() > FormularioDjango.MAX_CAMPO) {
+            LOG.warn("Mercado Pago webhook: corpo acima do limite (event=mercadopago_webhook_auth, ok=false)");
+            resp.setStatus(400);
+            resp.setContentType("text/html; charset=utf-8");
+            resp.getWriter().write(AssinaturaWordPress.BAD_REQUEST);
+            return;
+        }
         if (!valida(segredo, req.getQueryString(), req.getHeader("x-request-id"), req.getHeader("x-signature"))) {
             String xff = req.getHeader("X-Forwarded-For");
             LOG.warn("Mercado Pago webhook auth failed (event=mercadopago_webhook_auth, ok=false, ip={})",

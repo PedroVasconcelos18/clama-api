@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.function.Supplier;
 import me.clama.api.blog.SemBanimento;
 import me.clama.api.blog.webhook.AssinaturaWordPress;
+import me.clama.api.comum.api.PaginaLimitOffset;
 import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.comum.erro.PastoralExceptionHandler;
 import me.clama.api.identidade.Usuario;
@@ -31,6 +32,7 @@ import org.springframework.security.web.access.intercept.RequestAuthorizationCon
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.header.writers.CacheControlHeadersWriter;
+import org.springframework.security.web.header.writers.CrossOriginOpenerPolicyHeaderWriter.CrossOriginOpenerPolicy;
 import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
@@ -108,7 +110,16 @@ public class SegurancaConfig {
                         // Valor do Django em producao; addHeader (nao set) pra nao apagar o Vary: Origin do CORS.
                         .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(leituraDeComentarios,
                                 (req, resp) -> resp.addHeader("Vary", "Accept, Accept-Language, Cookie, origin")))
-                        .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.SAME_ORIGIN)))
+                        .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.SAME_ORIGIN))
+                        // SECURE_HSTS_*: atras do proxy o Tomcat ve http, entao o gatilho e o 1o valor do X-Forwarded-Proto.
+                        // Texto do Django ("; "), nao o do HstsHeaderWriter do Spring ("max-age=60 ; ...").
+                        .httpStrictTransportSecurity(s -> s.disable())
+                        .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(
+                                req -> req.isSecure() || PaginaLimitOffset.https(req.getHeader("X-Forwarded-Proto")),
+                                new StaticHeadersWriter("Strict-Transport-Security",
+                                        "max-age=60; includeSubDomains; preload")))
+                        // SECURE_CROSS_ORIGIN_OPENER_POLICY (default do Django)
+                        .crossOriginOpenerPolicy(c -> c.policy(CrossOriginOpenerPolicy.SAME_ORIGIN)))
                 .cors(c -> c.configurationSource(cors(lista(cors))))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .requestCache(c -> c.disable())

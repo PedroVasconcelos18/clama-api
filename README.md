@@ -19,6 +19,13 @@ export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
 
 **Nunca exporte `DATABASE_URL` no shell em que roda os testes.** O replay do contrato faz `TRUNCATE users_user ... CASCADE`, o que apaga pedidos, blog e tokens. Hoje ha duas protecoes. O surefire ativa o perfil `test`, e nele o DataSource do `DATABASE_URL` nao existe (`@Profile("!test")` em `DatabaseUrlConfig`). Alem disso, toda limpeza chama `BancoDeTeste.exigirContainer`, que recusa qualquer banco que nao seja `localhost/clama_testcontainers`. Mesmo assim, nao conte com elas: um `DATABASE_URL` de producao exportado no shell e um acidente esperando a vez.
 
+## Configuracao de producao (web)
+
+- `PORT` (default 8080). Shutdown graceful de 15 s; `forward-headers-strategy: none`; sem `/actuator/**`.
+- `DJANGO_ALLOWED_HOSTS` (lista separada por virgula, `.dominio` e curinga; default `clama.me,www.clama.me,api.clama.me`): Host fora da lista leva 400. `healthcheck.railway.app` passa sempre. **Rodando local, exporte `DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1`** (ou `clama.hosts.validar=false`).
+- HSTS (`max-age=60; includeSubDomains; preload`) sai quando o 1o valor do `X-Forwarded-Proto` e `https`; COOP `same-origin` sempre.
+- Webhook do Mercado Pago recusa corpo acima de 2,5 MB com 400, antes do HMAC.
+
 ## Modo comando e a rotina mensal de repasse
 
 O jar tambem roda comandos pontuais (equivalentes aos `manage.py` do Django): `java -jar target/clama-api.jar <comando> [flags]`. Se o 1o argumento e um comando conhecido (`instituicoes`, `tarefa`, `relatorio_repasse`, `auditar_repasses`, `marcar_repasse_transferido`, `adotar_pedidos_orfaos`, `create_clama_admin`, `purgar_dados_blog_customer`, `lgpd_export`, `lgpd_delete`), o `main` sobe um contexto sem web, sem poller da fila, sem agenda e com o Flyway desligado, executa e sai com o exit code do comando. O stdout leva so o resultado (o log vai para o stderr), sempre em UTF-8.

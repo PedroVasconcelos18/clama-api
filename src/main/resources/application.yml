@@ -1,4 +1,22 @@
+server:
+  # Railway: o dominio aponta para a porta do servico; PORT=8080 explicito la (mapa 2.1)
+  port: ${PORT:8080}
+  # Graceful do Tomcat (15 s) roda antes do destroy da fila (25 s) e da agenda (10 s); ver spring.lifecycle abaixo
+  shutdown: graceful
+  # XFF/XFP lidos a mao (ClienteIp, PaginaLimitOffset.https), em paridade com o DRF; sem RemoteIpValve
+  forward-headers-strategy: none
+management:
+  endpoints:
+    web:
+      exposure:
+        # sem /actuator/**: a URL cai no 404 do dispatcher, como no Django (mapa 2.6)
+        exclude: "*"
+      # a pagina de links do proprio /actuator tambem
+      discovery:
+        enabled: false
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 15s
   application:
     name: clama-api
   jackson:
@@ -28,6 +46,9 @@ spring:
     baseline-on-migrate: true
     baseline-version: "0"
 clama:
+  hosts:
+    # ALLOWED_HOSTS (DJANGO_ALLOWED_HOSTS). Local: DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+    validar: true
   agenda:
     pedidos-presos:
       cron: "0 */10 * * * *"

@@ -131,7 +131,7 @@ public class FiltroJwtCookie extends OncePerRequestFilter {
         String origem = req.getHeader("Origin");
         String host = req.getHeader("Host");
         // o Django confia no X-Forwarded-Proto em producao (SECURE_PROXY_SSL_HEADER); aqui ele so endurece a checagem
-        boolean https = req.isSecure() || "https".equalsIgnoreCase(req.getHeader("X-Forwarded-Proto"));
+        boolean https = req.isSecure() || me.clama.api.comum.api.PaginaLimitOffset.https(req.getHeader("X-Forwarded-Proto"));
         if (origem != null) {
             if (!origemConfiavel(origem, https, host)) {
                 return false;
