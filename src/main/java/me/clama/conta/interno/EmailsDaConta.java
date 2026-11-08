@@ -19,9 +19,11 @@ class EmailsDaConta {
 	private final ContaProps props;
 	private final UsuarioRepository usuarios;
 	private final TokensDeSenha tokens;
+	private final EnvioAssincrono envio;
 
 	EmailsDaConta(ModelosDeEmail modelos, EnviadorDeEmail enviador, ContaProps props, UsuarioRepository usuarios,
-			TokensDeSenha tokens) {
+			TokensDeSenha tokens, EnvioAssincrono envio) {
+		this.envio = envio;
 		this.modelos = modelos;
 		this.enviador = enviador;
 		this.props = props;
@@ -44,12 +46,10 @@ class EmailsDaConta {
 	/** Falha de envio nao desfaz a conta (ja commitada): vai para o log e a pessoa pede o link em "esqueci a senha". */
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	void aoCriarConta(ContaCriada evento) {
-		try {
+		envio.executar("link de definir senha da conta " + evento.id(), () -> {
 			var usuario = usuarios.findById(evento.id()).orElseThrow();
 			var token = tokens.emitir(usuario.getId(), TokensDeSenha.Finalidade.DEFINIR);
 			enviar(usuario, token, "definir-senha", "Bem-vinda ao Clama — defina sua senha", "definir_senha");
-		} catch (RuntimeException e) {
-			EnvioAssincrono.registrar("link de definir senha da conta " + evento.id(), e);
-		}
+		});
 	}
 }

@@ -298,6 +298,16 @@ class UsuariosAdminTest {
 	}
 
 	@Test
+	void promoverDerrubaAsSessoesDoAlvo() throws Exception {
+		var su = entrar(conta(Papel.SUPERUSUARIO));
+		var alvo = conta(Papel.CLIENTE);
+		var alvoNav = entrar(alvo);
+		assertThat(alvoNav.get("/api/auth/eu").statusCode()).isEqualTo(200);
+		assertThat(su.patch("/api/admin/usuarios/" + alvo.getId(), papel(Papel.ADMIN)).statusCode()).isEqualTo(200);
+		assertThat(alvoNav.get("/api/auth/eu").statusCode()).isEqualTo(401);
+	}
+
+	@Test
 	void desativarDerrubaESaiDoLoginEReativarNaoDerruba() throws Exception {
 		var su = entrar(conta(Papel.SUPERUSUARIO));
 		var alvo = conta(Papel.CLIENTE);

@@ -84,7 +84,7 @@ public class AdminDeUsuariosServico {
 	 */
 	public Usuario criar(Long autorId, String email, String nomeCompleto, String senha) {
 		var minusculo = email.strip().toLowerCase(Locale.ROOT);
-		exigirSenhaForte(senha, minusculo);
+		validador.exigirForte(senha, minusculo, "senha");
 		if (usuarios.findByEmailCanonico(EmailCanonico.de(minusculo)).isPresent()) throw emailDuplicado();
 		var hash = vagas.comVaga(() -> senhas.encode(senha));
 		var nome = nomeCompleto == null ? "" : nomeCompleto.strip();
@@ -126,17 +126,17 @@ public class AdminDeUsuariosServico {
 			u.promover(papelDepois);
 			if (ativoDepois) u.reativar(); else u.desativar();
 			if (ativoAntes && !ativoDepois) tokens.revogarTodos(id); // conta desativada nao recebe link pendente
-			derrubar[0] = (ativoAntes && !ativoDepois) || papelDepois.compareTo(papelAntes) < 0;
+			derrubar[0] = (ativoAntes && !ativoDepois) || papelDepois != papelAntes;
 			auditoria.registrar(autorId, "usuario", id.toString(), Acao.MUDANCA, diff);
 			return u;
 		});
-		if (derrubar[0]) sessoes.derrubarTodas(id); // o papel fica congelado na sessao: sem isto o rebaixado segue mandando
+		if (derrubar[0]) sessoes.derrubarTodas(id); // o papel fica congelado na sessao: sem isto quem mudou de papel segue com o antigo
 		return resultado;
 	}
 
 	public void definirSenha(Long autorId, Long id, String senha) {
 		var alvo = detalhar(id);
-		exigirSenhaForte(senha, alvo.getEmail());
+		validador.exigirForte(senha, alvo.getEmail(), "senha");
 		var hash = vagas.comVaga(() -> senhas.encode(senha));
 		transacao.executeWithoutResult(s -> {
 			var u = usuarios.travar(id).orElseThrow(AdminDeUsuariosServico::naoEncontrado);
@@ -177,14 +177,6 @@ public class AdminDeUsuariosServico {
 		if (usuarios.countByPapelAndAtivoTrue(Papel.SUPERUSUARIO) < 2) {
 			throw conflito("ultimo_superusuario", "Último superusuário ativo.",
 					"Essa é a última conta de superusuário ativa. Torne outra conta superusuária antes.");
-		}
-	}
-
-	private void exigirSenhaForte(String senha, String email) {
-		var fraquezas = validador.validar(senha, email);
-		if (!fraquezas.isEmpty()) {
-			throw new ErroDeNegocio(HttpStatus.BAD_REQUEST, "senha_fraca", "A senha é fraca.",
-					"Escolha uma senha mais forte.", fraquezas.stream().map(m -> new ErroDeCampo("senha", m)).toList());
 		}
 	}
 

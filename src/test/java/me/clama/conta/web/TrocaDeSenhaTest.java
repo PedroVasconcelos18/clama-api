@@ -76,6 +76,8 @@ class TrocaDeSenhaTest {
 		assertThat(res.statusCode()).isEqualTo(400);
 		var corpo = json(res);
 		assertThat(corpo.get("codigo").asString()).isEqualTo("senha_fraca");
+		assertThat(corpo.get("mensagemPastoral").asString()).isEqualTo(
+				"Esta senha é muito curta. Ela precisa conter pelo menos 8 caracteres. Esta senha é muito comum. Esta senha é inteiramente numérica.");
 		assertThat(corpo.get("erros").get(0).get("campo").asString()).isEqualTo("novaSenha");
 		var mensagens = corpo.get("erros").valueStream().map(e -> e.get("mensagem").asString()).toList();
 		assertThat(mensagens).contains("Esta senha é muito curta. Ela precisa conter pelo menos 8 caracteres.",
@@ -122,7 +124,9 @@ class TrocaDeSenhaTest {
 			var f1 = pool.submit(troca1);
 			var f2 = pool.submit(troca2);
 			largada.countDown();
-			assertThat(java.util.List.of(f1.get(), f2.get())).containsExactlyInAnyOrder(200, 409);
+			var codigos = java.util.List.of(f1.get(), f2.get());
+			assertThat(codigos.stream().filter(c -> c == 200).count()).isEqualTo(1); // exatamente uma passa
+			assertThat(codigos.stream().filter(c -> c != 200)).allMatch(c -> c == 400 || c == 409); // a outra: senha_atual_invalida ou senha_alterada
 		} finally {
 			pool.shutdownNow();
 		}

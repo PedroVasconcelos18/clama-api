@@ -47,18 +47,23 @@ public class LoginServico {
 		var hash = usuario.map(Usuario::getSenha).orElse(hashFicticio);
 		var novoHash = vagas.comVaga(() -> {
 			if (!confere(senha, hash) || usuario.isEmpty() || !usuario.get().isAtivo()) {
-				throw new ErroDeNegocio(HttpStatus.UNAUTHORIZED, "credenciais_invalidas", MENSAGEM, MENSAGEM);
+				throw invalido();
 			}
 			return senhas.upgradeEncoding(hash) ? senhas.encode(senha) : null;
 		});
 
 		var regravar = novoHash;
 		return transacao.execute(s -> { // transacao curta: so a escrita, com o usuario relido
-			var u = usuarios.findById(usuario.get().getId()).orElseThrow();
+			var u = usuarios.travar(usuario.get().getId()).orElseThrow(LoginServico::invalido);
+			if (!u.isAtivo() || !hash.equals(u.getSenha())) throw invalido(); // mudou entre a conferencia e a gravacao
 			u.registrarLogin(Instant.now());
 			if (regravar != null) u.definirSenha(regravar);
 			return u;
 		});
+	}
+
+	private static ErroDeNegocio invalido() {
+		return new ErroDeNegocio(HttpStatus.UNAUTHORIZED, "credenciais_invalidas", MENSAGEM, MENSAGEM);
 	}
 
 	private boolean confere(String senha, String hash) {

@@ -30,6 +30,7 @@ class ProvisionamentoTest {
 	@Autowired PasswordEncoder encoder;
 	@Autowired TransactionTemplate transacao;
 	@Autowired CaixaDeSaidaEmMemoria caixa;
+	@Autowired me.clama.infra.email.EnvioAssincrono envio;
 
 	@BeforeEach
 	void zerar() {
@@ -40,14 +41,22 @@ class ProvisionamentoTest {
 		return "doador-" + UUID.randomUUID() + "@exemplo.com";
 	}
 
+	/** Espera o executor de e-mail esvaziar (prazo de 10 s). */
+	private void ociosa() throws Exception {
+		var prazo = System.nanoTime() + 10_000_000_000L;
+		while (envio.pendentes() > 0 && System.nanoTime() < prazo) Thread.sleep(10);
+		assertThat(envio.pendentes()).isZero();
+	}
+
 	@Test
-	void criaClienteSemSenhaEEnviaLinkDepoisDoCommit() {
+	void criaClienteSemSenhaEEnviaLinkDepoisDoCommit() throws Exception {
 		var email = email();
 		var resumo = transacao.execute(s -> {
 			var r = api.provisionarOuVincular(email, "Maria da Graça");
 			assertThat(caixa.enviados()).as("nada sai antes do commit").isEmpty();
 			return r;
 		});
+		ociosa();
 		assertThat(resumo.email()).isEqualTo(email);
 		assertThat(resumo.nomeCompleto()).isEqualTo("Maria da Graça");
 		var u = usuarios.findById(resumo.id()).orElseThrow();
@@ -70,12 +79,13 @@ class ProvisionamentoTest {
 	}
 
 	@Test
-	void rollbackNaoEnvia() {
+	void rollbackNaoEnvia() throws Exception {
 		var email = email();
 		assertThatThrownBy(() -> transacao.executeWithoutResult(s -> {
 			api.provisionarOuVincular(email, "Fulana");
 			throw new IllegalStateException("estourou");
 		})).isInstanceOf(IllegalStateException.class);
+		ociosa();
 		assertThat(caixa.enviados()).isEmpty();
 		assertThat(usuarios.findByEmail(email)).isEmpty();
 	}
@@ -109,6 +119,7 @@ class ProvisionamentoTest {
 		} finally {
 			pool.shutdownNow();
 		}
+		ociosa();
 		assertThat(usuarios.findByEmailCanonico(email)).isPresent();
 		assertThat(caixa.para(email)).as("so quem criou envia").hasSize(1);
 	}

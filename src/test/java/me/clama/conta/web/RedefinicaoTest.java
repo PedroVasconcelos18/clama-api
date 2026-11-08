@@ -143,6 +143,7 @@ class RedefinicaoTest {
 	void definirSenhaDeContaNova() throws Exception {
 		var email = emailUnico();
 		transacao.executeWithoutResult(s -> contaApi.provisionarOuVincular(email, "Maria da Graça"));
+		caixa.aguardarPara(email, 1); // o envio e assincrono
 		assertThat(usuarios.findByEmail(email).orElseThrow().temSenha()).isFalse();
 		assertThat(new Navegador(porta).login(email, ANTIGA).statusCode()).isEqualTo(401);
 
@@ -156,6 +157,7 @@ class RedefinicaoTest {
 	void redefinirRevogaOutrosLinksPendentes() throws Exception {
 		var email = emailUnico();
 		transacao.executeWithoutResult(s -> contaApi.provisionarOuVincular(email, "Maria"));
+		caixa.aguardarPara(email, 1);
 		var definir = ultimoToken(email); // link DEFINIR da conta nova
 		var redefinir = pedirToken(email);
 		assertThat(redefinir(redefinir, NOVA).statusCode()).isEqualTo(200);

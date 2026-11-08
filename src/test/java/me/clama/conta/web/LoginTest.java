@@ -41,6 +41,8 @@ class LoginTest {
 	@Autowired LimiteDeTaxa limite;
 	@Autowired SessoesDoUsuario sessoes;
 	@Autowired VagasDeHash vagasDeHash;
+	@Autowired me.clama.conta.interno.LoginServico loginServico;
+	@Autowired org.springframework.transaction.support.TransactionTemplate transacao;
 
 	@BeforeEach
 	void zerarLimites() {
@@ -73,7 +75,10 @@ class LoginTest {
 
 		var sessao = res.headers().allValues("Set-Cookie").stream().filter(c -> c.startsWith("SESSION=")).toList();
 		assertThat(sessao).singleElement().satisfies(c -> assertThat(c)
-				.contains("HttpOnly").contains("SameSite=Lax").contains("Max-Age=2592000").doesNotContain("Secure"));
+				.contains("HttpOnly").contains("SameSite=Lax").contains("Max-Age=2592000").contains("Path=/api")
+				.doesNotContain("Secure"));
+		var xsrf = res.headers().allValues("Set-Cookie").stream().filter(c -> c.startsWith("XSRF-TOKEN=")).toList();
+		assertThat(xsrf).last().satisfies(c -> assertThat(c).endsWith("; Path=/").doesNotContain("HttpOnly"));
 
 		var salvo = usuarios.findById(u.getId()).orElseThrow();
 		assertThat(salvo.getUltimoLoginEm()).isNotNull();
@@ -225,6 +230,33 @@ class LoginTest {
 		var res = nav.post("/api/auth/login", "{\"email\":\"a@exemplo.com\",\"senha\":\"x\"}");
 		assertThat(res.statusCode()).isEqualTo(403);
 		assertThat(json(res).get("codigo").asString()).isEqualTo("csrf_invalido");
+	}
+
+	@Test
+	void contaDesativadaEntreAConferenciaEAGravacaoDa401() throws Exception {
+		var email = emailUnico();
+		var u = usuario(email, "senha-forte-123", Papel.CLIENTE);
+		var pool = java.util.concurrent.Executors.newSingleThreadExecutor();
+		try {
+			// quem segura a linha trava a gravacao do login; desativa e solta so depois que o login ja conferiu a senha
+			var login = new java.util.concurrent.atomic.AtomicReference<java.util.concurrent.Future<Object>>();
+			transacao.executeWithoutResult(s -> {
+				usuarios.travar(u.getId());
+				login.set(pool.submit(() -> {
+					try {
+						loginServico.autenticar(email, "senha-forte-123", "127.0.0.1");
+						return "entrou";
+					} catch (me.clama.infra.web.ErroDeNegocio e) {
+						return e.codigo();
+					}
+				}));
+				try { Thread.sleep(1500); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+				usuarios.findById(u.getId()).orElseThrow().desativar();
+			});
+			assertThat(login.get().get(10, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo("credenciais_invalidas");
+		} finally {
+			pool.shutdownNow();
+		}
 	}
 
 	@Test

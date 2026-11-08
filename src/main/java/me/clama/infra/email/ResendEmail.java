@@ -50,7 +50,7 @@ public class ResendEmail implements EnviadorDeEmail {
 				dormir.accept(Duration.ofSeconds(1L << (tentativa - 1)));
 			} catch (ResendException e) {
 				if (jaEnviado(e)) {
-					LOG.warn("Resend: e-mail ja enviado (chave {})", chaveIdempotencia);
+					LOG.warn("Resend: e-mail ja enviado");
 					return;
 				}
 				var status = e.getStatusCode();

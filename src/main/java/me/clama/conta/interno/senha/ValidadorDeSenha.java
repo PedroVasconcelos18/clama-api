@@ -12,6 +12,9 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
+import me.clama.infra.web.ErroDeCampo;
+import me.clama.infra.web.ErroDeNegocio;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 /** Os 4 validadores do AUTH_PASSWORD_VALIDATORS do Django, na mesma ordem e com as mesmas mensagens pt-BR. */
@@ -45,6 +48,14 @@ public class ValidadorDeSenha {
 		if (comuns.contains(strip(senha.toLowerCase(Locale.ROOT)))) erros.add(COMUM);
 		if (!senha.isEmpty() && senha.codePoints().allMatch(ValidadorDeSenha::digito)) erros.add(NUMERICA);
 		return erros;
+	}
+
+	/** Lanca 400 {@code senha_fraca} com os motivos na mensagem pastoral e um erro por motivo no {@code campo}. */
+	public void exigirForte(String senha, String email, String campo) {
+		var fraquezas = validar(senha, email);
+		if (fraquezas.isEmpty()) return;
+		throw new ErroDeNegocio(HttpStatus.BAD_REQUEST, "senha_fraca", "A senha é fraca.", String.join(" ", fraquezas),
+				fraquezas.stream().map(m -> new ErroDeCampo(campo, m)).toList());
 	}
 
 	private static boolean parecida(String senha, String email) {

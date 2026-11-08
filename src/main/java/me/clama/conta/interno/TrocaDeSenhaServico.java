@@ -4,7 +4,6 @@ import java.time.Duration;
 import me.clama.conta.interno.senha.ValidadorDeSenha;
 import me.clama.infra.seguranca.LimiteDeTaxa;
 import me.clama.infra.seguranca.LimiteDeTaxa.Cota;
-import me.clama.infra.web.ErroDeCampo;
 import me.clama.infra.web.ErroDeNegocio;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -60,11 +59,7 @@ public class TrocaDeSenhaServico {
 			throw new ErroDeNegocio(HttpStatus.BAD_REQUEST, "senha_atual_invalida", "A senha atual está incorreta.",
 					"A senha atual está incorreta.");
 		}
-		var fraquezas = validador.validar(novaSenha, usuario.getEmail());
-		if (!fraquezas.isEmpty()) {
-			throw new ErroDeNegocio(HttpStatus.BAD_REQUEST, "senha_fraca", "A nova senha é fraca.",
-					"Escolha uma senha mais forte.", fraquezas.stream().map(m -> new ErroDeCampo("novaSenha", m)).toList());
-		}
+		validador.exigirForte(novaSenha, usuario.getEmail(), "novaSenha");
 		var novoHash = vagas.comVaga(() -> senhas.encode(novaSenha));
 
 		transacao.executeWithoutResult(s -> {
