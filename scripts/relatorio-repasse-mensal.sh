@@ -25,18 +25,22 @@ set -u -o pipefail
 #                           ./mvnw -q package -DskipTests no clama-api)
 #
 # Tudo abaixo com padrão é sobrescrevível pelo ambiente; os padrões são os de
-# produção. Os ganchos (HOJE, DESDE, ATE, MES, RELATORIOS, EXEC_PREFIX) existem
-# para o teste (RelatorioMensalIT): ninguém precisa defini-los na rotina.
+# produção. Os overrides têm prefixo CLAMA_ (CLAMA_API, CLAMA_JAVA, CLAMA_JAR,
+# CLAMA_BACKEND, CLAMA_RAILWAY, CLAMA_RELATORIOS) para não colidir com variáveis
+# do ambiente (um JAR ou API genéricos no shell). MOTOR e SERVICO ficam sem
+# prefixo de propósito: o plano da etapa 8 e a troca no launchd os nomeiam assim.
+# Os ganchos (CLAMA_HOJE, CLAMA_DESDE, CLAMA_ATE, CLAMA_MES, TESTE_EXEC_PREFIX)
+# existem para o teste (RelatorioMensalIT): ninguém precisa defini-los na rotina.
 MOTOR="${MOTOR:-django}"
-BACKEND="${BACKEND:-/Users/pedro/projects/clama/clama-backend}"   # dir linkado no Railway
-API="${API:-/Users/pedro/projects/clama/clama-api}"               # idem, no motor java
-RELATORIOS="${RELATORIOS:-/Users/pedro/projects/clama/relatorios}"
+BACKEND="${CLAMA_BACKEND:-/Users/pedro/projects/clama/clama-backend}"   # dir linkado no Railway
+API="${CLAMA_API:-/Users/pedro/projects/clama/clama-api}"               # idem, no motor java
+RELATORIOS="${CLAMA_RELATORIOS:-/Users/pedro/projects/clama/relatorios}"
 PYTHON="$BACKEND/.venv/bin/python"
-RAILWAY="${RAILWAY:-/opt/homebrew/bin/railway}"
+RAILWAY="${CLAMA_RAILWAY:-/opt/homebrew/bin/railway}"
 # O launchd não tem PATH, e o `java` do PATH do Mac é o 25 (o jar é 27).
-JAVA="${JAVA:-/opt/homebrew/opt/openjdk@27/bin/java}"
-JAR="${JAR:-$API/target/clama-api.jar}"   # finalName fixo no pom.xml
-SERVICO="${SERVICO:-web}"                 # serviço do Railway (o do Java, depois da virada)
+JAVA="${CLAMA_JAVA:-/opt/homebrew/opt/openjdk@27/bin/java}"
+JAR="${CLAMA_JAR:-$API/target/clama-api.jar}"   # finalName fixo no pom.xml
+SERVICO="${SERVICO:-web}"                       # serviço do Railway (o do Java, depois da virada)
 
 case "$MOTOR" in
     django) DIRETORIO="$BACKEND" ;;
@@ -63,16 +67,17 @@ INSTITUICOES=(
     "Pela Vida"         # KM’s Pela Vida | NÃO DESISTA (cadastrada em 22/09, ficou 1 mês fora daqui)
 )
 
-MES="${MES:-$(date +%Y-%m)}"
-HOJE="${HOJE:-$(date +%Y-%m-%d)}"
+MES="${CLAMA_MES:-$(date +%Y-%m)}"
+HOJE="${CLAMA_HOJE:-$(date +%Y-%m-%d)}"
 
 # Ciclo do repasse: dia 28 do mês anterior até dia 27 do mês corrente, os dois
 # inclusivos (o comando trata --desde/--ate como inclusivos; "28 a 28" contaria
 # o dia 28 em dois ciclos). Rodando antes do dia 28, o ciclo corrente ainda não
 # fechou, então emite o anterior. -v1d antes do -v-Nm evita o estouro de
 # "31 de março menos um mês".
-if [ -n "${DESDE:-}" ] && [ -n "${ATE:-}" ]; then
-    :   # ciclo informado de fora (teste)
+if [ -n "${CLAMA_DESDE:-}" ] && [ -n "${CLAMA_ATE:-}" ]; then
+    DESDE="$CLAMA_DESDE"   # ciclo informado de fora (teste)
+    ATE="$CLAMA_ATE"
 elif [ "$(date +%-d)" -ge 28 ]; then
     DESDE="$(date -v1d -v-1m +%Y-%m)-28"
     ATE="$(date +%Y-%m)-27"
@@ -90,10 +95,19 @@ echo ""
 echo "==================== $(date '+%d/%m/%Y %H:%M') ===================="
 
 if [ "$MOTOR" = java ]; then
-    # railway run injeta as variáveis do serviço, como no Django. EXEC_PREFIX
+    # Sem o jar nada roda (nem a auditoria): avisa com todas as letras e sai, em vez
+    # de deixar cada passo falhar e a notificação dizer "CRÍTICO" por um jar ausente.
+    if [ ! -f "$JAR" ]; then
+        RESUMO="Jar do clama-api não encontrado em $JAR — rode ./mvnw -q package -DskipTests em $API"
+        echo ""
+        echo "!!! $RESUMO"
+        osascript -e "display notification \"$RESUMO\" with title \"Repasse — dia 28\"" 2>/dev/null || true
+        exit 1
+    fi
+    # railway run injeta as variáveis do serviço, como no Django. TESTE_EXEC_PREFIX
     # (mesmo vazio) troca o prefixo: o teste chama o jar direto, sem railway.
-    if [ "${EXEC_PREFIX+set}" = set ]; then
-        read -r -a PREFIXO <<< "$EXEC_PREFIX"
+    if [ "${TESTE_EXEC_PREFIX+set}" = set ]; then
+        read -r -a PREFIXO <<< "$TESTE_EXEC_PREFIX"
     else
         PREFIXO=("$RAILWAY" run --service "$SERVICO" --)
     fi

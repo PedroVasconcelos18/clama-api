@@ -25,7 +25,7 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * Etapa 8, tarefa 4: scripts/relatorio-repasse-mensal.sh com MOTOR=java, de ponta a ponta (failsafe, depois do package):
  * o bash roda o script de verdade, que chama o jar empacotado oito vezes contra o Postgres do Testcontainers semeado
- * com os "dados" dos cenarios cmd_relatorio_repasse_rotina_* (a rotina de 2026-10-28). Sem railway (EXEC_PREFIX vazio) e
+ * com os "dados" dos cenarios cmd_relatorio_repasse_rotina_* (a rotina de 2026-10-28). Sem railway (TESTE_EXEC_PREFIX vazio) e
  * sem notificacao (osascript falso no PATH). Confere os 6 CSVs byte a byte com os gravados do Django, a ausencia do CSV
  * do ledger (sem achado), e a guarda de instituicoes do log: com as 5 do cenario ela avisa; com 3 fica calada.
  */
@@ -67,39 +67,34 @@ class RelatorioMensalIT {
         }
     }
 
+    /** Jar ausente: nada roda, o log diz por que e a notificacao fala do jar, nao de ledger CRITICO. */
+    @Test
+    void semOJarAvisaEnaoDizCritico() throws Exception {
+        Path alvo = Path.of(System.getProperty("clama.jar")).toAbsolutePath().getParent();
+        Path relatorios = Files.createTempDirectory(alvo, "relatorios-sem-jar");
+        Path fake = Files.createTempDirectory(alvo, "fake-bin");
+        ProcessBuilder pb = script(relatorios, fake);
+        pb.environment().put("CLAMA_JAR", alvo.resolve("nao-existe.jar").toString());
+
+        Process p = pb.start();
+        String stdout = new String(p.getInputStream().readAllBytes(), UTF_8);
+        assertThat(p.waitFor(60, TimeUnit.SECONDS)).isTrue();
+
+        assertThat(p.exitValue()).as(stdout).isEqualTo(1);
+        assertThat(stdout).contains("!!! Jar do clama-api não encontrado em ").doesNotContain("auditoria do ledger");
+        assertThat(Files.readString(fake.resolve("notificacao"), UTF_8)).contains("Jar do clama-api não encontrado")
+                .doesNotContain("CRÍTICO");
+        try (Stream<Path> s = Files.list(relatorios)) {
+            assertThat(s.map(f -> f.getFileName().toString())).containsExactly("log-2026-10.txt"); // so o log
+        }
+    }
+
     private static String rodar(String nome, Map<String, byte[]> esperados) throws Exception {
-        var banco = BancoDeTeste.container();
         Path alvo = Path.of(System.getProperty("clama.jar")).toAbsolutePath().getParent();
         Path relatorios = Files.createTempDirectory(alvo, "relatorios-" + nome);
         Path fake = Files.createTempDirectory(alvo, "fake-bin");
-        Path osascript = fake.resolve("osascript");
-        Files.writeString(osascript, "#!/bin/sh\necho \"$@\" > \"" + fake + "/notificacao\"\n");
-        Files.setPosixFilePermissions(osascript, PosixFilePermissions.fromString("rwxr-xr-x"));
 
-        ProcessBuilder pb = new ProcessBuilder("/bin/bash", "scripts/relatorio-repasse-mensal.sh").redirectErrorStream(true);
-        Map<String, String> env = pb.environment();
-        env.keySet().removeIf(k -> k.equals("LANG") || k.startsWith("LC_") || k.startsWith("JAVA_TOOL_OPTIONS")
-                || k.startsWith("JDK_JAVA_OPTIONS") || k.startsWith("SPRING_") || k.startsWith("CLAMA_"));
-        env.put("LC_ALL", "C"); // como o launchd: sem LANG (R2)
-        env.put("PATH", fake + ":" + env.get("PATH"));
-        env.put("MOTOR", "java");
-        env.put("JAVA", ProcessHandle.current().info().command().orElseThrow());
-        env.put("JAR", System.getProperty("clama.jar"));
-        env.put("API", Path.of("").toAbsolutePath().toString());
-        env.put("EXEC_PREFIX", ""); // sem railway: o jar le o ambiente abaixo
-        env.put("RELATORIOS", relatorios.toString());
-        env.put("HOJE", "2026-10-28");
-        env.put("MES", "2026-10");
-        env.put("DESDE", "2026-09-28");
-        env.put("ATE", "2026-10-27");
-        env.put("DATABASE_URL", "postgres://" + banco.getUsername() + ":" + banco.getPassword() + "@localhost:"
-                + banco.getMappedPort(5432) + "/" + banco.getDatabaseName());
-        env.put("FIELD_ENCRYPTION_KEY", "-dPyxte5HDDyxBQExFzkphbnXt2xhs9FWlMLPFQpeuw=");
-        env.put("FREEMIUM_HASH_SECRET", "script");
-        env.put("DJANGO_SECRET_KEY", "script");
-        env.put("MERCADOPAGO_WEBHOOK_SECRET", "script");
-        env.put("WORDPRESS_WEBHOOK_SECRET", "script");
-        env.put("SENTRY_DSN", "");
+        ProcessBuilder pb = script(relatorios, fake);
 
         Process p = pb.start();
         byte[] saida = p.getInputStream().readAllBytes(); // EOF so quando o tee do script tambem terminou
@@ -128,6 +123,39 @@ class RelatorioMensalIT {
             assertThat(g).as("%s: bytes de %s", nome, e.getKey()).isEqualTo(e.getValue());
         }
         return stdout;
+    }
+
+    /** O script com o ambiente do teste: sem railway, sem notificacao de verdade (osascript falso em fake). */
+    private static ProcessBuilder script(Path relatorios, Path fake) throws Exception {
+        var banco = BancoDeTeste.container();
+        Path osascript = fake.resolve("osascript");
+        Files.writeString(osascript, "#!/bin/sh\necho \"$@\" > \"" + fake + "/notificacao\"\n");
+        Files.setPosixFilePermissions(osascript, PosixFilePermissions.fromString("rwxr-xr-x"));
+        ProcessBuilder pb = new ProcessBuilder("/bin/bash", "scripts/relatorio-repasse-mensal.sh").redirectErrorStream(true);
+        Map<String, String> env = pb.environment();
+        env.keySet().removeIf(k -> k.equals("LANG") || k.startsWith("LC_") || k.startsWith("JAVA_TOOL_OPTIONS")
+                || k.startsWith("JDK_JAVA_OPTIONS") || k.startsWith("SPRING_") || k.startsWith("CLAMA_"));
+        env.put("LC_ALL", "C"); // como o launchd: sem LANG (R2)
+        env.put("PATH", fake + ":" + env.get("PATH"));
+        env.put("MOTOR", "java");
+        env.put("CLAMA_JAVA", ProcessHandle.current().info().command().orElseThrow());
+        env.put("CLAMA_JAR", System.getProperty("clama.jar"));
+        env.put("CLAMA_API", Path.of("").toAbsolutePath().toString());
+        env.put("TESTE_EXEC_PREFIX", ""); // sem railway: o jar le o ambiente abaixo
+        env.put("CLAMA_RELATORIOS", relatorios.toString());
+        env.put("CLAMA_HOJE", "2026-10-28");
+        env.put("CLAMA_MES", "2026-10");
+        env.put("CLAMA_DESDE", "2026-09-28");
+        env.put("CLAMA_ATE", "2026-10-27");
+        env.put("DATABASE_URL", "postgres://" + banco.getUsername() + ":" + banco.getPassword() + "@localhost:"
+                + banco.getMappedPort(5432) + "/" + banco.getDatabaseName());
+        env.put("FIELD_ENCRYPTION_KEY", "-dPyxte5HDDyxBQExFzkphbnXt2xhs9FWlMLPFQpeuw=");
+        env.put("FREEMIUM_HASH_SECRET", "script");
+        env.put("DJANGO_SECRET_KEY", "script");
+        env.put("MERCADOPAGO_WEBHOOK_SECRET", "script");
+        env.put("WORDPRESS_WEBHOOK_SECRET", "script");
+        env.put("SENTRY_DSN", "");
+        return pb;
     }
 
     private static void limpar(Connection c) throws Exception {
