@@ -478,14 +478,17 @@ class LgpdTest {
             o.setTransportFactory(sentry.fabrica());
         });
         Saida s;
+        Saida exportado;
         try {
+            exportado = rodar("", "lgpd_export", "--email", EMAIL); // 1o, com a pessoa ainda la (caminho do achado)
             s = deletar("DELETAR\n", "--confirm");
-            rodar("", "lgpd_export", "--email", EMAIL);
         } finally {
             raiz.detachAppender(logs);
             Sentry.close();
         }
 
+        assertThat(exportado.exit()).as(exportado.err()).isZero();
+        assertThat(exportado.out()).contains("Encontrados 2 pedido(s) e 1 conta(s)").contains("Export salvo em: ");
         assertThat(s.exit()).as(s.err()).isZero();
         List<String> pistas = List.of(EMAIL, "maria.silva", "mariasilva");
         assertThat(logs.list).isNotEmpty().allSatisfy(e -> {
@@ -500,6 +503,8 @@ class LgpdTest {
             assertThat(msg).isEqualTo("LGPD delete: 1 pedido(s) apagado(s), 1 anonimizado(s), 1 conta(s) excluída(s)");
         });
         pistas.forEach(x -> assertThat(s.out()).doesNotContainIgnoringCase(x));
+        pistas.forEach(x -> assertThat(exportado.out() + exportado.err()).doesNotContainIgnoringCase(x));
+        assertThat(logs.list).anySatisfy(e -> assertThat(e.getFormattedMessage()).contains("lgpd_export")); // achado logado
     }
 
     /** Producao antes da virada: o Java nunca rodou e scheduled_tasks nao existe (o modo comando nao roda Flyway). */
