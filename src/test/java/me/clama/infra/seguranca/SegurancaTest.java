@@ -1,0 +1,129 @@
+package me.clama.infra.seguranca;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import me.clama.BancoDeTeste;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.web.servlet.MockMvc;
+
+@SpringBootTest(webEnvironment = RANDOM_PORT)
+@AutoConfigureMockMvc
+@Import(BancoDeTeste.class)
+@ExtendWith(OutputCaptureExtension.class)
+class SegurancaTest {
+
+	@Autowired
+	MockMvc mvc;
+
+	@Autowired
+	UserDetailsService usuarios;
+
+	@Test
+	void adminSemLoginDa401EmJson() throws Exception {
+		mvc.perform(get("/api/admin/teste"))
+				.andExpect(status().isUnauthorized())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+				.andExpect(jsonPath("$.codigo").value("nao_autenticado"))
+				.andExpect(jsonPath("$.mensagemPastoral").value("Entre na sua conta para continuar."))
+				.andExpect(header().doesNotExist("Location"))
+				.andExpect(header().doesNotExist("WWW-Authenticate"));
+	}
+
+	@Test
+	@WithMockUser(roles = "CLIENTE")
+	void adminComUsuarioSemPapelDa403() throws Exception {
+		mvc.perform(get("/api/admin/teste"))
+				.andExpect(status().isForbidden())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+				.andExpect(jsonPath("$.codigo").value("sem_permissao"))
+				.andExpect(jsonPath("$.mensagemPastoral").value("Você não tem acesso a esta área."));
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
+	void adminComPapelPassa() throws Exception {
+		mvc.perform(get("/api/admin/teste")).andExpect(status().isOk());
+	}
+
+	@Test
+	void rotaSemRegraNegada() throws Exception {
+		var status = mvc.perform(get("/api/publico/teste")).andReturn().getResponse().getStatus();
+		assertThat(status).isIn(401, 403);
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
+	void postSemCsrfDa403() throws Exception {
+		mvc.perform(post("/api/admin/teste")).andExpect(status().isForbidden());
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
+	void postComTokenCsrfPassa() throws Exception {
+		// Fluxo real da SPA: le o cookie da primeira resposta e devolve no header.
+		// (O post-processor csrf() nao serve: troca o repositorio do filtro e vaza para os outros testes.)
+		var cookie = mvc.perform(get("/actuator/health")).andReturn().getResponse().getCookie("XSRF-TOKEN");
+		mvc.perform(post("/api/admin/teste").cookie(cookie).header("X-XSRF-TOKEN", cookie.getValue()))
+				.andExpect(status().isOk());
+	}
+
+	@Test
+	void cookieXsrfVemNaPrimeiraRespostaELegivelPeloJs() throws Exception {
+		mvc.perform(get("/actuator/health"))
+				.andExpect(cookie().exists("XSRF-TOKEN"))
+				.andExpect(cookie().httpOnly("XSRF-TOKEN", false));
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
+	void excecaoDeAcessoNegadoDentroDoControllerDa403Nao500() throws Exception {
+		mvc.perform(get("/api/admin/teste/negado"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.codigo").value("sem_permissao"))
+				.andExpect(jsonPath("$.mensagemPastoral").value("Você não tem acesso a esta área."));
+	}
+
+	@Test
+	void headersDeSeguranca() throws Exception {
+		mvc.perform(get("/actuator/health"))
+				.andExpect(status().isOk())
+				.andExpect(header().string("X-Frame-Options", "DENY"))
+				.andExpect(header().string("X-Content-Type-Options", "nosniff"))
+				.andExpect(header().string("Referrer-Policy", "same-origin"))
+				.andExpect(header().string("Cross-Origin-Opener-Policy", "same-origin"))
+				.andExpect(header().doesNotExist("Strict-Transport-Security"));
+	}
+
+	@Test
+	void hstsSoSobHttps() throws Exception {
+		mvc.perform(get("/actuator/health").secure(true))
+				.andExpect(header().string("Strict-Transport-Security", "max-age=31536000 ; includeSubDomains"));
+	}
+
+	@Test
+	void semSenhaGeradaPeloBoot(CapturedOutput saida) {
+		assertThat(saida).doesNotContain("Using generated security password");
+		assertThat(usuarios.getClass().getSimpleName()).isNotEqualTo("InMemoryUserDetailsManager");
+		org.junit.jupiter.api.Assertions.assertThrows(UsernameNotFoundException.class,
+				() -> usuarios.loadUserByUsername("qualquer"));
+	}
+}

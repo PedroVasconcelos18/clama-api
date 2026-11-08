@@ -2,6 +2,7 @@ package me.clama.infra.web;
 
 import io.sentry.Sentry;
 import java.util.List;
+import me.clama.infra.seguranca.RespostasDeSeguranca;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.TypeMismatchException;
@@ -12,6 +13,8 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -29,6 +32,18 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ErroDeNegocio.class)
     ResponseEntity<Object> negocio(ErroDeNegocio e, WebRequest req) {
         return resposta(e, e.status(), e.codigo(), e.getMessage(), e.mensagemPastoral(), null, req);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    ResponseEntity<Object> acessoNegado(AccessDeniedException e, WebRequest req) {
+        return resposta(e, HttpStatus.FORBIDDEN, RespostasDeSeguranca.CODIGO_SEM_PERMISSAO,
+                "Acesso negado.", RespostasDeSeguranca.PASTORAL_SEM_PERMISSAO, null, req);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    ResponseEntity<Object> naoAutenticado(AuthenticationException e, WebRequest req) {
+        return resposta(e, HttpStatus.UNAUTHORIZED, RespostasDeSeguranca.CODIGO_NAO_AUTENTICADO,
+                "Não autenticado.", RespostasDeSeguranca.PASTORAL_NAO_AUTENTICADO, null, req);
     }
 
     @ExceptionHandler(Exception.class)
