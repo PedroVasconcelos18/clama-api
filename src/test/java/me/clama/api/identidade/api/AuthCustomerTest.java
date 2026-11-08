@@ -215,4 +215,22 @@ class AuthCustomerTest {
         assertThat(post("/api/customer/auth/change-password/", corpo, "Cookie", cookies, "X-CSRFToken", token)
                 .statusCode()).isEqualTo(429);
     }
+
+    /** Django TestChangePasswordTOCTOURace: duas trocas com a mesma senha atual; a 2a confere depois do lock e leva 400. */
+    @Test
+    void duasTrocasSimultaneasComAMesmaSenhaAtualSoUmaPassa() throws Exception {
+        Usuario u = usuario("toctou-" + sufixo + "@x.com", false);
+        HttpResponse<String> csrf = http.send(HttpRequest.newBuilder(
+                URI.create("http://localhost:" + porta + "/api/csrf/")).build(), HttpResponse.BodyHandlers.ofString());
+        String token = (String) ((Map<?, ?>) corpo(csrf)).get("csrf_token");
+        String cookies = "clama_access=" + tokens.emitirPar(u).access() + "; csrftoken=" + token;
+        java.util.concurrent.Callable<Integer> troca = () -> post("/api/customer/auth/change-password/",
+                "{\"senha_atual\": \"" + SENHA + "\", \"nova_senha\": \"Outra-forte-2027\"}", "Cookie", cookies,
+                "X-CSRFToken", token).statusCode();
+        try (var threads = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var a = threads.submit(troca);
+            var b = threads.submit(troca);
+            assertThat(List.of(a.get(), b.get())).containsExactlyInAnyOrder(200, 400);
+        }
+    }
 }

@@ -116,4 +116,18 @@ class EsqueciSenhaTest {
         assertThat(new SenhaDjango().matches("antiga", usuarios.findById(u.getId()).orElseThrow().getPassword()))
                 .isFalse();
     }
+
+    /** Django test_temp_password_do_email_funciona_no_login_e_exige_troca: a senha do e-mail e a que ficou gravada. */
+    @Test
+    void senhaTemporariaDoEmailEAQueFicouGravada() throws Exception {
+        Usuario u = conta("temp-" + sufixo + "@x.com");
+        assertThat(pedir(u.getEmail()).statusCode()).isEqualTo(200);
+        ArgumentCaptor<Email> e = ArgumentCaptor.forClass(Email.class);
+        Mockito.verify(enviador).enviar(e.capture());
+        Usuario depois = usuarios.findById(u.getId()).orElseThrow();
+        SenhaDjango senhas = new SenhaDjango();
+        assertThat(java.util.Arrays.stream(e.getValue().texto().split("\\s+")).anyMatch(
+                t -> senhas.matches(t, depois.getPassword()))).as("alguma palavra do e-mail e a senha nova").isTrue();
+        assertThat(depois.isForceChangePassword()).isTrue();
+    }
 }

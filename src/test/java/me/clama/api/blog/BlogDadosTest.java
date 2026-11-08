@@ -1,6 +1,7 @@
 package me.clama.api.blog;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -145,5 +146,34 @@ class BlogDadosTest {
         assertThat(jdbc.queryForObject("select revogado_em from blog_customerbanido where id = ?",
                 OffsetDateTime.class, b.getId()).toInstant()).isEqualTo(T0.plusSeconds(3600));
         assertThat(b.getBanidoEm()).isEqualTo(t0);
+    }
+
+    // Django test_post_espelho / test_comentario_no_espelho: o schema (schema-prod.sql, igual a producao) e quem barra
+    // linha sem ancora e wp_post_id repetido; o Java depende disso e nao tem outra guarda.
+    @Test
+    void comentarioSemAncoraEBarradoPeloBanco() {
+        Usuario u = usuario("c4@exemplo.com");
+        assertThatThrownBy(() -> jdbc.update("""
+                insert into blog_comentario (created_at, updated_at, id, conteudo, ip_address, is_suspeito, customer_id)
+                values (now(), now(), gen_random_uuid(), 'x', '', false, ?)""", u.getId()))
+                .hasMessageContaining("ck_blog_comentario_tem_post");
+    }
+
+    @Test
+    void reacaoSemAncoraEBarradaPeloBanco() {
+        Usuario u = usuario("c5@exemplo.com");
+        assertThatThrownBy(() -> jdbc.update("""
+                insert into blog_reacao (created_at, updated_at, id, tipo, customer_id)
+                values (now(), now(), gen_random_uuid(), 'like', ?)""", u.getId()))
+                .hasMessageContaining("ck_blog_reacao_tem_post");
+    }
+
+    @Test
+    void wpPostIdRepetidoEBarradoPeloBanco() {
+        String sql = """
+                insert into blog_postespelho (created_at, updated_at, id, wp_post_id, slug, titulo, status, url)
+                values (now(), now(), gen_random_uuid(), 1005, ?, 't', 'publicado', 'u')""";
+        jdbc.update(sql, "um");
+        assertThatThrownBy(() -> jdbc.update(sql, "outro")).hasMessageContaining("wp_post_id");
     }
 }

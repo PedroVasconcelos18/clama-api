@@ -129,4 +129,17 @@ class PedidosThrottleTest {
             assertThat(api.post("/api/pedidos/", "{}", temporaria).statusCode()).isEqualTo(403);
         }
     }
+
+    /** Django test_rate_limit_blocks_after_60_requests (StatusPedidoView): 60 por minuto por IP, o 61o leva 429. */
+    @Test
+    void statusLimitadoA60PorMinutoPorIp() throws Exception {
+        java.net.http.HttpClient http = java.net.http.HttpClient.newHttpClient();
+        java.net.http.HttpRequest req = java.net.http.HttpRequest
+                .newBuilder(java.net.URI.create("http://localhost:" + porta + "/api/pedidos/" + UUID.randomUUID() + "/"))
+                .header("X-Forwarded-For", "198.51.100.200").build();
+        for (int i = 0; i < 60; i++) {
+            assertThat(http.send(req, java.net.http.HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(404);
+        }
+        assertThat(http.send(req, java.net.http.HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(429);
+    }
 }

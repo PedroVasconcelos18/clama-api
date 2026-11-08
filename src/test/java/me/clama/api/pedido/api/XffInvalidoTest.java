@@ -84,4 +84,19 @@ class XffInvalidoTest {
                 .isEqualTo("203.0.113.9");
         assertThat(consentIp(api.post("/api/doacoes/", PEDIDO, null))).isIn("127.0.0.1", "::1");
     }
+
+    /** Django test_paywall.test_autenticado_admin_pode_criar_pedido: IsAuthenticated, admin nao e bloqueado e vira o dono. */
+    @Test
+    void adminAutenticadoPodeCriarPedido() throws Exception {
+        String email = "adm-" + UUID.randomUUID().toString().substring(0, 8) + "@x.com";
+        ApiDePedidos.Sessao s = api.entrar(usuarios, tokens, email, false);
+        var admin = usuarios.buscarPorEmailIgnorandoCaixa(email).get(0);
+        admin.setClamaAdmin(true);
+        usuarios.saveAndFlush(admin);
+        HttpResponse<String> r = api.post("/api/pedidos/", PEDIDO, s);
+        assertThat(r.statusCode()).as(r.body()).isEqualTo(201);
+        String id = (String) ApiDePedidos.JSON.readValue(r.body(), Map.class).get("id");
+        assertThat(jdbc.queryForObject("select user_id from orders_pedido where id = ?::uuid", Long.class, id))
+                .isEqualTo(admin.getId());
+    }
 }

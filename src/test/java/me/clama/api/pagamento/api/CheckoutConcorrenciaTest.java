@@ -193,4 +193,18 @@ class CheckoutConcorrenciaTest {
             segura.join();
         }
     }
+
+    /** Django test_estado_parcial_nao_dispara_reuso: so payment_id, sem QR, nao reaproveita; cria a cobranca. */
+    @Test
+    void estadoParcialSemQrCriaNovaCobranca() throws Exception {
+        limiter.limpar();
+        UUID id = semearPedido();
+        jdbc.update("update orders_pedido set provider_payment_id = 'pref_existing' where id = ?", id);
+        CRIACOES.set(0);
+        HttpResponse<String> r = HttpClient.newHttpClient().send(HttpRequest.newBuilder(URI.create(
+                "http://localhost:" + porta + "/api/pedidos/" + id + "/checkout/"))
+                .POST(HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofString());
+        assertThat(r.statusCode()).as(r.body()).isEqualTo(200);
+        assertThat(CRIACOES.get()).isEqualTo(1);
+    }
 }
