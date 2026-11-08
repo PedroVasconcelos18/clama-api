@@ -49,6 +49,12 @@ public class DatabaseUrlConfig {
 		ds.setConnectionTimeout(10_000);
 		// o Detail de uma violacao de unique traz o e-mail e o Hibernate o loga: o driver nem o poe na mensagem
 		ds.addDataSourceProperty("logServerErrorDetail", "false");
+		// o driver nao tem timeout por padrao: pelo proxy publico do Railway o handshake ja ficou parado para sempre
+		// (comando rodado do Mac). Falhar em segundos e melhor que travar a rotina mensal do launchd.
+		// ponytail: sem socketTimeout (cortaria consulta longa); se travar no meio de uma consulta, avaliar um por comando
+		ds.addDataSourceProperty("connectTimeout", "10");
+		ds.addDataSourceProperty("loginTimeout", "20");
+		ds.addDataSourceProperty("tcpKeepAlive", "true");
 		return ds;
 	}
 }

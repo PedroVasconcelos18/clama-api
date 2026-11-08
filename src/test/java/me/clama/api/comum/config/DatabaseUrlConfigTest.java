@@ -40,6 +40,9 @@ class DatabaseUrlConfigTest {
 			assertThat(ds.getConnectionTimeout()).isEqualTo(10_000);
 			assertThat(ds.getJdbcUrl()).isEqualTo("jdbc:postgresql://localhost:5432/clama");
 			assertThat(ds.getUsername()).isEqualTo("u");
+			// sem eles o handshake pelo proxy publico do Railway ja travou para sempre (D-1 da virada, 2026-11-08)
+			assertThat(ds.getDataSourceProperties()).containsEntry("connectTimeout", "10")
+					.containsEntry("loginTimeout", "20").containsEntry("tcpKeepAlive", "true");
 		});
 	}
 
