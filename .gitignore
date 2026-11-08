@@ -34,3 +34,6 @@ build/
 
 ### uploads locais (clama.media-root, MEDIA_ROOT do Django) ###
 /media/
+
+### export LGPD (lgpd_export, dados pessoais) ###
+/lgpd_exports/

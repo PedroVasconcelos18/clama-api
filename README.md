@@ -30,7 +30,7 @@ Notas dos comandos de conta:
 - `--autor <id>` grava a criacao no `django_admin_log` em nome desse usuario (a tabela exige autor); sem ele so sai o log estruturado.
 
 Notas dos comandos LGPD (`--email` e comparado na forma canonica: caixa, Gmail sem pontos e `+tag`):
-- `lgpd_export --email <e> [--output-dir lgpd_exports]` grava um JSON (permissao 0600) com pedidos, contas, blog e se a pessoa consta na blacklist do freemium. Apague o arquivo depois de enviar ao titular.
+- `lgpd_export --email <e> [--output-dir lgpd_exports]` grava `lgpd_<AAAAmmdd_HHMMSS>.json` (arquivo 0600, diretorio criado com 0700, ja no `.gitignore`; sem o e-mail no nome, ao contrario do Django, para nao furar o `m***@`) com pedidos, contas, blog e se a pessoa consta na blacklist do freemium. Apague o arquivo depois de enviar ao titular.
 - `lgpd_delete --email <e>` so lista (dry-run). Com `--confirm`, pede `DELETAR` no stdin e, numa transacao, exclui as contas, apaga os pedidos e anonimiza os que tem repasse (registro contabil). A blacklist do freemium fica. Guarda que falha (ultimo admin, conta que baniu alguem) = exit 1 e nada muda. `--autor <id>` audita.
 
 Rodar um comando localmente (a mesma `bash`/JDK 27 dos testes; o `java` do PATH do Mac pode ser o 25):

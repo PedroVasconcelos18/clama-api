@@ -36,9 +36,9 @@ import tools.jackson.databind.SerializationFeature;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * lgpd_export (mapa §8.3, D1, D4): um JSON com tudo do titular, no nome e com os avisos do Django
- * (&lt;email com _at_ e _&gt;_&lt;AAAAmmdd_HHMMSS&gt;.json, hora de Sao Paulo pelo Clock; --output-dir relativo ao diretorio
- * corrente). Alem das chaves do Django: cpf_cnpj, eh_gratuito, instituicao e as confirmacoes do freemium de cada
+ * lgpd_export (mapa §8.3, D1, D4): um JSON com tudo do titular e os avisos do Django. Parte diferente de
+ * proposito: o arquivo e lgpd_&lt;AAAAmmdd_HHMMSS&gt;.json (hora de Sao Paulo pelo Clock), sem o e-mail no nome, que
+ * derrotaria o m***@ do stdout; --output-dir relativo ao diretorio corrente, criado com 0700. Alem das chaves do Django: cpf_cnpj, eh_gratuito, instituicao e as confirmacoes do freemium de cada
  * pedido; as contas da mesma caixa (sem senha nem hashes); o blog (comentarios com o IP decifrado, reacoes, bans
  * recebidos) e se ha linha na blacklist do freemium. Datas em ISO no fuso de Sao Paulo. Arquivo so do dono (0600).
  */
@@ -86,9 +86,11 @@ public class LgpdExport implements Comando {
         export.put("bloqueio_freemium", bloqueio(email, pedidos, contas));
 
         Path dir = c.caminho(Objects.requireNonNullElse(c.valor("--output-dir"), "lgpd_exports"));
-        Files.createDirectories(dir);
+        // 0700 so se criar (a mascara do processo ainda vale); um diretorio ja existente fica como esta
+        Files.createDirectories(dir,
+                PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
         String carimbo = LocalDateTime.ofInstant(agora.toInstant(), FUSO).format(CARIMBO);
-        Path arquivo = dir.resolve(email.replace("@", "_at_").replace(".", "_") + "_" + carimbo + ".json");
+        Path arquivo = dir.resolve("lgpd_" + carimbo + ".json");
         Files.deleteIfExists(arquivo); // mesmo segundo: sobrescreve, como o Django
         Files.createFile(arquivo, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")));
         Files.writeString(arquivo, JSON.writeValueAsString(export), UTF_8);

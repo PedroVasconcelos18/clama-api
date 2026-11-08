@@ -477,8 +477,10 @@ class LgpdTest {
         Saida s = rodar("", "lgpd_export", "--email", "Maria.Silva@Exemplo.com", "--output-dir", "saida");
 
         assertThat(s.exit()).as(s.err()).isZero();
-        Path arquivo = dir.resolve("saida/maria_silva_at_exemplo_com_20261107_120405.json");
-        assertThat(arquivo).exists();
+        Path arquivo = dir.resolve("saida/lgpd_20261107_120405.json");
+        assertThat(arquivo).exists().satisfies(a -> assertThat(a.toString()).doesNotContain("maria"));
+        assertThat(Files.getPosixFilePermissions(dir.resolve("saida"))).extracting(Object::toString)
+                .containsExactlyInAnyOrder("OWNER_READ", "OWNER_WRITE", "OWNER_EXECUTE");
         assertThat(s.out()).isEqualTo("Buscando pedidos para: m***@exemplo.com\n"
                 + "Encontrados 3 pedido(s) e 1 conta(s)\n"
                 + "Export salvo em: " + arquivo + "\n"
