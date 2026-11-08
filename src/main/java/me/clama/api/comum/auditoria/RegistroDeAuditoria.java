@@ -46,7 +46,7 @@ public class RegistroDeAuditoria {
         LOG.info("auditoria autor={} objeto={}.{}#{} acao={}", autorId, appLabel, model, objetoId, acao);
     }
 
-    /** --autor dos comandos: o id de um usuario existente (django_admin_log.user_id e NOT NULL); ausente = null. */
+    /** --autor dos comandos: o id de um usuario staff e ativo (django_admin_log.user_id e NOT NULL); ausente = null. */
     public Long autorDoComando(String valor) {
         if (valor == null) {
             return null;
@@ -57,9 +57,10 @@ public class RegistroDeAuditoria {
         } catch (NumberFormatException e) {
             throw new ErroDeComando("--autor inválido: " + TextoPython.repr(valor) + ". Use o id numérico de um usuário.");
         }
-        Integer existe = jdbc.queryForObject("select count(*) from users_user where id = ?", Integer.class, id);
+        Integer existe = jdbc.queryForObject(
+                "select count(*) from users_user where id = ? and is_staff and is_active", Integer.class, id);
         if (existe == null || existe == 0) {
-            throw new ErroDeComando("Nenhum usuário com o id " + id + ".");
+            throw new ErroDeComando("Nenhum usuário staff ativo com o id " + id + ".");
         }
         return id;
     }

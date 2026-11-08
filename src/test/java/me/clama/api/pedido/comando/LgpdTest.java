@@ -388,6 +388,7 @@ class LgpdTest {
     @Test
     void autorNaoPodeSerAPropriaContaExcluida() {
         Pessoa p = pessoa();
+        jdbc.update("update users_user set is_staff = true where id = ?", p.conta());
         String antes = estado();
 
         Saida s = deletar("DELETAR\n", "--confirm", "--autor=" + p.conta());

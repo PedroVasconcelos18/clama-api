@@ -50,6 +50,7 @@ class CreateClamaAdminTest {
     void autor() {
         jdbc.update("insert into django_content_type (app_label, model) values ('users', 'user') on conflict do nothing");
         autor = usuario("autor@exemplo.com");
+        jdbc.update("update users_user set is_staff = true, is_active = true where id = ?", autor);
     }
 
     long usuario(String email) {
@@ -180,6 +181,37 @@ class CreateClamaAdminTest {
     void autorInexistenteOuInvalidoNaoCria() {
         assertThat(rodar("", "--email", "x@exemplo.com", "--password", SENHA, "--autor", "999999").exit()).isEqualTo(1);
         assertThat(rodar("", "--email", "x@exemplo.com", "--password", SENHA, "--autor", "abc").exit()).isEqualTo(1);
+        assertThat(total()).isEqualTo(1);
+    }
+
+    @Test
+    void autorPrecisaSerStaffEAtivo() {
+        long comum = usuario("comum@exemplo.com");
+        long inativo = usuario("inativo@exemplo.com");
+        jdbc.update("update users_user set is_staff = true, is_active = false where id = ?", inativo);
+        for (long quem : List.of(comum, inativo)) {
+            Saida s = rodar("", "--email", "x@exemplo.com", "--password", SENHA, "--autor", "" + quem);
+            assertThat(s.exit()).isEqualTo(1);
+            assertThat(s.err()).contains("CommandError: Nenhum usuário staff ativo");
+        }
+        assertThat(total()).isEqualTo(3);
+        assertThat(auditorias()).isZero();
+    }
+
+    /** E-mail vazio ou invalido: exit 1 antes de pedir a senha (o stdin nem e lido), com e sem --superusuario. */
+    @Test
+    void emailVazioOuInvalidoERecusadoAntesDaSenha() {
+        for (String ruim : List.of("", "   ", "sem-arroba", "a@b", "a b@exemplo.com")) {
+            for (String[] extra : List.of(new String[0], new String[] {"--superusuario"})) {
+                String[] args = new String[2 + extra.length];
+                args[0] = "--email";
+                args[1] = ruim;
+                System.arraycopy(extra, 0, args, 2, extra.length);
+                Saida s = rodar(SENHA + "\n", args);
+                assertThat(s.exit()).as("'%s' %s", ruim, List.of(extra)).isEqualTo(1);
+                assertThat(s.err()).contains("CommandError: E-mail inválido").doesNotContain("Sem terminal");
+            }
+        }
         assertThat(total()).isEqualTo(1);
     }
 

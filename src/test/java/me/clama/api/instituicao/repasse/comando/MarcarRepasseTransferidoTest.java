@@ -198,6 +198,7 @@ class MarcarRepasseTransferidoTest {
         u.setEmail("tesouraria@exemplo.com");
         u.setPassword("x");
         long autor = usuarios.saveAndFlush(u).getId();
+        jdbc.update("update users_user set is_staff = true where id = ?", autor);
         jdbc.update("insert into django_content_type (app_label, model) values ('instituicoes', 'repasse') "
                 + "on conflict do nothing");
         UUID a = repasse();
@@ -224,7 +225,7 @@ class MarcarRepasseTransferidoTest {
         UUID r = repasse();
 
         assertThat(marcar("--comprovante=E1", "--confirmar", "--autor=999999").err())
-                .isEqualTo("CommandError: Nenhum usuário com o id 999999.\n");
+                .isEqualTo("CommandError: Nenhum usuário staff ativo com o id 999999.\n");
         assertThat(marcar("--comprovante=E1", "--confirmar", "--autor=ana").err())
                 .isEqualTo("CommandError: --autor inválido: 'ana'. Use o id numérico de um usuário.\n");
         assertThat(linha(r)).containsEntry("status", "registrado");

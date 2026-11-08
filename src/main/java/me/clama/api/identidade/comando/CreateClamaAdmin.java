@@ -9,6 +9,7 @@ import me.clama.api.comum.comando.Chamada;
 import me.clama.api.comum.comando.Comando;
 import me.clama.api.comum.comando.Comandos.Opcao;
 import me.clama.api.comum.comando.ErroDeComando;
+import me.clama.api.comum.email.ValidadorDeEmail;
 import me.clama.api.comum.texto.TextoPython;
 import me.clama.api.identidade.CriacaoDeAdmin;
 import me.clama.api.identidade.senha.ValidadorDeSenha;
@@ -45,6 +46,9 @@ public class CreateClamaAdmin implements Comando {
     public int executar(Chamada c) throws IOException {
         String email = TextoPython.strip(c.valor("--email")).toLowerCase(Locale.ROOT);
         String nome = c.valor("--nome") == null ? "" : c.valor("--nome");
+        if (!ValidadorDeEmail.valido(email)) {
+            throw new ErroDeComando("E-mail inválido: informe um endereço como nome@dominio.com.");
+        }
         boolean superusuario = c.tem("--superusuario");
         Long autor = auditoria.autorDoComando(c.valor("--autor"));
         String senha = c.valor("--password") != null ? c.valor("--password") : pedirSenha(c);
