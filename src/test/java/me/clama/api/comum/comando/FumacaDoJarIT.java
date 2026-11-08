@@ -22,7 +22,8 @@ import org.junit.jupiter.api.Test;
 class FumacaDoJarIT {
     /** Variaveis que, sem as travas do Comandos.abrir, venceriam o application-comando.yml (D6, R3, R6, R7). */
     static final Map<String, String> HOSTIL = Map.of("SPRING_FLYWAY_ENABLED", "true", "CLAMA_FILA_SCHEDULER_ATIVO",
-            "true", "CLAMA_AGENDA_ATIVA", "true", "SPRING_MAIN_WEB_APPLICATION_TYPE", "servlet");
+            "true", "CLAMA_AGENDA_ATIVA", "true", "SPRING_MAIN_WEB_APPLICATION_TYPE", "servlet", "SPRING_JPA_HIBERNATE_DDL_AUTO",
+            "create-drop", "SPRING_SQL_INIT_MODE", "always");
 
     @Test
     void instituicoesPeloJarSoAsLinhasEmUtf8SemLogNoStdoutSemPollerESemMigrar() throws Exception {
@@ -73,7 +74,8 @@ class FumacaDoJarIT {
         // o log existe, e foi para o stderr; o poller do db-scheduler loga "Starting scheduler." ao subir
         assertThat(stderr).as(nome).contains("Comando instituicoes: inicio")
                 .contains("Comando instituicoes: fim, exit 0").contains("Agenda desligada (clama.agenda.ativa=false)")
-                .doesNotContain("Starting scheduler").doesNotContain("Tomcat").doesNotContain("Migrating schema");
+                .doesNotContain("Starting scheduler").doesNotContain("Tomcat").doesNotContain("Migrating schema")
+                .doesNotContain("drop table").doesNotContain("create table");
 
         try (Connection c = DriverManager.getConnection(banco.getJdbcUrl(), banco.getUsername(), banco.getPassword());
                 ResultSet r = c.createStatement().executeQuery(
@@ -81,6 +83,12 @@ class FumacaDoJarIT {
             r.next();
             assertThat(r.getBoolean(1)).as("%s: Flyway nao rodou (R3)", nome).isTrue();
             assertThat(r.getBoolean(2)).as("%s: nem criou a fila", nome).isTrue();
+        }
+        // create-drop hostil: nada foi apagado (a tabela e as 2 linhas continuam) e o schema segue valido
+        try (Connection c = DriverManager.getConnection(banco.getJdbcUrl(), banco.getUsername(), banco.getPassword());
+                ResultSet r = c.createStatement().executeQuery("SELECT count(*) FROM instituicoes_instituicao")) {
+            r.next();
+            assertThat(r.getInt(1)).as("%s: create-drop nao apagou nada", nome).isEqualTo(2);
         }
     }
 }

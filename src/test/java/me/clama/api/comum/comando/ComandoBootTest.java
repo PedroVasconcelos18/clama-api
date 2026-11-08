@@ -34,7 +34,8 @@ class ComandoBootTest {
 
     /** O que um ambiente hostil tentaria religar (SPRING_FLYWAY_ENABLED, CLAMA_FILA_SCHEDULER_ATIVO etc.). */
     static final Map<String, String> RELIGAR = Map.of("spring.flyway.enabled", "true", "clama.fila.scheduler-ativo",
-            "true", "clama.agenda.ativa", "true", "spring.main.web-application-type", "servlet");
+            "true", "clama.agenda.ativa", "true", "spring.main.web-application-type", "servlet", "spring.jpa.hibernate.ddl-auto", "create-drop",
+            "spring.sql.init.mode", "always");
 
     @Test
     void sobeSemWebSemFilaSemAgendaSemFlywayMesmoComAmbientePedindo() {
@@ -58,6 +59,8 @@ class ComandoBootTest {
             assertThat(agenda.getScheduledThreadPoolExecutor().getQueue()).as("nada agendado").isEmpty();
             assertThat(ctx.getBeanNamesForType(Flyway.class)).as("Flyway nunca roda no modo comando").isEmpty();
             assertThat(ctx.getEnvironment().getProperty("spring.flyway.enabled")).isEqualTo("false");
+            assertThat(ctx.getEnvironment().getProperty("spring.jpa.hibernate.ddl-auto")).isEqualTo("validate");
+            assertThat(ctx.getEnvironment().getProperty("spring.sql.init.mode")).isEqualTo("never");
             // R1 no logback (alem do System.setOut do Comandos.rodar): o console do perfil comando e o stderr
             var raiz = ((ch.qos.logback.classic.LoggerContext) org.slf4j.LoggerFactory.getILoggerFactory())
                     .getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);

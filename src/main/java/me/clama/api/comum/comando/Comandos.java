@@ -130,7 +130,8 @@ public final class Comandos {
      */
     static final Map<String, Object> TRAVAS = Map.of("spring.flyway.enabled", "false",
             "clama.fila.scheduler-ativo", "false", "clama.agenda.ativa", "false",
-            "spring.main.web-application-type", "none");
+            "spring.main.web-application-type", "none", "spring.jpa.hibernate.ddl-auto", "validate",
+            "spring.sql.init.mode", "never");
 
     /**
      * O contexto do modo comando. Sem os args (R5: o Spring faria de --x=y uma propriedade). sobrescritas: so para o
