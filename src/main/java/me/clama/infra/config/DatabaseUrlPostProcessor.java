@@ -23,14 +23,22 @@ public class DatabaseUrlPostProcessor implements EnvironmentPostProcessor {
 		if (url == null || url.isBlank()) {
 			return;
 		}
-		URI uri = URI.create(url);
+		URI uri;
+		try {
+			uri = URI.create(url);
+		} catch (IllegalArgumentException e) {
+			throw invalida();
+		}
 		String host = uri.getHost();
+		if (host == null) {
+			throw invalida();
+		}
 		boolean local = "localhost".equals(host) || "127.0.0.1".equals(host);
 		String[] credenciais = uri.getRawUserInfo() == null ? new String[0] : uri.getRawUserInfo().split(":", 2);
 
 		var props = new HashMap<String, Object>();
 		props.put("spring.datasource.url",
-				"jdbc:postgresql://" + host + ":" + uri.getPort() + uri.getPath() + (local ? "" : "?sslmode=require"));
+				"jdbc:postgresql://" + host + (uri.getPort() < 0 ? "" : ":" + uri.getPort()) + uri.getPath() + (local ? "" : "?sslmode=require"));
 		if (credenciais.length > 0) {
 			props.put("spring.datasource.username", decodifica(credenciais[0]));
 		}
@@ -43,6 +51,12 @@ public class DatabaseUrlPostProcessor implements EnvironmentPostProcessor {
 		props.put(HIKARI + "tcpKeepAlive", "true");
 		props.put(HIKARI + "logServerErrorDetail", "false");
 		env.getPropertySources().addLast(new MapPropertySource("databaseUrl", props));
+	}
+
+	// nunca incluir a URL na mensagem: ela carrega a senha
+	private static IllegalArgumentException invalida() {
+		return new IllegalArgumentException(
+				"DATABASE_URL invalida: esperado postgres[ql]://usuario:senha@host:porta/banco (caracteres especiais da senha devem ir codificados)");
 	}
 
 	private static String decodifica(String s) {
