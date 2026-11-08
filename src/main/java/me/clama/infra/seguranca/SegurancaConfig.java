@@ -19,6 +19,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.DelegatingSecurityContextRepository;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfToken;
@@ -47,6 +51,13 @@ public class SegurancaConfig {
 		return CookieCsrfTokenRepository.withHttpOnlyFalse();
 	}
 
+	/** Le e grava o contexto na requisicao e na sessao (o padrao do Security); o login grava neste mesmo. */
+	@Bean
+	public SecurityContextRepository repositorioDeContexto() {
+		return new DelegatingSecurityContextRepository(new RequestAttributeSecurityContextRepository(),
+				new HttpSessionSecurityContextRepository());
+	}
+
 	/**
 	 * Cadeia que nega por padrao; fica por ultimo para nunca sombrear a cadeia de um modulo.
 	 */
@@ -67,14 +78,15 @@ public class SegurancaConfig {
 	 * .authorizeHttpRequests(...).build()}, com {@code @Order} menor que o da cadeia padrao.
 	 */
 	public static HttpSecurity aplicarPadrao(HttpSecurity http, RespostasDeSeguranca respostas) {
+		var beans = http.getSharedObject(ApplicationContext.class);
 		return http
 				// dispatch de ERROR (firewall, excecao de filtro) nao pode virar 401; vale para toda cadeia
 				.authorizeHttpRequests(a -> a.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll())
 				.requestCache(c -> c.disable()) // 401 anonimo nao deve criar sessao so para lembrar a URL
-				// cookie XSRF-TOKEN (legivel pelo JS) + handler de SPA; header X-XSRF-TOKEN. O repositorio e o bean,
-				// para o login trocar o token no mesmo lugar em que a cadeia le
-				.csrf(c -> c.spa().csrfTokenRepository(
-						http.getSharedObject(ApplicationContext.class).getBean(CsrfTokenRepository.class)))
+				// cookie XSRF-TOKEN (legivel pelo JS) + handler de SPA; header X-XSRF-TOKEN. Os repositorios sao beans,
+				// para o login gravar o contexto e trocar o token no mesmo lugar em que a cadeia le
+				.csrf(c -> c.spa().csrfTokenRepository(beans.getBean(CsrfTokenRepository.class)))
+				.securityContext(c -> c.securityContextRepository(beans.getBean(SecurityContextRepository.class)))
 				.addFilterAfter(new CookieCsrfFilter(), CsrfFilter.class)
 				.httpBasic(b -> b.disable())
 				.formLogin(f -> f.disable())

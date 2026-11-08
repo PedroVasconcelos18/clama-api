@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 import me.clama.conta.LoginServico;
 import me.clama.conta.Usuario;
@@ -20,9 +21,9 @@ import org.springframework.security.web.authentication.logout.SecurityContextLog
 import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.CompositeSessionAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CsrfAuthenticationStrategy;
+import org.springframework.security.web.csrf.CsrfLogoutHandler;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.session.FindByIndexNameSessionRepository;
@@ -38,17 +39,23 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 class AuthController {
 
-	record Credenciais(@NotBlank String email, @NotBlank String senha) {}
+	/** Tetos de tamanho: entrada sem limite viraria hash enorme e chave de limite enorme. */
+	record Credenciais(@NotBlank @Size(max = 254) String email, @NotBlank @Size(max = 1024) String senha) {}
 
 	private final LoginServico login;
 	private final UsuarioRepository usuarios;
 	private final SessionAuthenticationStrategy estrategiaDeSessao;
-	private final SecurityContextRepository contextos = new HttpSessionSecurityContextRepository();
+	private final SecurityContextRepository contextos;
+	private final CsrfLogoutHandler csrfNoLogout;
 	private final SecurityContextHolderStrategy contextoAtual = SecurityContextHolder.getContextHolderStrategy();
 
-	AuthController(LoginServico login, UsuarioRepository usuarios, CsrfTokenRepository csrf) {
+	/** Repositorios de contexto e de CSRF sao os mesmos beans que a cadeia usa (infra.seguranca.SegurancaConfig). */
+	AuthController(LoginServico login, UsuarioRepository usuarios, CsrfTokenRepository csrf,
+			SecurityContextRepository contextos) {
 		this.login = login;
 		this.usuarios = usuarios;
+		this.contextos = contextos;
+		this.csrfNoLogout = new CsrfLogoutHandler(csrf);
 		// novo id de sessao (fixacao) e novo token CSRF (o anonimo nao vale para a sessao autenticada)
 		this.estrategiaDeSessao = new CompositeSessionAuthenticationStrategy(
 				List.of(new ChangeSessionIdAuthenticationStrategy(), new CsrfAuthenticationStrategy(csrf)));
@@ -74,11 +81,18 @@ class AuthController {
 		return UsuarioResposta.de(usuario);
 	}
 
-	/** Idempotente: sem sessao tambem da 204. Invalidar a sessao apaga a linha do SPRING_SESSION. */
+	/**
+	 * Idempotente: sem sessao tambem da 204. Invalidar a sessao apaga a linha do SPRING_SESSION; o XSRF-TOKEN tambem
+	 * e apagado (o front refaz o GET e ganha um token novo).
+	 */
 	@PostMapping("/logout")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	void logout(HttpServletRequest req, HttpServletResponse res) {
-		new SecurityContextLogoutHandler().logout(req, res, contextoAtual.getContext().getAuthentication());
+		var auth = contextoAtual.getContext().getAuthentication();
+		var sair = new SecurityContextLogoutHandler();
+		sair.setSecurityContextRepository(contextos);
+		sair.logout(req, res, auth);
+		csrfNoLogout.logout(req, res, auth);
 	}
 
 	/**

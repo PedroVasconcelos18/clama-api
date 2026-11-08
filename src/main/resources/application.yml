@@ -9,6 +9,8 @@ server:
         # Secure fica no automatico do Spring Session (segue request.isSecure(): https sim, http local nao)
         same-site: lax
         http-only: true
+        # o navegador guarda por 30 dias; quem expira de fato e o servidor (7 dias sem uso)
+        max-age: 30d
 
 spring:
   datasource:

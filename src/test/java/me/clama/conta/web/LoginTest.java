@@ -12,6 +12,8 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import me.clama.BancoDeTeste;
+import java.util.concurrent.Semaphore;
+import me.clama.conta.LoginServico;
 import me.clama.conta.Papel;
 import me.clama.conta.SessoesDoUsuario;
 import me.clama.conta.Usuario;
@@ -26,6 +28,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @Import(BancoDeTeste.class)
@@ -37,6 +40,7 @@ class LoginTest {
 	@Autowired JdbcTemplate jdbc;
 	@Autowired LimiteDeTaxa limite;
 	@Autowired SessoesDoUsuario sessoes;
+	@Autowired LoginServico loginServico;
 
 	@BeforeEach
 	void zerarLimites() {
@@ -69,7 +73,7 @@ class LoginTest {
 
 		var sessao = res.headers().allValues("Set-Cookie").stream().filter(c -> c.startsWith("SESSION=")).toList();
 		assertThat(sessao).singleElement().satisfies(c -> assertThat(c)
-				.contains("HttpOnly").contains("SameSite=Lax").doesNotContain("Secure"));
+				.contains("HttpOnly").contains("SameSite=Lax").contains("Max-Age=2592000").doesNotContain("Secure"));
 
 		var salvo = usuarios.findById(u.getId()).orElseThrow();
 		assertThat(salvo.getUltimoLoginEm()).isNotNull();
@@ -163,7 +167,8 @@ class LoginTest {
 		nav.login(email, "senha-forte-123");
 
 		assertThat(nav.post("/api/auth/logout", "").statusCode()).isEqualTo(204);
-		assertThat(nav.get("/api/auth/eu").statusCode()).isEqualTo(401);
+		assertThat(nav.cookie("XSRF-TOKEN")).isNull(); // o token da sessao morta nao sobrevive
+		assertThat(nav.get("/api/auth/eu").statusCode()).isEqualTo(401); // o front refaz o GET e ganha outro
 		assertThat(linhasDeSessao(u)).isZero();
 		assertThat(nav.post("/api/auth/logout", "").statusCode()).isEqualTo(204);
 	}
@@ -204,6 +209,37 @@ class LoginTest {
 
 		sessoes.derrubarTodas(u.getId());
 		assertThat(a.get("/api/auth/eu").statusCode()).isEqualTo(401);
+	}
+
+	@Test
+	void emailEnormeDa400() throws Exception {
+		var res = new Navegador(porta).login("a".repeat(288) + "@exemplo.com", "x".repeat(1025));
+		assertThat(res.statusCode()).isEqualTo(400);
+		assertThat(json(res).get("codigo").asString()).isEqualTo("dados_invalidos");
+		assertThat(json(res).get("erros").findValuesAsString("campo")).containsExactlyInAnyOrder("email", "senha");
+	}
+
+	@Test
+	void loginSemCsrfDa403() throws Exception {
+		var nav = new Navegador(porta); // sem o GET antes: nenhum cookie, nenhum header
+		var res = nav.post("/api/auth/login", "{\"email\":\"a@exemplo.com\",\"senha\":\"x\"}");
+		assertThat(res.statusCode()).isEqualTo(403);
+		assertThat(json(res).get("codigo").asString()).isEqualTo("csrf_invalido");
+	}
+
+	@Test
+	void semVagaParaCalcularHashDa503() throws Exception {
+		var vagas = (Semaphore) ReflectionTestUtils.getField(loginServico, "vagasDeHash");
+		var tomadas = vagas.drainPermits();
+		try {
+			var res = new Navegador(porta).login(emailUnico(), "qualquer-senha"); // espera os 5 s e desiste
+			assertThat(res.statusCode()).isEqualTo(503);
+			assertThat(json(res).get("codigo").asString()).isEqualTo("ocupado");
+			assertThat(json(res).get("mensagemPastoral").asString())
+					.isEqualTo("Muita gente entrando agora — tente de novo em instantes.");
+		} finally {
+			vagas.release(tomadas);
+		}
 	}
 
 	private long linhasDeSessao(Usuario u) {

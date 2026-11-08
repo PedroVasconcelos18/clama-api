@@ -101,7 +101,9 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
                 p.setProperty("mensagemPastoral", PASTORAL_GENERICA);
             }
         }
-        if (status.is5xxServerError()) {
+        if (e instanceof ErroDeNegocio && status.is5xxServerError()) {
+            log.warn("{} {}", status.value(), e.getMessage()); // esperado (ex.: ocupado): sem stack nem Sentry
+        } else if (status.is5xxServerError()) {
             log.error("Erro interno", e);
             Sentry.captureException(e);
         }
