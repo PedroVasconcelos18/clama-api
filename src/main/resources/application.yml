@@ -14,6 +14,9 @@ spring:
         logServerErrorDetail: "false"
   application:
     name: clama-api
+  session:
+    jdbc:
+      initialize-schema: never
   lifecycle:
     timeout-per-shutdown-phase: 15s
   jpa:
