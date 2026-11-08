@@ -4,12 +4,15 @@ import io.sentry.Sentry;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.TypeMismatchException;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -30,8 +33,6 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<Object> inesperado(Exception e, WebRequest req) {
-        log.error("Erro interno não tratado", e);
-        Sentry.captureException(e);
         return resposta(e, HttpStatus.INTERNAL_SERVER_ERROR, "erro_interno", "Erro interno.", null, null, req);
     }
 
@@ -53,6 +54,41 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleNoResourceFoundException(NoResourceFoundException e,
             HttpHeaders headers, HttpStatusCode status, WebRequest req) {
         return resposta(e, HttpStatus.NOT_FOUND, "nao_encontrado", "Recurso não encontrado.", null, null, req);
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleTypeMismatch(TypeMismatchException e, HttpHeaders headers,
+            HttpStatusCode status, WebRequest req) {
+        return resposta(e, HttpStatus.BAD_REQUEST, "requisicao_invalida", "Parâmetro inválido.", null, null, req);
+    }
+
+    /** Ponto único: completa codigo/mensagemPastoral nos casos herdados e loga/reporta todo 5xx. */
+    @Override
+    protected ResponseEntity<Object> handleExceptionInternal(Exception e, Object body, HttpHeaders headers,
+            HttpStatusCode status, WebRequest req) {
+        if (body == null && e instanceof ErrorResponse er) {
+            body = er.updateAndGetBody(getMessageSource(), LocaleContextHolder.getLocale());
+        }
+        if (body instanceof ProblemDetail p) {
+            if (p.getProperties() == null || !p.getProperties().containsKey("codigo")) {
+                p.setProperty("codigo", codigoPadrao(status));
+            }
+            if (!p.getProperties().containsKey("mensagemPastoral")) {
+                p.setProperty("mensagemPastoral", PASTORAL_GENERICA);
+            }
+        }
+        if (status.is5xxServerError()) {
+            log.error("Erro interno", e);
+            Sentry.captureException(e);
+        }
+        return super.handleExceptionInternal(e, body, headers, status, req);
+    }
+
+    private static String codigoPadrao(HttpStatusCode status) {
+        if (status.is5xxServerError()) return "erro_interno";
+        if (status.value() == 405) return "metodo_nao_permitido";
+        if (status.value() == 415) return "tipo_de_midia_nao_suportado";
+        return "requisicao_invalida";
     }
 
     private ResponseEntity<Object> resposta(Exception e, HttpStatus status, String codigo, String detail,
