@@ -1,6 +1,7 @@
 package me.clama.infra.seguranca;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -15,27 +16,82 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @AutoConfigureMockMvc
-@Import(BancoDeTeste.class)
+@Import({ BancoDeTeste.class, SegurancaTest.CadeiaDeModuloParaTeste.class })
 @ExtendWith(OutputCaptureExtension.class)
 class SegurancaTest {
+
+	/** Convencao das ondas seguintes: cadeia do modulo = padrao comum + securityMatcher + @Order + regras. */
+	@TestConfiguration(proxyBeanMethods = false)
+	static class CadeiaDeModuloParaTeste {
+		@Bean
+		@Order(1)
+		SecurityFilterChain cadeiaDoModulo(HttpSecurity http, RespostasDeSeguranca respostas) throws Exception {
+			return SegurancaConfig.aplicarPadrao(http, respostas)
+					.securityMatcher("/api/modulo-teste/**")
+					.authorizeHttpRequests(a -> a.anyRequest().permitAll())
+					.build();
+		}
+	}
 
 	@Autowired
 	MockMvc mvc;
 
 	@Autowired
 	UserDetailsService usuarios;
+
+	@Test
+	void cadeiaDeModuloLiberaSuaRotaComCookieCsrfENaoESombreada() throws Exception {
+		mvc.perform(get("/api/modulo-teste/x"))
+				.andExpect(status().isOk())
+				.andExpect(cookie().exists("XSRF-TOKEN"))
+				.andExpect(header().string("X-Frame-Options", "DENY"));
+	}
+
+	@Test
+	void cadeiaDeModuloExigeCsrfNoPost() throws Exception {
+		mvc.perform(post("/api/modulo-teste/x")).andExpect(status().isForbidden());
+	}
+
+	@Test
+	void acessoNegadoDeAnonimoDa401() throws Exception {
+		mvc.perform(get("/api/modulo-teste/negado"))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.codigo").value("nao_autenticado"))
+				.andExpect(jsonPath("$.mensagemPastoral").value("Entre na sua conta para continuar."));
+	}
+
+	@Test
+	@WithMockUser(roles = "CLIENTE")
+	void acessoNegadoDeAutenticadoContinuaDando403() throws Exception {
+		mvc.perform(get("/api/modulo-teste/negado"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.codigo").value("sem_permissao"));
+	}
+
+	@Test
+	void credenciaisInvalidasDentroDoControllerDao401() throws Exception {
+		mvc.perform(get("/api/modulo-teste/credenciais"))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.codigo").value("nao_autenticado"));
+	}
 
 	@Test
 	void adminSemLoginDa401EmJson() throws Exception {
@@ -122,8 +178,8 @@ class SegurancaTest {
 	@Test
 	void semSenhaGeradaPeloBoot(CapturedOutput saida) {
 		assertThat(saida).doesNotContain("Using generated security password");
-		assertThat(usuarios.getClass().getSimpleName()).isNotEqualTo("InMemoryUserDetailsManager");
-		org.junit.jupiter.api.Assertions.assertThrows(UsernameNotFoundException.class,
+		assertThat(usuarios).isNotInstanceOf(InMemoryUserDetailsManager.class);
+		assertThrows(UsernameNotFoundException.class,
 				() -> usuarios.loadUserByUsername("qualquer"));
 	}
 }

@@ -1,6 +1,7 @@
 package me.clama.infra.seguranca;
 
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,5 +30,25 @@ class RotasDeSegurancaParaTeste {
 	@GetMapping("/admin/teste/negado")
 	String negado() {
 		throw new AccessDeniedException("negado dentro do controller");
+	}
+
+	@GetMapping("/modulo-teste/x")
+	String modulo() {
+		return "ok";
+	}
+
+	@PostMapping("/modulo-teste/x")
+	String moduloPost() {
+		return "ok";
+	}
+
+	@GetMapping("/modulo-teste/negado")
+	String moduloNegado() {
+		throw new AccessDeniedException("negado");
+	}
+
+	@GetMapping("/modulo-teste/credenciais")
+	String moduloCredenciais() {
+		throw new BadCredentialsException("ruim");
 	}
 }

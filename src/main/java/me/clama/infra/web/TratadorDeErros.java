@@ -14,7 +14,11 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AuthenticationTrustResolver;
+import org.springframework.security.authentication.AuthenticationTrustResolverImpl;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -27,6 +31,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 public class TratadorDeErros extends ResponseEntityExceptionHandler {
 
     static final String PASTORAL_GENERICA = "Algo não saiu como esperado. Tente novamente em instantes.";
+    private static final AuthenticationTrustResolver CONFIANCA = new AuthenticationTrustResolverImpl();
     private static final Logger log = LoggerFactory.getLogger(TratadorDeErros.class);
 
     @ExceptionHandler(ErroDeNegocio.class)
@@ -36,6 +41,10 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<Object> acessoNegado(AccessDeniedException e, WebRequest req) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || CONFIANCA.isAnonymous(auth)) { // anonimo precisa entrar, nao "sem permissao"
+            return naoAutenticado(new InsufficientAuthenticationException("Autenticação necessária", e), req);
+        }
         return resposta(e, HttpStatus.FORBIDDEN, RespostasDeSeguranca.CODIGO_SEM_PERMISSAO,
                 "Acesso negado.", RespostasDeSeguranca.PASTORAL_SEM_PERMISSAO, null, req);
     }
