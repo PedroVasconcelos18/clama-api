@@ -1,0 +1,10 @@
+target/
+.git/
+.superpowers/
+.idea/
+.vscode/
+media*/
+lgpd_exports/
+.env
+.env.*
+*.env

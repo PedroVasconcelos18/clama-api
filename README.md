@@ -54,7 +54,7 @@ As variaveis obrigatorias sao as do boot normal: `DATABASE_URL`, `FIELD_ENCRYPTI
 
 `scripts/relatorio-repasse-mensal.sh` e a versao versionada do script do dia 28 (o script em uso no Mac e o launchd nao dependem dele ate a virada). `MOTOR=django` (padrao) faz o que o script atual faz; `MOTOR=java` chama `$JAVA -jar $JAR <comando>` dentro de `railway run --service $SERVICO --` e conta as instituicoes pelo comando `instituicoes` (`wc -l`) no lugar do `manage.py shell -c`. Variaveis: `MOTOR` e `SERVICO` (padrao `web`) sem prefixo, porque o plano as nomeia assim; os overrides levam o prefixo `CLAMA_`: `CLAMA_JAVA` (padrao `/opt/homebrew/opt/openjdk@27/bin/java`, o launchd nao tem PATH), `CLAMA_JAR` (padrao `$CLAMA_API/target/clama-api.jar`), `CLAMA_API`, `CLAMA_BACKEND`, `CLAMA_RAILWAY`, `CLAMA_RELATORIOS`; ganchos de teste: `CLAMA_HOJE`, `CLAMA_MES`, `CLAMA_DESDE`+`CLAMA_ATE`, `TESTE_EXEC_PREFIX` (substitui o `railway run`; vazio = chama o jar direto). No modo java, se o jar nao existe o script nao roda nada: registra "Jar do clama-api nao encontrado", notifica isso (nao "CRITICO") e sai com 1. O jar tem que ser do mesmo commit do deploy. Teste: `RelatorioMensalIT` (roda no `./mvnw verify`).
 
-**Start command do servico no Railway: `java -jar target/clama-api.jar`, sem argumento posicional.** Um argumento que case com um comando faria o servidor virar um processo one-shot e sair.
+**No Railway o start vem do `CMD` do `Dockerfile` (`java -jar /app/clama-api.jar`, sem argumento posicional; ver "Deploy no Railway").** Um argumento que case com um comando faria o servidor virar um processo one-shot e sair.
 
 ## Configuracao
 
@@ -103,4 +103,36 @@ A fila e at-least-once: um job pode rodar de novo depois de ja ter enviado (proc
 
 ## Shutdown no redeploy (Etapa 9)
 
-No SIGTERM, a fila (db-scheduler, `shutdownMaxWait` 25 s) espera 25 s pelo que esta rodando, e a agenda (`ThreadPoolTaskScheduler`, `awaitTermination` 10 s) espera so a tarefa em andamento: tarefa futura nao roda no shutdown. **No Railway, o draining time do servico precisa ser >= 35 s**, senao o SIGKILL chega antes (orcamento: 25 s para a fila + 10 s para a agenda, que podem somar). Um job morto no meio (heartbeat de 20 s, 6 perdidos) e retomado por outra instancia em cerca de 2 min.
+No SIGTERM, em sequencia:
+1. o Tomcat para de aceitar conexoes e espera as requisicoes em andamento por ate 15 s (`timeout-per-shutdown-phase`);
+2. a fila (db-scheduler, `shutdownMaxWait` 15 s) espera os jobs em execucao 15 s, **interrompe e espera mais 15 s** (o db-scheduler espera duas vezes: "Will wait up to 2xPT15S");
+3. a agenda (`ThreadPoolTaskScheduler`, `awaitTermination` 10 s) espera so a tarefa em andamento: tarefa futura nao roda no shutdown.
+
+Pior caso: 15 + 30 + 10 = **55 s**, dentro do draining de **60 s** do servico; acima disso vem o SIGKILL. Uma chamada a Claude bloqueada no socket nao obedece a interrupcao; ela termina pelo timeout de 30 s do cliente, e o job falha e volta pela retentativa (60 s). Um job morto no meio (SIGKILL, heartbeat de 20 s, 6 perdidos) e retomado em cerca de 2 min. Tempos medidos em `scripts/ensaio-deploy.sh`.
+
+## Deploy no Railway (Dockerfile)
+
+O Railway usa o `Dockerfile` da raiz sozinho: build multi-stage (`./mvnw package -DskipTests` no `eclipse-temurin:27-jdk`), runtime `eclipse-temurin:27-jre`, usuario sem root, `/app/media` gravavel (os uploads somem no redeploy, como no Django) e `CMD ["java", "-jar", "/app/clama-api.jar"]` em forma exec, para o SIGTERM chegar na JVM. A imagem nao leva segredo nenhum: tudo vem das variaveis do servico. O `railway.json` (Config as Code) nao vale para servico novo, entao o resto se configura **no painel**:
+
+| Painel | Valor |
+|---|---|
+| Criacao | **Empty Service**, sem origem. Ligar o repo dispara um deploy na hora, contra o banco de producao com o Django no ar; a origem so se conecta dentro da janela |
+| Regiao / replicas | `us-west2`, 1 replica |
+| Limite | 1,5 GB de memoria, 2 vCPU |
+| Start Command | **vazio** (um start command do painel roda sob shell e pode engolir o SIGTERM) |
+| Healthcheck Path | `/api/health/` (chega com `Host: healthcheck.railway.app`, que o filtro de Host sempre aceita); o timeout default de 300 s cobre JVM + Flyway |
+| Restart | `ON_FAILURE` |
+| Variaveis de deploy | `RAILWAY_DEPLOYMENT_DRAINING_SECONDS=60`, `RAILWAY_DEPLOYMENT_OVERLAP_SECONDS=0` |
+| Dominio | nenhum ate a janela; o `api.clama.me` aponta para a porta 8080 |
+
+Variaveis do servico (nomes do mapa da Etapa 9, §0.4; os valores vem do `web` do Django):
+- `PORT=8080`, explicito.
+- `JAVA_TOOL_OPTIONS`: a imagem ja traz `-Xmx640m -XX:MaxMetaspaceSize=256m -Xss512k -XX:+ExitOnOutOfMemoryError`; uma variavel no servico sobrescreve sem rebuild. O ensaio local mediu cerca de 540 MiB de RSS depois do boot e 610 MiB depois de carga leve, com `-m 1536m`.
+- Obrigatorias: `DATABASE_URL`, `FIELD_ENCRYPTION_KEY`, `FREEMIUM_HASH_SECRET`, `DJANGO_SECRET_KEY`, `MERCADOPAGO_WEBHOOK_SECRET`, `WORDPRESS_WEBHOOK_SECRET`.
+- Opcionais com efeito: `ANTHROPIC_API_KEY`, `FREEMIUM_TEMP_PWD_KEY`, `MERCADOPAGO_ACCESS_TOKEN`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`, `BACKEND_PUBLIC_URL` (tem de ser `https://api.clama.me`), `FRONTEND_URL`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CORS_ALLOWED_ORIGINS`, `WORDPRESS_API_URL`, `WORDPRESS_API_USER`, `WORDPRESS_API_APP_PASSWORD`, `SENTRY_DSN`, `SENTRY_ENVIRONMENT`.
+- Nao copiar: `CELERY_*`, `REDIS_URL`, `DJANGO_SETTINGS_MODULE`, `DJANGO_ADMIN_URL`, `DJANGO_DEBUG`, `USE_DOCKER`, `POSTGRES_*`, `DEFAULT_FROM_EMAIL` (ninguem le).
+- Nunca definir: `SPRING_PROFILES_ACTIVE=test`, `SPRING_JPA_HIBERNATE_DDL_AUTO`, `AUTH_COOKIE_SECURE=false`.
+
+O `DATABASE_URL` com host que nao e `localhost` ganha `sslmode=require`.
+
+Ensaio local da imagem (so docker no colima; Postgres 18 com o `schema-prod.sql`, Claude de mentira, segredos gerados na hora; nunca toca o Railway): `bash scripts/ensaio-deploy.sh`. Ele faz o build, sobe tudo, confere Flyway, health, PID 1, memoria, uploads e cronometra o `docker stop -t 60` ocioso e com job, e remove os containers no fim.

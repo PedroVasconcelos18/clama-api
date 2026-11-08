@@ -222,7 +222,9 @@ class DocumentosAdminController {
                     + "” não é permitida. As extensões válidas são: pdf, txt, docx .");
             return null;
         }
-        // MIME pela extensao: com o validador acima, o fallback do content_type do Django nunca e alcancado
+        // MIME pela extensao. Desvio (ensaio da Etapa 9, #15): o Python 3.12.3 de producao (Railpack, sem
+        // /etc/mime.types) nao conhece .docx, e o Django grava o content_type que o cliente mandou; aqui sai sempre o
+        // oficial, que e o que o navegador manda
         if (a.tamanho() > maximo) {
             c.erro("arquivo", excede(a.tamanho()));
             return null;
