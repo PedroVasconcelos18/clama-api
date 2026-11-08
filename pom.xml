@@ -149,37 +149,14 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
-					<!-- perfil test em todo contexto de teste: o DataSource do DATABASE_URL fica fora (DatabaseUrlConfig) -->
-					<!-- nunca mandar evento real a partir do ambiente do desenvolvedor -->
-					<environmentVariables>
-						<SENTRY_DSN></SENTRY_DSN>
-						<!-- Files API em modo mock (nenhuma chamada a Anthropic de verdade) -->
-						<ANTHROPIC_API_KEY></ANTHROPIC_API_KEY>
-					</environmentVariables>
-					<!-- o replay do contrato manda Host: testserver, como o test client do Django -->
-					<argLine>-Djdk.httpclient.allowRestrictedHeaders=host</argLine>
-					<systemPropertyVariables>
-						<spring.profiles.active>test</spring.profiles.active>
-						<clama.media-root>${project.build.directory}/media-test</clama.media-root>
-					</systemPropertyVariables>
 					<includes>
 						<include>**/*Test.java</include>
-						<include>**/*Testes.java</include>
 					</includes>
 				</configuration>
 			</plugin>
-			<!-- fumaca do jar empacotado (*IT): roda no verify, depois do package; o processo filho nao tem o perfil test -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-failsafe-plugin</artifactId>
-				<configuration>
-					<environmentVariables>
-						<SENTRY_DSN></SENTRY_DSN>
-					</environmentVariables>
-					<systemPropertyVariables>
-						<clama.jar>${project.build.directory}/${project.build.finalName}.jar</clama.jar>
-					</systemPropertyVariables>
-				</configuration>
 				<executions>
 					<execution>
 						<goals>

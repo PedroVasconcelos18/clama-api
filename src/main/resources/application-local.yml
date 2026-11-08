@@ -1,0 +1,11 @@
+# dev local: SPRING_PROFILES_ACTIVE=local
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/clama
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+
+logging:
+  structured:
+    format:
+      console: ""

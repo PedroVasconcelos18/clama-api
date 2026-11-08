@@ -1,0 +1,1 @@
+org.springframework.boot.EnvironmentPostProcessor=me.clama.infra.config.DatabaseUrlPostProcessor
