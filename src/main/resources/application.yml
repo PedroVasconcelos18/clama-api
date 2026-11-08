@@ -67,3 +67,10 @@ sentry:
   dsn: ${SENTRY_DSN:}
   environment: ${SENTRY_ENVIRONMENT:local}
   send-default-pii: false
+
+clama:
+  conta:
+    frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  email:
+    resend-api-key: ${RESEND_API_KEY:}
+    remetente: ${DEFAULT_FROM_EMAIL:Clama <nao-responda@clama.me>}
