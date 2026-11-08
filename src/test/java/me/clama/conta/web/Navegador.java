@@ -33,9 +33,18 @@ final class Navegador {
 	}
 
 	HttpResponse<String> post(String caminho, String json, String... headers) throws Exception {
+		return enviarJson("POST", caminho, json, headers);
+	}
+
+	HttpResponse<String> patch(String caminho, String json, String... headers) throws Exception {
+		return enviarJson("PATCH", caminho, json, headers);
+	}
+
+	private HttpResponse<String> enviarJson(String metodo, String caminho, String json, String... headers)
+			throws Exception {
 		var req = HttpRequest.newBuilder(URI.create(base + caminho))
 				.header("Content-Type", "application/json")
-				.POST(HttpRequest.BodyPublishers.ofString(json));
+				.method(metodo, HttpRequest.BodyPublishers.ofString(json));
 		var xsrf = cookie("XSRF-TOKEN");
 		if (xsrf != null) req.header("X-XSRF-TOKEN", xsrf);
 		return enviar(req, headers);

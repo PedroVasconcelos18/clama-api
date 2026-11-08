@@ -36,7 +36,7 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ErroDeNegocio.class)
     ResponseEntity<Object> negocio(ErroDeNegocio e, WebRequest req) {
-        return resposta(e, e.status(), e.codigo(), e.getMessage(), e.mensagemPastoral(), null, req);
+        return resposta(e, e.status(), e.codigo(), e.getMessage(), e.mensagemPastoral(), e.erros(), req);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

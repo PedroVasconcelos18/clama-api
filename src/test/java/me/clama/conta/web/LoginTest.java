@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import me.clama.BancoDeTeste;
 import java.util.concurrent.Semaphore;
-import me.clama.conta.LoginServico;
+import me.clama.conta.VagasDeHash;
 import me.clama.conta.Papel;
 import me.clama.conta.SessoesDoUsuario;
 import me.clama.conta.Usuario;
@@ -40,7 +40,7 @@ class LoginTest {
 	@Autowired JdbcTemplate jdbc;
 	@Autowired LimiteDeTaxa limite;
 	@Autowired SessoesDoUsuario sessoes;
-	@Autowired LoginServico loginServico;
+	@Autowired VagasDeHash vagasDeHash;
 
 	@BeforeEach
 	void zerarLimites() {
@@ -229,7 +229,7 @@ class LoginTest {
 
 	@Test
 	void semVagaParaCalcularHashDa503() throws Exception {
-		var vagas = (Semaphore) ReflectionTestUtils.getField(loginServico, "vagasDeHash");
+		var vagas = (Semaphore) ReflectionTestUtils.getField(vagasDeHash, "vagas");
 		var tomadas = vagas.drainPermits();
 		try {
 			var res = new Navegador(porta).login(emailUnico(), "qualquer-senha"); // espera os 5 s e desiste
