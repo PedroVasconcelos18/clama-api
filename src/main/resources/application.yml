@@ -30,6 +30,11 @@ spring:
   session:
     jdbc:
       initialize-schema: never
+  data:
+    web:
+      pageable:
+        max-page-size: 100 # PagedModel em JSON estavel: serialization-mode
+        serialization-mode: via-dto
   lifecycle:
     timeout-per-shutdown-phase: 15s
   jpa:
@@ -71,6 +76,7 @@ sentry:
 clama:
   conta:
     frontend-url: ${FRONTEND_URL:http://localhost:5173}
+    admin-resgate-email: ${CLAMA_ADMIN_RESGATE_EMAIL:}
   email:
     resend-api-key: ${RESEND_API_KEY:}
     remetente: ${DEFAULT_FROM_EMAIL:Clama <nao-responda@clama.me>}

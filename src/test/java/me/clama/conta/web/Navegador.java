@@ -40,6 +40,13 @@ final class Navegador {
 		return enviarJson("PATCH", caminho, json, headers);
 	}
 
+	HttpResponse<String> delete(String caminho, String... headers) throws Exception {
+		var req = HttpRequest.newBuilder(URI.create(base + caminho)).DELETE();
+		var xsrf = cookie("XSRF-TOKEN");
+		if (xsrf != null) req.header("X-XSRF-TOKEN", xsrf);
+		return enviar(req, headers);
+	}
+
 	private HttpResponse<String> enviarJson(String metodo, String caminho, String json, String... headers)
 			throws Exception {
 		var req = HttpRequest.newBuilder(URI.create(base + caminho))
