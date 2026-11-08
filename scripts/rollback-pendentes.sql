@@ -13,6 +13,12 @@
 -- clama.blog.tasks.sincronizar_post_espelho(webhook_evento_id) (id da instancia = id do WebhookEvento).
 -- boas-vindas NAO tem linha: a task do Django so envia se a senha temporaria estiver no cache do Django, e a do Java
 -- (SenhasTemporarias) e so memoria e se perde quando o servico para. Os user_ids saem na secao 4b: reset de senha manual.
+-- As linhas da secao 5 rodam no Mac (cd + .venv/bin/python do clama-backend; `python` nao esta no PATH). ATENCAO: o `.delay()`
+-- do Mac pode TRAVAR contra o proxy publico do Redis (redis-py meio-aberto; ver scripts/redis-fila.py e a nota do worker zumbi).
+-- Duas saidas: (a) no D-1, SEM enfileirar nada, checar que o broker responde:
+--   cd /Users/pedro/projects/clama/clama-backend && railway run --service web -- .venv/bin/python manage.py shell -c "from config.celery_app import app; app.connection().ensure_connection(max_retries=1); print('broker ok')"
+-- (b) rodar as linhas DENTRO do container (rede privada, sem o proxy): `railway ssh --service web`, e la `python manage.py shell -c "..."`
+-- com o mesmo trecho entre aspas (sem o `cd ... && railway run ... --`). Nao testado: confirmar que o ssh abre shell no D-1.
 -- O token do freemium nunca e impresso: o shell do Django o busca (FreemiumConfirmationToken).
 \set ON_ERROR_STOP on
 SET default_transaction_read_only = on;
@@ -54,29 +60,29 @@ WHERE t.task_name = 'boas-vindas' ORDER BY t.execution_time;
 \pset tuples_only on
 
 -- gerar_oracao_task: gerar-oracao
-SELECT 'railway run --service web -- python manage.py shell -c "from clama.prayer_generation.tasks import gerar_oracao_task as t; [t.delay(i) for i in ['
+SELECT 'cd /Users/pedro/projects/clama/clama-backend && railway run --service web -- .venv/bin/python manage.py shell -c "from clama.prayer_generation.tasks import gerar_oracao_task as t; [t.delay(i) for i in ['
        || string_agg('''' || split_part(task_instance, '/', 2) || '''', ', ' ORDER BY execution_time) || ']]"'
 FROM scheduled_tasks WHERE task_name = 'gerar-oracao' HAVING count(*) > 0;
 
 -- enviar_oracao_task: enviar-oracao e reenviar-oracao (o envio e por pedido; o Django nao tem o "envio" do Java)
-SELECT 'railway run --service web -- python manage.py shell -c "from clama.notifications.tasks import enviar_oracao_task as t; [t.delay(i) for i in ['
+SELECT 'cd /Users/pedro/projects/clama/clama-backend && railway run --service web -- .venv/bin/python manage.py shell -c "from clama.notifications.tasks import enviar_oracao_task as t; [t.delay(i) for i in ['
        || string_agg(DISTINCT '''' || split_part(task_instance, '/', 2) || '''', ', ') || ']]"'
 FROM scheduled_tasks WHERE task_name IN ('enviar-oracao', 'reenviar-oracao') HAVING count(*) > 0;
 
 -- enviar_alerta_admin_task: alerta-admin
-SELECT 'railway run --service web -- python manage.py shell -c "from clama.notifications.tasks import enviar_alerta_admin_task as t; [t.delay(i) for i in ['
+SELECT 'cd /Users/pedro/projects/clama/clama-backend && railway run --service web -- .venv/bin/python manage.py shell -c "from clama.notifications.tasks import enviar_alerta_admin_task as t; [t.delay(i) for i in ['
        || string_agg('''' || split_part(task_instance, '/', 2) || '''', ', ' ORDER BY execution_time) || ']]"'
 FROM scheduled_tasks WHERE task_name = 'alerta-admin' HAVING count(*) > 0;
 
 -- sincronizar_post_espelho: sincronizar-espelho (o evento do WordPress ja esta em payments_webhookevento)
-SELECT 'railway run --service web -- python manage.py shell -c "from clama.blog.tasks import sincronizar_post_espelho as t; [t.delay(i) for i in ['
+SELECT 'cd /Users/pedro/projects/clama/clama-backend && railway run --service web -- .venv/bin/python manage.py shell -c "from clama.blog.tasks import sincronizar_post_espelho as t; [t.delay(i) for i in ['
        || string_agg('''' || split_part(task_instance, '/', 2) || '''', ', ' ORDER BY execution_time) || ']]"'
 FROM scheduled_tasks WHERE task_name = 'sincronizar-espelho' HAVING count(*) > 0;
 
 -- enviar_email_confirmacao_freemium_task(pedido_id, token): confirmacao-freemium. So os ids saem aqui; o shell do Django
 -- pega o token mais recente, nao usado e nao vencido (FreemiumConfirmationToken: pedido, used_at, expires_at, created_at).
 -- Pedido sem token valido e pulado pelo shell (e listado na secao 6).
-SELECT 'railway run --service web -- python manage.py shell -c "from django.utils import timezone; from clama.freemium.models import FreemiumConfirmationToken as K; from clama.notifications.tasks import enviar_email_confirmacao_freemium_task as t; [t.delay(p, k.token) for p in ['
+SELECT 'cd /Users/pedro/projects/clama/clama-backend && railway run --service web -- .venv/bin/python manage.py shell -c "from django.utils import timezone; from clama.freemium.models import FreemiumConfirmationToken as K; from clama.notifications.tasks import enviar_email_confirmacao_freemium_task as t; [t.delay(p, k.token) for p in ['
        || string_agg('''' || split_part(task_instance, '/', 2) || '''', ', ' ORDER BY execution_time)
        || '] for k in [K.objects.filter(pedido_id=p, used_at__isnull=True, expires_at__gt=timezone.now()).order_by(''-created_at'').first()] if k]"'
 FROM scheduled_tasks WHERE task_name = 'confirmacao-freemium' HAVING count(*) > 0;

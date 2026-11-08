@@ -61,7 +61,11 @@ class HeadersDeProducaoTest {
                 .andExpect(header().string("Cross-Origin-Opener-Policy", "same-origin"))
                 .andExpect(header().string("Referrer-Policy", "same-origin"))
                 .andExpect(header().string("X-Content-Type-Options", "nosniff"))
-                .andExpect(header().string("X-Frame-Options", "DENY"));
+                .andExpect(header().string("X-Frame-Options", "DENY"))
+                // so do Spring (diferencas aceitas no mapa 6.4): o Django nao manda
+                .andExpect(header().string("X-XSS-Protection", "0"))
+                .andExpect(header().string("Pragma", "no-cache"))
+                .andExpect(header().string("Expires", "0"));
     }
 
     @Test
@@ -112,6 +116,7 @@ class HeadersDeProducaoTest {
         assertThat(f.permitido("xclama.me")).isFalse();
         assertThat(f.permitido("sub.exemplo.com")).isFalse();
         assertThat(f.permitido(null)).isFalse();
+        assertThat(f.permitido("10.0.0.1")).isFalse();
         assertThat(new FiltroHostPermitido(true, "*").permitido("qualquer.coisa")).isTrue();
         assertThat(new FiltroHostPermitido(true, "").permitido("clama.me")).isFalse();
     }

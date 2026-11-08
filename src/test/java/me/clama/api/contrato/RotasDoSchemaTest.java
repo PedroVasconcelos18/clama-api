@@ -68,6 +68,10 @@ class RotasDoSchemaTest {
 		for (String r : new String[]{"GET /api/schema/", "GET /api/docs/", "GET /api/redoc/"}) REMOVIDAS.put(r, doc);
 		REMOVIDAS.put("GET /sitemap.xml", post + " (sitemap do Post; fora do schema, view comum do Django)");
 		REMOVIDAS.put("GET /robots.txt", post + " (robots.txt do blog, com o sitemap do Post; fora do schema)");
+		String raiz = "DefaultRouter vazio em config/urls.py:16,24 (sem viewsets registrados): so devolvia o indice de rotas do DRF, fora do schema e sem uso";
+		REMOVIDAS.put("GET /api/", raiz);
+		REMOVIDAS.put("GET /api/.{format}", raiz + " (variante com sufixo de formato)");
+		REMOVIDAS.put("GET /<DJANGO_ADMIN_URL>/", "Admin do Django (config/urls.py:21, path(settings.ADMIN_URL, ...)): sai porque o React admin o substitui (etapa 7); fora do schema");
 		REMOVIDAS.put("GET /api/_sentry-debug/", "So existe no Django com DEBUG (config/urls.py); fora do schema e sem uso em producao");
 
 		String e7 = "Etapa 7 (mapa 2026-11-07-mapa-etapa-7-admin): o Django so tinha o /admin em HTML (sessao), sem API; "

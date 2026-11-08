@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Etapa 9 / janela (mapa 6.2.2): tamanho da fila do Celery no Redis. SO LEITURA (AUTH, SELECT, LLEN, HLEN).
 
-  REDIS_URL=redis://default:senha@host:6379/0 python3 scripts/redis-fila.py
-  railway run --service worker -- python3 scripts/redis-fila.py     (CELERY_BROKER_URL tambem serve, se REDIS_URL faltar)
+  CELERY_BROKER_URL=redis://default:senha@host:6379/0 python3 scripts/redis-fila.py
+  railway run --service worker -- python3 scripts/redis-fila.py     (REDIS_URL serve se CELERY_BROKER_URL faltar)
+  CELERY_BROKER_URL e o broker real do Celery (config/settings/base.py); REDIS_URL em producao e o cache do Django.
 
 Socket cru em vez do redis-py: o redis-py trava contra o proxy publico do Railway (conexao meio-aberta). rediss:// liga TLS.
-Saida: `celery=<LLEN celery> unacked=<HLEN unacked>`. Pronto para desligar o worker quando os dois forem 0.
+Saida: `<variavel usada> db=<n> celery=<LLEN celery> unacked=<HLEN unacked>` (sem host nem senha). Pronto para desligar o worker quando os dois forem 0.
 Exit 0 se leu, 1 em qualquer erro (URL, rede, AUTH, resposta inesperada). Nunca escreve no Redis.
 """
 import os
@@ -34,9 +35,10 @@ def resposta(f):
 
 
 def main():
-    url = os.environ.get("REDIS_URL") or os.environ.get("CELERY_BROKER_URL")
-    if not url:
-        raise RuntimeError("defina REDIS_URL (ou CELERY_BROKER_URL)")
+    nome = next((n for n in ("CELERY_BROKER_URL", "REDIS_URL") if os.environ.get(n)), None)
+    if not nome:
+        raise RuntimeError("defina CELERY_BROKER_URL (ou REDIS_URL)")
+    url = os.environ[nome]
     u = urlparse(url)
     if u.scheme not in ("redis", "rediss") or not u.hostname:
         raise RuntimeError("URL deve ser redis:// ou rediss:// com host")
@@ -55,7 +57,7 @@ def main():
             chamar("SELECT", u.path.strip("/"))
         celery = int(chamar("LLEN", "celery"))
         unacked = int(chamar("HLEN", "unacked"))
-    print("celery=%d unacked=%d" % (celery, unacked))
+    print("%s db=%s celery=%d unacked=%d" % (nome, u.path.strip("/") or "0", celery, unacked))
 
 
 if __name__ == "__main__":
