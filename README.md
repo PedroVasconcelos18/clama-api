@@ -23,6 +23,12 @@ export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
 
 O jar tambem roda comandos pontuais (equivalentes aos `manage.py` do Django): `java -jar target/clama-api.jar <comando> [flags]`. Se o 1o argumento e um comando conhecido (`instituicoes`, `tarefa`, `relatorio_repasse`, `auditar_repasses`, `marcar_repasse_transferido`, `adotar_pedidos_orfaos`, `create_clama_admin`, `purgar_dados_blog_customer`...), o `main` sobe um contexto sem web, sem poller da fila, sem agenda e com o Flyway desligado, executa e sai com o exit code do comando. O stdout leva so o resultado (o log vai para o stderr), sempre em UTF-8.
 
+Notas dos comandos de conta:
+- `create_clama_admin --password <senha>` deixa a senha no historico do shell e no argv (`ps`); prefira omitir `--password` e digitar no prompt (duas vezes, sem eco).
+- Sem terminal (pipe, redirecionamento), a senha vem de UMA linha do stdin, e ali nao ha como esconder o eco.
+- `--superusuario` e o resgate para quando se perde o unico superusuario: cria o admin tambem com `is_superuser`. A tela do painel nunca cria superusuario.
+- `--autor <id>` grava a criacao no `django_admin_log` em nome desse usuario (a tabela exige autor); sem ele so sai o log estruturado.
+
 Rodar um comando localmente (a mesma `bash`/JDK 27 dos testes; o `java` do PATH do Mac pode ser o 25):
 
 ```bash

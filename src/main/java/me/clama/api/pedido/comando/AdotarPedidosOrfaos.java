@@ -19,7 +19,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * adotar_pedidos_orfaos (mapa §5): liga pedido sem usuario ao dono do e-mail. O e-mail do pedido e cifrado, entao a
- * comparacao e em memoria, pelo hash canonico (Gmail sem pontos/+tag), o mesmo do provisionamento. Diferencas do Django:
+ * comparacao e em memoria, pela forma canonica do e-mail em claro (Gmail sem pontos/+tag), como o Django (a coluna email_hash nao entra). Diferencas do Django:
  * conta ambigua (mais de um usuario com o mesmo hash) e pulada e contada; o UPDATE so toca quem ainda esta sem usuario
  * (sem corrida com o provisionamento); nao ha alerta de admin ao adotar pedido em erro. O stdout leva o e-mail em claro
  * (paridade); log e Sentry nunca.
@@ -33,13 +33,11 @@ public class AdotarPedidosOrfaos implements Comando {
     private final JdbcTemplate jdbc;
     private final TransactionTemplate tx;
     private final Fernet fernet;
-    private final HashIdentificador hash;
 
-    AdotarPedidosOrfaos(JdbcTemplate jdbc, TransactionTemplate tx, Fernet fernet, HashIdentificador hash) {
+    AdotarPedidosOrfaos(JdbcTemplate jdbc, TransactionTemplate tx, Fernet fernet) {
         this.jdbc = jdbc;
         this.tx = tx;
         this.fernet = fernet;
-        this.hash = hash;
     }
 
     record Vinculo(UUID pedido, String email, long usuario) {}
@@ -60,10 +58,11 @@ public class AdotarPedidosOrfaos implements Comando {
         }
 
         Map<String, List<Long>> porHash = new HashMap<>();
-        jdbc.query("select id, email_hash from users_user where email <> '' and email_hash <> '' order by id",
-                rs -> {
-                    porHash.computeIfAbsent(rs.getString("email_hash"), k -> new ArrayList<>()).add(rs.getLong("id"));
-                });
+        // como o Django: pelo e-mail em claro, normalizado em memoria; nunca pela coluna email_hash
+        jdbc.query("select id, email from users_user where email <> '' order by id", rs -> {
+            porHash.computeIfAbsent(HashIdentificador.normalizarEmail(rs.getString("email")), k -> new ArrayList<>())
+                    .add(rs.getLong("id"));
+        });
 
         List<Vinculo> vinculaveis = new ArrayList<>();
         int semConta = 0;
@@ -79,7 +78,7 @@ public class AdotarPedidosOrfaos implements Comando {
             if (!soEmail.isEmpty() && !normalizado.equals(soEmail)) {
                 continue;
             }
-            List<Long> donos = porHash.getOrDefault(hash.hashEmail(email), List.of());
+            List<Long> donos = porHash.getOrDefault(normalizado, List.of());
             if (donos.size() > 1) {
                 ambiguos++;
             } else if (donos.isEmpty()) {

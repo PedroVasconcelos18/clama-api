@@ -169,6 +169,20 @@ class AdotarPedidosOrfaosTest {
         assertThat(dono(p)).isEqualTo(joao);
     }
 
+    /** O Django nao olha email_hash: hash vazio ou velho nao tira o usuario do casamento. */
+    @Test
+    void usuarioComEmailHashVazioOuVelhoEAdotado() {
+        long semHash = usuario("sem.hash@clama.me");
+        jdbc.update("update users_user set email_hash = '' where id = ?", semHash);
+        long velho = usuario("velho@clama.me");
+        jdbc.update("update users_user set email_hash = 'de-outro-segredo' where id = ?", velho);
+        UUID a = pedido("SEM.Hash@clama.me", null);
+        UUID b = pedido("velho@clama.me", null);
+        rodar();
+        assertThat(dono(a)).isEqualTo(semHash);
+        assertThat(dono(b)).isEqualTo(velho);
+    }
+
     @Test
     void emailRestringeEIgnoraEspacosECaixa() {
         long outra = usuario("outra@clama.me");
