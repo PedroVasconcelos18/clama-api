@@ -108,7 +108,7 @@ No SIGTERM, em sequencia:
 2. a fila (db-scheduler, `shutdownMaxWait` 15 s) espera os jobs em execucao 15 s, **interrompe e espera mais 15 s** (o db-scheduler espera duas vezes: "Will wait up to 2xPT15S");
 3. a agenda (`ThreadPoolTaskScheduler`, `awaitTermination` 10 s) espera so a tarefa em andamento: tarefa futura nao roda no shutdown.
 
-Pior caso: 15 + 30 + 10 = **55 s**, dentro do draining de **60 s** do servico; acima disso vem o SIGKILL. Uma chamada a Claude bloqueada no socket nao obedece a interrupcao; ela termina pelo timeout de 30 s do cliente, e o job falha e volta pela retentativa (60 s). Um job morto no meio (SIGKILL, heartbeat de 20 s, 6 perdidos) e retomado em cerca de 2 min. Tempos medidos em `scripts/ensaio-deploy.sh`.
+Tipicamente ~**55 s** (15 + 30 + 10), dentro do draining de **60 s** do servico; acima disso vem o SIGKILL. Nao e teto rigido: antes da espera dos jobs, o `stop()` do db-scheduler para o due-executor e o housekeeper (ate 1 s + 5 s cada, na pratica milissegundos), entao o pior caso teorico e ~67 s, acima dos 60 s do draining so se o housekeeper travar. Uma chamada a Claude bloqueada no socket nao obedece a interrupcao; ela termina pelo timeout de 30 s do cliente, e o job falha e volta pela retentativa (60 s). Um job morto no meio (SIGKILL, heartbeat de 20 s, 6 perdidos) e retomado em cerca de 2 min. Tempos medidos em `scripts/ensaio-deploy.sh`.
 
 ## Deploy no Railway (Dockerfile)
 
@@ -117,6 +117,7 @@ O Railway usa o `Dockerfile` da raiz sozinho: build multi-stage (`./mvnw package
 | Painel | Valor |
 |---|---|
 | Criacao | **Empty Service**, sem origem. Ligar o repo dispara um deploy na hora, contra o banco de producao com o Django no ar; a origem so se conecta dentro da janela |
+| Origem (so na janela) | o repo `clama-api` na branch que o Pedro publicar com o codigo da virada: `migracao-java/integracao`, ou a `main` depois do merge dela (mapa §2.14). Hoje o repo nao tem remote |
 | Regiao / replicas | `us-west2`, 1 replica |
 | Limite | 1,5 GB de memoria, 2 vCPU |
 | Start Command | **vazio** (um start command do painel roda sob shell e pode engolir o SIGTERM) |
@@ -127,10 +128,10 @@ O Railway usa o `Dockerfile` da raiz sozinho: build multi-stage (`./mvnw package
 
 Variaveis do servico (nomes do mapa da Etapa 9, §0.4; os valores vem do `web` do Django):
 - `PORT=8080`, explicito.
-- `JAVA_TOOL_OPTIONS`: a imagem ja traz `-Xmx640m -XX:MaxMetaspaceSize=256m -Xss512k -XX:+ExitOnOutOfMemoryError`; uma variavel no servico sobrescreve sem rebuild. O ensaio local mediu cerca de 540 MiB de RSS depois do boot e 610 MiB depois de carga leve, com `-m 1536m`.
+- `JAVA_TOOL_OPTIONS`: a imagem ja traz `-Xmx640m -XX:MaxMetaspaceSize=256m -Xss512k -XX:+ExitOnOutOfMemoryError`; uma variavel no servico sobrescreve sem rebuild. O ensaio local mediu cerca de 540 MiB de RSS depois do boot e 550 a 610 MiB depois de carga leve, com `-m 1536m`.
 - Obrigatorias: `DATABASE_URL`, `FIELD_ENCRYPTION_KEY`, `FREEMIUM_HASH_SECRET`, `DJANGO_SECRET_KEY`, `MERCADOPAGO_WEBHOOK_SECRET`, `WORDPRESS_WEBHOOK_SECRET`.
 - Opcionais com efeito: `ANTHROPIC_API_KEY`, `FREEMIUM_TEMP_PWD_KEY`, `MERCADOPAGO_ACCESS_TOKEN`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`, `BACKEND_PUBLIC_URL` (tem de ser `https://api.clama.me`), `FRONTEND_URL`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CORS_ALLOWED_ORIGINS`, `WORDPRESS_API_URL`, `WORDPRESS_API_USER`, `WORDPRESS_API_APP_PASSWORD`, `SENTRY_DSN`, `SENTRY_ENVIRONMENT`.
-- Nao copiar: `CELERY_*`, `REDIS_URL`, `DJANGO_SETTINGS_MODULE`, `DJANGO_ADMIN_URL`, `DJANGO_DEBUG`, `USE_DOCKER`, `POSTGRES_*`, `DEFAULT_FROM_EMAIL` (ninguem le).
+- Nao copiar: `CELERY_*` (inclusive `CELERY_FLOWER_USER` e `CELERY_FLOWER_PASSWORD`), `REDIS_URL`, `DJANGO_SETTINGS_MODULE`, `DJANGO_ADMIN_URL`, `DJANGO_DEBUG`, `USE_DOCKER`, `POSTGRES_*`, `DEFAULT_FROM_EMAIL` (ninguem le).
 - Nunca definir: `SPRING_PROFILES_ACTIVE=test`, `SPRING_JPA_HIBERNATE_DDL_AUTO`, `AUTH_COOKIE_SECURE=false`.
 
 O `DATABASE_URL` com host que nao e `localhost` ganha `sslmode=require`.

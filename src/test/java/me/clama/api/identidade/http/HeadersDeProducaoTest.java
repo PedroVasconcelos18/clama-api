@@ -1,6 +1,7 @@
 package me.clama.api.identidade.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -19,6 +20,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -164,5 +167,15 @@ class HeadersDeProducaoTest {
         assertThat(shutdown).isEqualTo("graceful");
         assertThat(timeoutDoShutdown).isEqualTo("15s");
         assertThat(forwardHeaders).isEqualTo("none");
+    }
+
+    /**
+     * Sem o InMemoryUserDetailsManager do Boot, que loga "Using generated security password" no boot (ensaio da
+     * Etapa 9): a autenticacao e so por JWT em cookie, nenhum usuario por nome.
+     */
+    @Test
+    void semUsuarioEmMemoria(@Autowired UserDetailsService usuariosPorNome) {
+        assertThatThrownBy(() -> usuariosPorNome.loadUserByUsername("user"))
+                .isInstanceOf(UsernameNotFoundException.class);
     }
 }

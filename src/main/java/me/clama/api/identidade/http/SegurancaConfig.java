@@ -27,6 +27,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
@@ -232,5 +234,16 @@ public class SegurancaConfig {
 
     private static List<String> lista(String v) {
         return Arrays.stream(v.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
+    }
+
+    /**
+     * Ninguem autentica por nome e senha no Spring Security (o login e do controller, a sessao e JWT em cookie). Sem
+     * este bean o Boot cria um usuario em memoria e loga "Using generated security password" no boot.
+     */
+    @Bean
+    UserDetailsService semUsuariosPorNome() {
+        return nome -> {
+            throw new UsernameNotFoundException("sem usuarios por nome");
+        };
     }
 }

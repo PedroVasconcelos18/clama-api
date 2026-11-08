@@ -337,7 +337,8 @@ class FilaTest {
 	/**
 	 * O db-scheduler espera shutdownMaxWait, interrompe e espera de novo ("Will wait up to 2xPT25S", ensaio da Etapa 9:
 	 * um job de 28 s segurou o SIGTERM por 27 s com 25 s configurados). Antes vem a fase graceful do Tomcat e depois a
-	 * agenda (10 s, AgendaTest): tudo tem de caber no draining de 60 s do Railway, com folga.
+	 * agenda (10 s, AgendaTest): tipicamente ~55 s, dentro do draining de 60 s do Railway. Nao e teto rigido: o stop() ainda
+	 * para o due-executor e o housekeeper (ate 1 s + 5 s cada, na pratica milissegundos), pior caso teorico ~67 s.
 	 */
 	@Test
 	void shutdownEsperaOsJobsEmAndamentoECabeNoDraining(@Autowired com.github.kagkarlsson.scheduler.Scheduler scheduler,

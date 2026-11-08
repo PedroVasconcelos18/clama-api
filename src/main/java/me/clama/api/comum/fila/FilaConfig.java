@@ -33,7 +33,9 @@ public class FilaConfig {
 	private static final Logger LOG = LoggerFactory.getLogger(FilaConfig.class);
 	/**
 	 * Redeploy no Railway: o db-scheduler espera isto, interrompe e espera de novo (ate 2x). Com o Tomcat (15 s) antes e
-	 * a agenda (10 s) depois: 15 + 2x15 + 10 = 55 s, dentro do draining de 60 s (Etapa 9, ensaio do deploy).
+	 * a agenda (10 s) depois: tipicamente ~55 s (15 + 2x15 + 10), dentro do draining de 60 s. Pior caso teorico ~67 s:
+	 * antes, o stop() para o due-executor e o housekeeper (ate 1 s + 5 s cada; na pratica milissegundos), entao so passa
+	 * dos 60 s se o housekeeper travar (Etapa 9, ensaio do deploy).
 	 */
 	static final Duration ESPERA_NO_SHUTDOWN = Duration.ofSeconds(15);
 

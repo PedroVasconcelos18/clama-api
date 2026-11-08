@@ -23,6 +23,10 @@ unset DATABASE_URL # nunca herdar um DATABASE_URL do shell
 
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 export DOCKER_HOST="${DOCKER_HOST:-unix://$HOME/.colima/default/docker.sock}"
+case "$DOCKER_HOST" in
+unix://*) ;;
+*) echo "DOCKER_HOST=$DOCKER_HOST nao e um socket unix local; o ensaio so roda no docker local" >&2; exit 1 ;;
+esac
 IMG=clama-api:ensaio
 REDE=clama-ensaio
 PG=clama-ensaio-pg
@@ -184,10 +188,12 @@ docker network create "$REDE" >/dev/null
 docker run -d --name "$PG" --network "$REDE" -e POSTGRES_PASSWORD=ensaio -e POSTGRES_DB=clama postgres:18 \
 	-c ssl=on -c ssl_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem \
 	-c ssl_key_file=/etc/ssl/private/ssl-cert-snakeoil.key >/dev/null
+PG_PRONTO=
 for _ in $(seq 1 100); do
-	docker exec "$PG" pg_isready -U postgres -d clama -h 127.0.0.1 >/dev/null 2>&1 && break
+	docker exec "$PG" pg_isready -U postgres -d clama -h 127.0.0.1 >/dev/null 2>&1 && { PG_PRONTO=1; break; }
 	sleep 0.3
 done
+[ -n "$PG_PRONTO" ] || { docker logs "$PG" >"$SAIDA/pg.log" 2>&1; echo "Postgres nao ficou pronto em 30 s: $SAIDA/pg.log" >&2; exit 1; }
 sql <"$RAIZ/src/test/resources/db/schema-prod.sql" >/dev/null
 checar "schema-prod carregado, sem flyway nem scheduled_tasks" \
 	'[ "$(sql -c "select to_regclass('"'public.scheduled_tasks'"') is null and to_regclass('"'public.flyway_schema_history'"') is null")" = t ]'
@@ -198,7 +204,7 @@ BOOT=$(subir_app boot) || { anotar "FAIL  boot (log em $SAIDA/app-boot.log)"; ex
 anotar "boot até o 1o 200 do health: $BOOT s ($(docker logs "$APP" 2>&1 | grep -o 'Started ClamaApiApplication in [0-9.]* seconds' | head -1))"
 checar "java é o PID 1 (CMD exec)" '[ "$(docker exec "$APP" sh -c "tr \"\\0\" \" \" </proc/1/cmdline")" = "java -jar /app/clama-api.jar " ]'
 checar "roda como usuário não-root" '[ "$(docker exec "$APP" id -u)" != 0 ]'
-checar "ouve em \$PORT=$PORTA" 'docker logs "$APP" 2>&1 | grep -q "Tomcat started on port $PORTA"'
+checar "ouve em \$PORT=$PORTA" '[ "$(docker logs "$APP" 2>&1 | grep -c "Tomcat started on port $PORTA")" -gt 0 ]'
 checar "conexão ao banco com sslmode=require" '[ "$(sql -c "select count(*) from pg_stat_ssl s join pg_stat_activity a using (pid) where a.datname = '"'clama'"' and s.ssl and a.backend_type = '"'client backend'"' and a.application_name <> '"'psql'"'")" -gt 0 ]'
 checar "Flyway: baseline 0 + V1" '[ "$(sql -c "select string_agg(version || '"':'"' || type || '"':'"' || success, '"','"' order by installed_rank) from flyway_schema_history")" = "0:BASELINE:true,1:SQL:true" ]'
 checar "scheduled_tasks criada" '[ "$(sql -c "select to_regclass('"'public.scheduled_tasks'"') is not null")" = t ]'
@@ -213,6 +219,7 @@ checar "HSTS com X-Forwarded-Proto: https" \
 
 # 7. memória depois do boot
 sleep 5
+checar "sem 'Using generated security password' no log" '[ "$(docker logs "$APP" 2>&1 | grep -c "Using generated security password")" = 0 ]'
 anotar "RSS depois do boot: $(rss) ($(docker stats --no-stream --format '{{.MemUsage}}' "$APP"))"
 
 # admin (modo comando dentro do container, com o env do servico) e login
@@ -251,13 +258,13 @@ read -r S_OCIOSO X_OCIOSO <<<"$(parar_app ocioso)"
 anotar "docker stop -t 60 ocioso: $S_OCIOSO s, exit $X_OCIOSO"
 checar "ocioso sai em < 5 s sem SIGKILL" '[ "$X_OCIOSO" != 137 ] && awk "BEGIN { exit !($S_OCIOSO < 5) }"'
 
-# 6b. shutdown com job: Claude lenta de 15 s (termina dentro da 1a espera da fila, 15 s)
+# 6b. shutdown com job: Claude lenta de 10 s (termina com folga dentro da 1a espera da fila, 15 s)
 semear
-subir_stub 15
+subir_stub 10
 B=$(subir_app curto) || { anotar "FAIL  boot curto"; exit 1; }
 logar
 read -r S_CURTO X_CURTO <<<"$(parar_com_job "$P_CURTO" curto)"
-anotar "docker stop -t 60 com job de 15 s: $S_CURTO s, exit $X_CURTO, pedido $(status_pedido "$P_CURTO")"
+anotar "docker stop -t 60 com job de 10 s: $S_CURTO s, exit $X_CURTO, pedido $(status_pedido "$P_CURTO")"
 checar "job curto termina antes de sair (oracao_gerada) e cabe em 60 s" \
 	'[ "$(status_pedido "$P_CURTO")" = oracao_gerada ] && [ "$X_CURTO" != 137 ]'
 

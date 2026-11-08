@@ -1,7 +1,8 @@
 server:
   # Railway: o dominio aponta para a porta do servico; PORT=8080 explicito la (mapa 2.1)
   port: ${PORT:8080}
-  # Graceful do Tomcat (15 s) roda antes do destroy da fila (25 s) e da agenda (10 s); ver spring.lifecycle abaixo
+  # Graceful do Tomcat (15 s) roda antes do destroy da fila (15 s, esperados 2x) e da agenda (10 s): tipicamente ~55 s
+  # no total, dentro do draining de 60 s (FilaConfig.ESPERA_NO_SHUTDOWN); ver spring.lifecycle abaixo
   shutdown: graceful
   # XFF/XFP lidos a mao (ClienteIp, PaginaLimitOffset.https), em paridade com o DRF; sem RemoteIpValve
   forward-headers-strategy: none
