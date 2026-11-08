@@ -19,6 +19,26 @@ export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
 
 **Nunca exporte `DATABASE_URL` no shell em que roda os testes.** O replay do contrato faz `TRUNCATE users_user ... CASCADE`, o que apaga pedidos, blog e tokens. Hoje ha duas protecoes. O surefire ativa o perfil `test`, e nele o DataSource do `DATABASE_URL` nao existe (`@Profile("!test")` em `DatabaseUrlConfig`). Alem disso, toda limpeza chama `BancoDeTeste.exigirContainer`, que recusa qualquer banco que nao seja `localhost/clama_testcontainers`. Mesmo assim, nao conte com elas: um `DATABASE_URL` de producao exportado no shell e um acidente esperando a vez.
 
+## Modo comando e a rotina mensal de repasse
+
+O jar tambem roda comandos pontuais (equivalentes aos `manage.py` do Django): `java -jar target/clama-api.jar <comando> [flags]`. Se o 1o argumento e um comando conhecido (`instituicoes`, `tarefa`, `relatorio_repasse`, `auditar_repasses`, `marcar_repasse_transferido`...), o `main` sobe um contexto sem web, sem poller da fila, sem agenda e com o Flyway desligado, executa e sai com o exit code do comando. O stdout leva so o resultado (o log vai para o stderr), sempre em UTF-8.
+
+Rodar um comando localmente (a mesma `bash`/JDK 27 dos testes; o `java` do PATH do Mac pode ser o 25):
+
+```bash
+./mvnw -q package -DskipTests        # gera target/clama-api.jar (finalName fixo)
+export DATABASE_URL=postgres://usuario:senha@localhost:5432/banco   # NUNCA o de producao fora da virada
+export FIELD_ENCRYPTION_KEY=... FREEMIUM_HASH_SECRET=... DJANGO_SECRET_KEY=... \
+       MERCADOPAGO_WEBHOOK_SECRET=... WORDPRESS_WEBHOOK_SECRET=...
+/opt/homebrew/opt/openjdk@27/bin/java -jar target/clama-api.jar instituicoes
+```
+
+As variaveis obrigatorias sao as do boot normal: `DATABASE_URL`, `FIELD_ENCRYPTION_KEY` (decifrar nome e e-mail do doador), `FREEMIUM_HASH_SECRET`, `DJANGO_SECRET_KEY`, `MERCADOPAGO_WEBHOOK_SECRET` e `WORDPRESS_WEBHOOK_SECRET`. Com `railway run --service <servico>` elas vem do servico.
+
+`scripts/relatorio-repasse-mensal.sh` e a versao versionada do script do dia 28 (o script em uso no Mac e o launchd nao dependem dele ate a virada). `MOTOR=django` (padrao) faz o que o script atual faz; `MOTOR=java` chama `$JAVA -jar $JAR <comando>` dentro de `railway run --service $SERVICO --` e conta as instituicoes pelo comando `instituicoes` (`wc -l`) no lugar do `manage.py shell -c`. Variaveis: `MOTOR`, `JAVA` (padrao `/opt/homebrew/opt/openjdk@27/bin/java`, o launchd nao tem PATH), `JAR` (padrao `$API/target/clama-api.jar`), `API`, `SERVICO` (padrao `web`), `RELATORIOS`; ganchos de teste: `HOJE`, `MES`, `DESDE`+`ATE`, `EXEC_PREFIX` (substitui o `railway run`; vazio = chama o jar direto). O jar tem que ser do mesmo commit do deploy. Teste: `RelatorioMensalIT` (roda no `./mvnw verify`).
+
+**Start command do servico no Railway: `java -jar target/clama-api.jar`, sem argumento posicional.** Um argumento que case com um comando faria o servidor virar um processo one-shot e sair.
+
 ## Configuracao
 
 - `DATABASE_URL` (formato Railway) vira o DataSource via `DatabaseUrlConfig`, fora do perfil `test`. Sem ela vale a config padrao do Spring.

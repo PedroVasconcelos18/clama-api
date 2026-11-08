@@ -130,6 +130,8 @@
 	</dependencies>
 
 	<build>
+		<!-- nome fixo: scripts/relatorio-repasse-mensal.sh e o start command apontam para target/clama-api.jar -->
+		<finalName>clama-api</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
