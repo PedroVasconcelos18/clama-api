@@ -1,5 +1,6 @@
 package me.clama.infra.seguranca;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -50,6 +51,9 @@ public class SegurancaConfig {
 	 */
 	public static HttpSecurity aplicarPadrao(HttpSecurity http, RespostasDeSeguranca respostas) {
 		return http
+				// dispatch de ERROR (firewall, excecao de filtro) nao pode virar 401; vale para toda cadeia
+				.authorizeHttpRequests(a -> a.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll())
+				.requestCache(c -> c.disable()) // 401 anonimo nao deve criar sessao so para lembrar a URL
 				.csrf(c -> c.spa()) // cookie XSRF-TOKEN (legivel pelo JS) + handler de SPA; header X-XSRF-TOKEN
 				.addFilterAfter(new CookieCsrfFilter(), CsrfFilter.class)
 				.httpBasic(b -> b.disable())

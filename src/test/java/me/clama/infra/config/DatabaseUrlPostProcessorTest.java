@@ -8,11 +8,11 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceProperties;
+import org.springframework.boot.env.YamlPropertySourceLoader;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.mock.env.MockEnvironment;
 
 class DatabaseUrlPostProcessorTest {
-
-	private static final String HIKARI = "spring.datasource.hikari.data-source-properties.";
 
 	private MockEnvironment processa(MockEnvironment env) {
 		new DatabaseUrlPostProcessor().postProcessEnvironment(env, null);
@@ -36,20 +36,10 @@ class DatabaseUrlPostProcessorTest {
 	}
 
 	@Test
-	void timeoutsDoDriver() {
-		var env = processa(new MockEnvironment().withProperty("DATABASE_URL", "postgres://u:p@localhost:5432/clama"));
-		assertThat(env.getProperty(HIKARI + "connectTimeout")).isEqualTo("10");
-		assertThat(env.getProperty(HIKARI + "loginTimeout")).isEqualTo("20");
-		assertThat(env.getProperty(HIKARI + "tcpKeepAlive")).isEqualTo("true");
-		assertThat(env.getProperty(HIKARI + "logServerErrorDetail")).isEqualTo("false");
-	}
-
-	@Test
 	void semDatabaseUrlNaoFazNada() {
 		var env = processa(new MockEnvironment());
 		assertThat(env.getProperty("spring.datasource.url")).isNull();
 		assertThat(env.getProperty("spring.datasource.username")).isNull();
-		assertThat(env.getProperty(HIKARI + "connectTimeout")).isNull();
 	}
 
 	@Test
@@ -81,8 +71,12 @@ class DatabaseUrlPostProcessorTest {
 	}
 
 	@Test
-	void propriedadesChegamAoHikari() {
+	void propriedadesChegamAoHikari() throws Exception {
 		var env = processa(new MockEnvironment().withProperty("DATABASE_URL", "postgres://u:p@localhost:5432/clama"));
+		// timeouts do driver vivem no application.yml (valem com ou sem DATABASE_URL)
+		for (var fonte : new YamlPropertySourceLoader().load("application", new ClassPathResource("application.yml"))) {
+			env.getPropertySources().addLast(fonte);
+		}
 		var binder = Binder.get(env);
 		var props = binder.bind("spring.datasource", DataSourceProperties.class).get();
 		var hikari = binder.bind("spring.datasource.hikari", HikariDataSource.class).get();

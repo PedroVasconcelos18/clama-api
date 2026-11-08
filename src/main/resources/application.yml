@@ -4,6 +4,14 @@ server:
   forward-headers-strategy: native
 
 spring:
+  datasource:
+    hikari:
+      data-source-properties:
+        # sem estes timeouts o proxy publico do Railway ja travou uma conexao para sempre (incidente 2026-11-08)
+        connectTimeout: "10"
+        loginTimeout: "20"
+        tcpKeepAlive: "true"
+        logServerErrorDetail: "false"
   application:
     name: clama-api
   lifecycle:

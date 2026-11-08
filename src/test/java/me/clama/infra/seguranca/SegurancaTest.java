@@ -11,12 +11,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import me.clama.BancoDeTeste;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -53,6 +58,34 @@ class SegurancaTest {
 
 	@Autowired
 	MockMvc mvc;
+
+	@LocalServerPort
+	int porta;
+
+	@Test
+	void rejeicaoDoFirewallDa400Nunca401() throws Exception {
+		// MockMvc nao passa pelo container: so um cliente real exercita o dispatch de ERROR
+		var res = HttpClient.newHttpClient().send(
+				HttpRequest.newBuilder(URI.create("http://localhost:" + porta + "/api//x")).build(),
+				HttpResponse.BodyHandlers.ofString());
+		assertThat(res.statusCode()).isEqualTo(400);
+	}
+
+	@Test
+	void anonimo401NaoCriaSessao() throws Exception {
+		var res = mvc.perform(get("/api/admin/x")).andExpect(status().isUnauthorized()).andReturn().getResponse();
+		assertThat(res.getHeaders("Set-Cookie")).noneMatch(c -> c.contains("JSESSIONID"));
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
+	void postSemTokenDaCsrfInvalido() throws Exception {
+		mvc.perform(post("/api/admin/teste"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.codigo").value("csrf_invalido"))
+				.andExpect(jsonPath("$.mensagemPastoral").value(
+						"Não conseguimos confirmar que este pedido veio de você. Recarregue a página e tente de novo."));
+	}
 
 	@Autowired
 	UserDetailsService usuarios;

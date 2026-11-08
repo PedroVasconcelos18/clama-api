@@ -11,6 +11,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -22,6 +23,9 @@ public class RespostasDeSeguranca implements AuthenticationEntryPoint, AccessDen
 	public static final String PASTORAL_NAO_AUTENTICADO = "Entre na sua conta para continuar.";
 	public static final String CODIGO_SEM_PERMISSAO = "sem_permissao";
 	public static final String PASTORAL_SEM_PERMISSAO = "Você não tem acesso a esta área.";
+	public static final String CODIGO_CSRF_INVALIDO = "csrf_invalido";
+	public static final String PASTORAL_CSRF_INVALIDO =
+			"Não conseguimos confirmar que este pedido veio de você. Recarregue a página e tente de novo.";
 
 	private static final JsonMapper JSON = JsonMapper.builder().build();
 
@@ -34,6 +38,10 @@ public class RespostasDeSeguranca implements AuthenticationEntryPoint, AccessDen
 	@Override
 	public void handle(HttpServletRequest req, HttpServletResponse res, AccessDeniedException e)
 			throws IOException {
+		if (e instanceof CsrfException) {
+			escrever(res, HttpStatus.FORBIDDEN, CODIGO_CSRF_INVALIDO, PASTORAL_CSRF_INVALIDO);
+			return;
+		}
 		escrever(res, HttpStatus.FORBIDDEN, CODIGO_SEM_PERMISSAO, PASTORAL_SEM_PERMISSAO);
 	}
 

@@ -38,7 +38,8 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
-			<!-- o ArchUnit 1.4.2 do Modulith nao le class files do Java 27 (major 71): ignora as classes e o ModulosTest falha -->
+			<!-- o ArchUnit 1.4.2 do Modulith nao le class files do Java 27 (major 71): ignora as classes e o ModulosTest falha.
+			     Remover quando o spring-modulith-bom trouxer archunit >= 1.5 -->
 			<dependency>
 				<groupId>com.tngtech.archunit</groupId>
 				<artifactId>archunit</artifactId>
@@ -49,7 +50,7 @@
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.modulith</groupId>
-			<artifactId>spring-modulith-starter-core</artifactId>
+			<artifactId>spring-modulith-api</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.modulith</groupId>
@@ -149,6 +150,7 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
+					<excludedEnvironmentVariables>DATABASE_URL,SENTRY_DSN</excludedEnvironmentVariables>
 					<includes>
 						<include>**/*Test.java</include>
 					</includes>
@@ -157,6 +159,9 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-failsafe-plugin</artifactId>
+				<configuration>
+					<excludedEnvironmentVariables>DATABASE_URL,SENTRY_DSN</excludedEnvironmentVariables>
+				</configuration>
 				<executions>
 					<execution>
 						<goals>

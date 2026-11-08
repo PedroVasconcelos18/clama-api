@@ -15,8 +15,6 @@ import org.springframework.core.env.MapPropertySource;
  */
 public class DatabaseUrlPostProcessor implements EnvironmentPostProcessor {
 
-	private static final String HIKARI = "spring.datasource.hikari.data-source-properties.";
-
 	@Override
 	public void postProcessEnvironment(ConfigurableEnvironment env, SpringApplication app) {
 		String url = env.getProperty("DATABASE_URL");
@@ -45,11 +43,6 @@ public class DatabaseUrlPostProcessor implements EnvironmentPostProcessor {
 		if (credenciais.length > 1) {
 			props.put("spring.datasource.password", decodifica(credenciais[1]));
 		}
-		// sem estes timeouts o proxy publico do Railway ja travou uma conexao para sempre (incidente 2026-11-08)
-		props.put(HIKARI + "connectTimeout", "10");
-		props.put(HIKARI + "loginTimeout", "20");
-		props.put(HIKARI + "tcpKeepAlive", "true");
-		props.put(HIKARI + "logServerErrorDetail", "false");
 		env.getPropertySources().addLast(new MapPropertySource("databaseUrl", props));
 	}
 
