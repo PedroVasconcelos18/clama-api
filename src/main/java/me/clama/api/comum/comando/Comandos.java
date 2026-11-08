@@ -26,6 +26,8 @@ import me.clama.api.instituicao.repasse.comando.AuditarRepasses;
 import me.clama.api.instituicao.repasse.comando.MarcarRepasseTransferido;
 import me.clama.api.instituicao.repasse.comando.RelatorioRepasse;
 import me.clama.api.pedido.comando.AdotarPedidosOrfaos;
+import me.clama.api.pedido.comando.LgpdDelete;
+import me.clama.api.pedido.comando.LgpdExport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.Banner;
@@ -57,7 +59,9 @@ public final class Comandos {
             new Definicao("adotar_pedidos_orfaos", AdotarPedidosOrfaos.class, AdotarPedidosOrfaos.OPCOES),
             new Definicao("create_clama_admin", CreateClamaAdmin.class, CreateClamaAdmin.OPCOES),
             new Definicao("purgar_dados_blog_customer", PurgarDadosBlogCustomer.class,
-                    PurgarDadosBlogCustomer.OPCOES));
+                    PurgarDadosBlogCustomer.OPCOES),
+            new Definicao("lgpd_export", LgpdExport.class, LgpdExport.OPCOES),
+            new Definicao("lgpd_delete", LgpdDelete.class, LgpdDelete.OPCOES));
 
     private Comandos() {
     }

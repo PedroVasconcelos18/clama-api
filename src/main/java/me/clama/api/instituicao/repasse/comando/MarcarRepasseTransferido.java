@@ -56,7 +56,7 @@ public class MarcarRepasseTransferido implements Comando {
 
     @Override
     public int executar(Chamada c) throws Exception {
-        Long autor = autor(c.valor("--autor"));
+        Long autor = auditoria.autorDoComando(c.valor("--autor"));
         Alvo instituicao = relatorio.resolverInstituicao(c.valor("--instituicao"));
         Periodo periodo = relatorio.resolverPeriodo(c);
 
@@ -144,23 +144,5 @@ public class MarcarRepasseTransferido implements Comando {
 
     private Array uuids(UUID[] ids) {
         return jdbc.execute((ConnectionCallback<Array>) con -> con.createArrayOf("uuid", ids));
-    }
-
-    /** --autor: o id do usuario que quita (django_admin_log.user_id e NOT NULL); ausente = so o log estruturado. */
-    private Long autor(String valor) {
-        if (valor == null) {
-            return null;
-        }
-        long id;
-        try {
-            id = Long.parseLong(valor);
-        } catch (NumberFormatException e) {
-            throw new ErroDeComando("--autor inválido: " + repr(valor) + ". Use o id numérico de um usuário.");
-        }
-        Integer existe = jdbc.queryForObject("select count(*) from users_user where id = ?", Integer.class, id);
-        if (existe == null || existe == 0) {
-            throw new ErroDeComando("Nenhum usuário com o id " + id + ".");
-        }
-        return id;
     }
 }

@@ -2,6 +2,8 @@ package me.clama.api.comum.auditoria;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import me.clama.api.comum.comando.ErroDeComando;
+import me.clama.api.comum.texto.TextoPython;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -42,5 +44,23 @@ public class RegistroDeAuditoria {
                 + "where app_label = ? and model = ?), ?)", OffsetDateTime.now(relogio), objetoId, repr, acao, mensagem,
                 appLabel, model, autorId);
         LOG.info("auditoria autor={} objeto={}.{}#{} acao={}", autorId, appLabel, model, objetoId, acao);
+    }
+
+    /** --autor dos comandos: o id de um usuario existente (django_admin_log.user_id e NOT NULL); ausente = null. */
+    public Long autorDoComando(String valor) {
+        if (valor == null) {
+            return null;
+        }
+        long id;
+        try {
+            id = Long.parseLong(valor);
+        } catch (NumberFormatException e) {
+            throw new ErroDeComando("--autor inválido: " + TextoPython.repr(valor) + ". Use o id numérico de um usuário.");
+        }
+        Integer existe = jdbc.queryForObject("select count(*) from users_user where id = ?", Integer.class, id);
+        if (existe == null || existe == 0) {
+            throw new ErroDeComando("Nenhum usuário com o id " + id + ".");
+        }
+        return id;
     }
 }

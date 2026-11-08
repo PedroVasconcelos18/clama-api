@@ -21,13 +21,17 @@ export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
 
 ## Modo comando e a rotina mensal de repasse
 
-O jar tambem roda comandos pontuais (equivalentes aos `manage.py` do Django): `java -jar target/clama-api.jar <comando> [flags]`. Se o 1o argumento e um comando conhecido (`instituicoes`, `tarefa`, `relatorio_repasse`, `auditar_repasses`, `marcar_repasse_transferido`, `adotar_pedidos_orfaos`, `create_clama_admin`, `purgar_dados_blog_customer`...), o `main` sobe um contexto sem web, sem poller da fila, sem agenda e com o Flyway desligado, executa e sai com o exit code do comando. O stdout leva so o resultado (o log vai para o stderr), sempre em UTF-8.
+O jar tambem roda comandos pontuais (equivalentes aos `manage.py` do Django): `java -jar target/clama-api.jar <comando> [flags]`. Se o 1o argumento e um comando conhecido (`instituicoes`, `tarefa`, `relatorio_repasse`, `auditar_repasses`, `marcar_repasse_transferido`, `adotar_pedidos_orfaos`, `create_clama_admin`, `purgar_dados_blog_customer`, `lgpd_export`, `lgpd_delete`), o `main` sobe um contexto sem web, sem poller da fila, sem agenda e com o Flyway desligado, executa e sai com o exit code do comando. O stdout leva so o resultado (o log vai para o stderr), sempre em UTF-8.
 
 Notas dos comandos de conta:
 - `create_clama_admin --password <senha>` deixa a senha no historico do shell e no argv (`ps`); prefira omitir `--password` e digitar no prompt (duas vezes, sem eco).
 - Sem terminal (pipe, redirecionamento), a senha vem de UMA linha do stdin, e ali nao ha como esconder o eco.
 - `--superusuario` e o resgate para quando se perde o unico superusuario: cria o admin tambem com `is_superuser`. A tela do painel nunca cria superusuario.
 - `--autor <id>` grava a criacao no `django_admin_log` em nome desse usuario (a tabela exige autor); sem ele so sai o log estruturado.
+
+Notas dos comandos LGPD (`--email` e comparado na forma canonica: caixa, Gmail sem pontos e `+tag`):
+- `lgpd_export --email <e> [--output-dir lgpd_exports]` grava um JSON (permissao 0600) com pedidos, contas, blog e se a pessoa consta na blacklist do freemium. Apague o arquivo depois de enviar ao titular.
+- `lgpd_delete --email <e>` so lista (dry-run). Com `--confirm`, pede `DELETAR` no stdin e, numa transacao, exclui as contas, apaga os pedidos e anonimiza os que tem repasse (registro contabil). A blacklist do freemium fica. Guarda que falha (ultimo admin, conta que baniu alguem) = exit 1 e nada muda. `--autor <id>` audita.
 
 Rodar um comando localmente (a mesma `bash`/JDK 27 dos testes; o `java` do PATH do Mac pode ser o 25):
 

@@ -1,11 +1,10 @@
 package me.clama.api.identidade.comando;
 
-import static me.clama.api.comum.texto.TextoPython.repr;
-
 import java.io.Console;
 import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
+import me.clama.api.comum.auditoria.RegistroDeAuditoria;
 import me.clama.api.comum.comando.Chamada;
 import me.clama.api.comum.comando.Comando;
 import me.clama.api.comum.comando.Comandos.Opcao;
@@ -15,7 +14,6 @@ import me.clama.api.identidade.CriacaoDeAdmin;
 import me.clama.api.identidade.senha.ValidadorDeSenha;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
@@ -35,12 +33,12 @@ public class CreateClamaAdmin implements Comando {
 
     private final CriacaoDeAdmin criacao;
     private final ValidadorDeSenha validador;
-    private final JdbcTemplate jdbc;
+    private final RegistroDeAuditoria auditoria;
 
-    CreateClamaAdmin(CriacaoDeAdmin criacao, ValidadorDeSenha validador, JdbcTemplate jdbc) {
+    CreateClamaAdmin(CriacaoDeAdmin criacao, ValidadorDeSenha validador, RegistroDeAuditoria auditoria) {
         this.criacao = criacao;
         this.validador = validador;
-        this.jdbc = jdbc;
+        this.auditoria = auditoria;
     }
 
     @Override
@@ -48,7 +46,7 @@ public class CreateClamaAdmin implements Comando {
         String email = TextoPython.strip(c.valor("--email")).toLowerCase(Locale.ROOT);
         String nome = c.valor("--nome") == null ? "" : c.valor("--nome");
         boolean superusuario = c.tem("--superusuario");
-        Long autor = autor(c.valor("--autor"));
+        Long autor = auditoria.autorDoComando(c.valor("--autor"));
         String senha = c.valor("--password") != null ? c.valor("--password") : pedirSenha(c);
 
         List<String> erros = validador.validar(senha, email);
@@ -82,23 +80,5 @@ public class CreateClamaAdmin implements Comando {
             throw new ErroDeComando("Senha não informada: use --password ou envie uma linha no stdin.");
         }
         return linha;
-    }
-
-    /** --autor: o id do usuario que cria (django_admin_log.user_id e NOT NULL); ausente = sem auditoria. */
-    private Long autor(String valor) {
-        if (valor == null) {
-            return null;
-        }
-        long id;
-        try {
-            id = Long.parseLong(valor);
-        } catch (NumberFormatException e) {
-            throw new ErroDeComando("--autor inválido: " + repr(valor) + ". Use o id numérico de um usuário.");
-        }
-        Integer existe = jdbc.queryForObject("select count(*) from users_user where id = ?", Integer.class, id);
-        if (existe == null || existe == 0) {
-            throw new ErroDeComando("Nenhum usuário com o id " + id + ".");
-        }
-        return id;
     }
 }
