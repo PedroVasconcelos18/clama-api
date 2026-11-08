@@ -228,4 +228,19 @@ class PedidoFreemiumTest {
         assertThat(code(r)).isEqualTo("not_authenticated");
         assertThat(contar("orders_pedido")).isZero();
     }
+
+    /** Django device_hash_vazio_nao_dispara_check: linha legada com device_hash '' nao bloqueia device vazio/ausente. */
+    @Test
+    void deviceHashVazioNaoCasaComLinhaLegadaVazia() throws Exception {
+        Timestamp t = Timestamp.from(AGORA);
+        jdbc.update("""
+                insert into freemium_freemiumblacklist (id, created_at, updated_at, cpf_hash, email_hash, telefone_hash,
+                    device_hash, ip_hash) values (?, ?, ?, ?, ?, null, '', null)""", UUID.randomUUID(), t, t,
+                "9".repeat(64), "9".repeat(64));
+        assertThat(enviar(corpo().put("device_hash", ""), "198.51.100.31").statusCode()).isEqualTo(201);
+        jdbc.execute("TRUNCATE orders_pedido, freemium_freemiumconfirmationtoken, scheduled_tasks CASCADE");
+        var semCampo = corpo();
+        semCampo.remove("device_hash");
+        assertThat(enviar(semCampo, "198.51.100.32").statusCode()).isEqualTo(201);
+    }
 }

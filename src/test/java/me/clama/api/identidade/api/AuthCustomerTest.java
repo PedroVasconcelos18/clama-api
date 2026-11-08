@@ -233,4 +233,37 @@ class AuthCustomerTest {
             assertThat(List.of(a.get(), b.get())).containsExactlyInAnyOrder(200, 400);
         }
     }
+
+    /** Django change_password_force_change_aceita_temp_e_zera_flag. */
+    @Test
+    void trocaDeSenhaZeraForceChangePassword() throws Exception {
+        Usuario u = usuario("force-" + sufixo + "@x.com", false);
+        u.setForceChangePassword(true);
+        usuarios.saveAndFlush(u);
+        String token = (String) ((Map<?, ?>) corpo(http.send(HttpRequest.newBuilder(
+                URI.create("http://localhost:" + porta + "/api/csrf/")).build(), HttpResponse.BodyHandlers.ofString())))
+                .get("csrf_token");
+        String cookies = "clama_access=" + tokens.emitirPar(u).access() + "; csrftoken=" + token;
+        HttpResponse<String> r = post("/api/customer/auth/change-password/",
+                "{\"senha_atual\": \"" + SENHA + "\", \"nova_senha\": \"Outra-forte-2027\"}", "Cookie", cookies,
+                "X-CSRFToken", token);
+        assertThat(r.statusCode()).isEqualTo(200);
+        assertThat(jdbc.queryForObject("select force_change_password from users_user where id = ?", Boolean.class,
+                u.getId())).isFalse();
+    }
+
+    /** Django logout_segunda_chamada_com_mesmo_refresh_e_idempotente: refresh ja na blacklist ainda da 205. */
+    @Test
+    void logoutDuasVezesComOMesmoRefreshDa205NasDuas() throws Exception {
+        Usuario u = usuario("logout2-" + sufixo + "@x.com", false);
+        String token = (String) ((Map<?, ?>) corpo(http.send(HttpRequest.newBuilder(
+                URI.create("http://localhost:" + porta + "/api/csrf/")).build(), HttpResponse.BodyHandlers.ofString())))
+                .get("csrf_token");
+        var par = tokens.emitirPar(u);
+        String cookies = "clama_access=" + par.access() + "; clama_refresh=" + par.refresh() + "; csrftoken=" + token;
+        for (int i = 0; i < 2; i++) {
+            assertThat(post("/api/customer/auth/logout/", "", "Cookie", cookies, "X-CSRFToken", token).statusCode())
+                    .as("chamada " + (i + 1)).isEqualTo(205);
+        }
+    }
 }

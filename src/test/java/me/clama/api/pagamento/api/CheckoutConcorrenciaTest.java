@@ -207,4 +207,18 @@ class CheckoutConcorrenciaTest {
         assertThat(r.statusCode()).as(r.body()).isEqualTo(200);
         assertThat(CRIACOES.get()).isEqualTo(1);
     }
+
+    /** Django test_checkout::pedido_gerando_returns_409: pedido fora de aguardando_pagamento nao gera Pix. */
+    @Test
+    void pedidoEmGerandoOracaoDa409SemChamarOProvedor() throws Exception {
+        limiter.limpar();
+        UUID id = semearPedido();
+        jdbc.update("update orders_pedido set status = 'gerando_oracao' where id = ?", id);
+        CRIACOES.set(0);
+        HttpResponse<String> r = HttpClient.newHttpClient().send(HttpRequest.newBuilder(URI.create(
+                "http://localhost:" + porta + "/api/pedidos/" + id + "/checkout/"))
+                .POST(HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofString());
+        assertThat(r.statusCode()).as(r.body()).isEqualTo(409);
+        assertThat(CRIACOES.get()).isZero();
+    }
 }
