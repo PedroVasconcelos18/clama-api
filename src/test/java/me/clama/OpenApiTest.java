@@ -55,6 +55,18 @@ class OpenApiTest {
 		assertThat(props.propertyNames()).contains("codigo", "mensagemPastoral", "erros", "detail", "status");
 	}
 
+	@Test
+	void listaDeUsuariosTemPaginacaoComoParametrosDeQuery() throws Exception {
+		var doc = JSON.readTree(Files.readString(ARQUIVO));
+		var params = doc.at("/paths/~1api~1admin~1usuarios/get/parameters");
+		var nomes = new java.util.ArrayList<String>();
+		params.forEach(p -> {
+			assertThat(p.get("in").asString()).isEqualTo("query");
+			nomes.add(p.get("name").asString());
+		});
+		assertThat(nomes).contains("page", "size").doesNotContain("pagina");
+	}
+
 	/** Chaves em ordem alfabetica (deterministico) e sem {@code servers}, que traz a porta aleatoria do teste. */
 	static String normalizar(String json) {
 		@SuppressWarnings("unchecked")

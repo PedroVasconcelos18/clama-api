@@ -4,12 +4,12 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import java.util.Map;
 import me.clama.conta.interno.AdminDeUsuariosServico;
 import me.clama.conta.interno.Papel;
 import me.clama.infra.seguranca.RespostasDeSeguranca;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PagedModel;
 import org.springframework.data.web.PageableDefault;
@@ -38,12 +38,12 @@ class UsuariosAdminController {
 
 	static final String PASTORAL_SO_SUPERUSUARIO = "Só o superusuário gerencia usuários.";
 
-	record Criacao(@NotBlank @Email @Size(max = 254) String email, @Size(max = 120) String nomeCompleto,
+	record CriacaoDeAdmin(@NotBlank @Email @Size(max = 254) String email, @Size(max = 120) String nomeCompleto,
 			@NotBlank @Size(max = 1024) String senha) {}
 
-	record Alteracao(Papel papel, Boolean ativo) {}
+	record AlteracaoDeUsuario(Papel papel, Boolean ativo) {}
 
-	record NovaSenha(@NotBlank @Size(max = 1024) String senha) {}
+	record NovaSenhaDoAdmin(@NotBlank @Size(max = 1024) String senha) {}
 
 	private final AdminDeUsuariosServico servico;
 
@@ -55,7 +55,7 @@ class UsuariosAdminController {
 	@GetMapping
 	PagedModel<UsuarioAdminItem> listar(@RequestParam(required = false) @Size(max = 100) String q,
 			@RequestParam(required = false) Papel papel, @RequestParam(required = false) Boolean ativo,
-			@PageableDefault(size = 20) Pageable pagina) {
+			@ParameterObject @PageableDefault(size = 20) Pageable pagina) {
 		var fixa = PageRequest.of(pagina.getPageNumber(), pagina.getPageSize(),
 				Sort.by(Sort.Direction.DESC, "criadoEm", "id"));
 		return new PagedModel<>(servico.listar(q, papel, ativo, fixa).map(UsuarioAdminItem::de));
@@ -69,21 +69,21 @@ class UsuariosAdminController {
 	@PostMapping
 	@PreAuthorize("hasRole('SUPERUSUARIO')")
 	@ResponseStatus(HttpStatus.CREATED)
-	UsuarioAdminItem criar(@Valid @RequestBody Criacao corpo, Authentication auth) {
+	UsuarioAdminItem criar(@Valid @RequestBody CriacaoDeAdmin corpo, Authentication auth) {
 		return UsuarioAdminItem.de(servico.criar(autor(auth), corpo.email(), corpo.nomeCompleto(), corpo.senha()));
 	}
 
 	@PatchMapping("/{id}")
 	@PreAuthorize("hasRole('SUPERUSUARIO')")
-	UsuarioAdminItem alterar(@PathVariable Long id, @RequestBody Alteracao corpo, Authentication auth) {
+	UsuarioAdminItem alterar(@PathVariable Long id, @RequestBody AlteracaoDeUsuario corpo, Authentication auth) {
 		return UsuarioAdminItem.de(servico.alterar(autor(auth), id, corpo.papel(), corpo.ativo()));
 	}
 
 	@PostMapping("/{id}/senha")
 	@PreAuthorize("hasRole('SUPERUSUARIO')")
-	Map<String, String> definirSenha(@PathVariable Long id, @Valid @RequestBody NovaSenha corpo, Authentication auth) {
+	MensagemPastoral definirSenha(@PathVariable Long id, @Valid @RequestBody NovaSenhaDoAdmin corpo, Authentication auth) {
 		servico.definirSenha(autor(auth), id, corpo.senha());
-		return Map.of("mensagemPastoral", "Senha definida. A pessoa precisa entrar de novo.");
+		return new MensagemPastoral("Senha definida. A pessoa precisa entrar de novo.");
 	}
 
 	@DeleteMapping("/{id}")

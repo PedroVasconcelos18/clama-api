@@ -1,7 +1,7 @@
 {
   "components" : {
     "schemas" : {
-      "Alteracao" : {
+      "AlteracaoDeUsuario" : {
         "properties" : {
           "ativo" : {
             "type" : "boolean"
@@ -13,7 +13,7 @@
         },
         "type" : "object"
       },
-      "Credenciais" : {
+      "CredenciaisDeLogin" : {
         "properties" : {
           "email" : {
             "maxLength" : 254,
@@ -29,7 +29,7 @@
         "required" : [ "email", "senha" ],
         "type" : "object"
       },
-      "Criacao" : {
+      "CriacaoDeAdmin" : {
         "properties" : {
           "email" : {
             "format" : "email",
@@ -51,7 +51,7 @@
         "required" : [ "email", "senha" ],
         "type" : "object"
       },
-      "Edicao" : {
+      "EdicaoDaConta" : {
         "properties" : {
           "nomeCompleto" : {
             "maxLength" : 120,
@@ -76,7 +76,15 @@
         },
         "type" : "object"
       },
-      "NovaSenha" : {
+      "MensagemPastoral" : {
+        "properties" : {
+          "mensagemPastoral" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "NovaSenhaDoAdmin" : {
         "properties" : {
           "senha" : {
             "maxLength" : 1024,
@@ -109,27 +117,6 @@
         "required" : [ "number", "size", "totalElements", "totalPages" ],
         "type" : "object"
       },
-      "Pageable" : {
-        "properties" : {
-          "page" : {
-            "format" : "int32",
-            "minimum" : 0,
-            "type" : "integer"
-          },
-          "size" : {
-            "format" : "int32",
-            "minimum" : 1,
-            "type" : "integer"
-          },
-          "sort" : {
-            "items" : {
-              "type" : "string"
-            },
-            "type" : "array"
-          }
-        },
-        "type" : "object"
-      },
       "PagedModelUsuarioAdminItem" : {
         "properties" : {
           "content" : {
@@ -145,7 +132,7 @@
         "required" : [ "content", "page" ],
         "type" : "object"
       },
-      "Pedido" : {
+      "PedidoDeLink" : {
         "properties" : {
           "email" : {
             "format" : "email",
@@ -195,7 +182,7 @@
         },
         "type" : "object"
       },
-      "Redefinicao" : {
+      "RedefinicaoDeSenhaPedido" : {
         "properties" : {
           "novaSenha" : {
             "maxLength" : 1024,
@@ -211,7 +198,7 @@
         "required" : [ "novaSenha", "token" ],
         "type" : "object"
       },
-      "Troca" : {
+      "TrocaDeSenha" : {
         "properties" : {
           "novaSenha" : {
             "maxLength" : 1024,
@@ -318,11 +305,35 @@
             "type" : "boolean"
           }
         }, {
+          "description" : "Zero-based page index (0..N)",
           "in" : "query",
-          "name" : "pagina",
-          "required" : true,
+          "name" : "page",
+          "required" : false,
           "schema" : {
-            "$ref" : "#/components/schemas/Pageable"
+            "default" : 0,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "The size of the page to be returned",
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+          "in" : "query",
+          "name" : "sort",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           }
         } ],
         "responses" : {
@@ -345,7 +356,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Criacao"
+                "$ref" : "#/components/schemas/CriacaoDeAdmin"
               }
             }
           },
@@ -425,7 +436,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Alteracao"
+                "$ref" : "#/components/schemas/AlteracaoDeUsuario"
               }
             }
           },
@@ -462,7 +473,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/NovaSenha"
+                "$ref" : "#/components/schemas/NovaSenhaDoAdmin"
               }
             }
           },
@@ -473,10 +484,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/MensagemPastoral"
                 }
               }
             },
@@ -493,7 +501,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Pedido"
+                "$ref" : "#/components/schemas/PedidoDeLink"
               }
             }
           },
@@ -504,10 +512,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/MensagemPastoral"
                 }
               }
             },
@@ -542,7 +547,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Credenciais"
+                "$ref" : "#/components/schemas/CredenciaisDeLogin"
               }
             }
           },
@@ -581,7 +586,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Redefinicao"
+                "$ref" : "#/components/schemas/RedefinicaoDeSenhaPedido"
               }
             }
           },
@@ -592,10 +597,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/MensagemPastoral"
                 }
               }
             },
@@ -612,7 +614,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Edicao"
+                "$ref" : "#/components/schemas/EdicaoDaConta"
               }
             }
           },
@@ -640,7 +642,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Troca"
+                "$ref" : "#/components/schemas/TrocaDeSenha"
               }
             }
           },
@@ -651,10 +653,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/MensagemPastoral"
                 }
               }
             },

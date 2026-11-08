@@ -40,7 +40,7 @@ import org.springframework.web.bind.annotation.RestController;
 class AuthController {
 
 	/** Tetos de tamanho: entrada sem limite viraria hash enorme e chave de limite enorme. */
-	record Credenciais(@NotBlank @Size(max = 254) String email, @NotBlank @Size(max = 1024) String senha) {}
+	record CredenciaisDeLogin(@NotBlank @Size(max = 254) String email, @NotBlank @Size(max = 1024) String senha) {}
 
 	private final LoginServico login;
 	private final UsuarioRepository usuarios;
@@ -62,7 +62,7 @@ class AuthController {
 	}
 
 	@PostMapping("/login")
-	UsuarioResposta login(@Valid @RequestBody Credenciais credenciais, HttpServletRequest req,
+	UsuarioResposta login(@Valid @RequestBody CredenciaisDeLogin credenciais, HttpServletRequest req,
 			HttpServletResponse res) {
 		var usuario = login.autenticar(credenciais.email(), credenciais.senha(), ClienteIp.de(req));
 		var id = usuario.getId().toString(); // principal = id: o indice que derruba as sessoes do usuario
