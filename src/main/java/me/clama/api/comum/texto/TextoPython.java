@@ -109,6 +109,11 @@ public final class TextoPython {
                 .collect(Collectors.joining(", ", "{", "}"));
     }
 
+    /** repr() do Python sobre um str: aspas simples, ou duplas se o texto tiver ' e nao tiver ". */
+    public static String repr(String s) {
+        return reprStr(s);
+    }
+
     // ponytail: escapa so \\, aspas e controles ASCII; caracteres nao imprimiveis do Unicode saem crus (o Python escapa)
     static String reprStr(String s) {
         char aspa = s.indexOf('\'') >= 0 && s.indexOf('"') < 0 ? '"' : '\'';

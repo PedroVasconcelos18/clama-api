@@ -67,6 +67,20 @@ class ComandosTest {
         uso(List.of("a", "--dry-run=sim"), "argument --dry-run: ignored explicit argument 'sim'");
     }
 
+    /** required=True do argparse: sem a opcao e uso (exit 2), na ordem da definicao; no usage, sem colchetes. */
+    @Test
+    void opcaoObrigatoria() throws Exception {
+        Definicao d = new Definicao("rel", Falso.class, List.of(Opcao.obrigatoria("--instituicao"),
+                Opcao.posicional("email"), Opcao.flag("--auditoria")));
+        assertThat(Comandos.ler(d, List.of("x", "--instituicao=Casa"))).containsEntry("--instituicao", "Casa");
+        assertThatThrownBy(() -> Comandos.ler(d, List.of("--auditoria"))).isInstanceOf(Comandos.ErroDeUso.class)
+                .hasMessage("the following arguments are required: --instituicao, email");
+        assertThatThrownBy(() -> Comandos.ler(d, List.of("x"))).hasMessage(
+                "the following arguments are required: --instituicao");
+        assertThat(Comandos.uso(d)).isEqualTo("usage: java -jar clama-api.jar rel --instituicao INSTITUICAO"
+                + " [--auditoria] email");
+    }
+
     private void uso(List<String> args, String erro) {
         out.reset();
         err.reset();
@@ -83,7 +97,7 @@ class ComandosTest {
         assertThat(Comandos.executar(new String[] {"relatorio_repase"}, saida(out), saida(err), stdin(null), dir, null))
                 .isEqualTo(2);
         assertThat(err.toString(UTF_8)).startsWith("Comando desconhecido: 'relatorio_repase'. Disponíveis: ")
-                .contains("instituicoes, tarefa");
+                .contains("instituicoes, tarefa, relatorio_repasse, auditar_repasses, marcar_repasse_transferido");
     }
 
     @Test

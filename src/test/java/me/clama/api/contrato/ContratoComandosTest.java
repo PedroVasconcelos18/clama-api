@@ -52,10 +52,10 @@ class ContratoComandosTest {
     /** Gravados (os .json da pasta). */
     static final int GRAVADOS = 59;
     /** Grupos ligados, por prefixo do arquivo. Cada task move o seu prefixo de PENDENTES para LIGADOS. */
-    static final List<String> LIGADOS = List.of("cmd_instituicoes_");
+    static final List<String> LIGADOS = List.of("cmd_instituicoes_", "cmd_relatorio_repasse_", "cmd_auditar_repasses_",
+            "cmd_marcar_repasse_transferido_");
     /** Gravados mas ainda sem implementacao. */
-    static final List<String> PENDENTES = List.of("cmd_relatorio_repasse_", "cmd_auditar_repasses_",
-            "cmd_marcar_repasse_transferido_", "cmd_adotar_pedidos_orfaos_", "cmd_purgar_dados_blog_customer_");
+    static final List<String> PENDENTES = List.of("cmd_adotar_pedidos_orfaos_", "cmd_purgar_dados_blog_customer_");
     /** Cenarios cujo comando grava no banco: o eco (que nao grava) tem de cair no estado final. */
     static final Set<String> GRAVAM = Set.of("cmd_marcar_repasse_transferido_confirmar.json",
             "cmd_adotar_pedidos_orfaos_vincula.json", "cmd_adotar_pedidos_orfaos_email.json",

@@ -20,6 +20,9 @@ import me.clama.api.catalogo.instituicao.ComandoInstituicoes;
 import me.clama.api.comum.agenda.ComandoTarefa;
 import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.comum.observabilidade.SentryConfig;
+import me.clama.api.instituicao.repasse.comando.AuditarRepasses;
+import me.clama.api.instituicao.repasse.comando.MarcarRepasseTransferido;
+import me.clama.api.instituicao.repasse.comando.RelatorioRepasse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.Banner;
@@ -43,7 +46,11 @@ public final class Comandos {
     /** Os comandos do jar (D5: nomes do Django). Cada task acrescenta os seus. */
     static final Map<String, Definicao> DEFINICOES = porNome(
             new Definicao("instituicoes", ComandoInstituicoes.class, ComandoInstituicoes.OPCOES),
-            new Definicao("tarefa", ComandoTarefa.class, ComandoTarefa.OPCOES));
+            new Definicao("tarefa", ComandoTarefa.class, ComandoTarefa.OPCOES),
+            new Definicao("relatorio_repasse", RelatorioRepasse.class, RelatorioRepasse.OPCOES),
+            new Definicao("auditar_repasses", AuditarRepasses.class, AuditarRepasses.OPCOES),
+            new Definicao("marcar_repasse_transferido", MarcarRepasseTransferido.class,
+                    MarcarRepasseTransferido.OPCOES));
 
     private Comandos() {
     }
@@ -51,12 +58,19 @@ public final class Comandos {
     public record Definicao(String nome, Class<? extends Comando> classe, List<Opcao> opcoes) {
     }
 
-    public enum Tipo { VALOR, FLAG, POSICIONAL }
+    public enum Tipo { VALOR, OBRIGATORIA, FLAG, POSICIONAL }
 
-    /** nome: "--flag" (VALOR, FLAG) ou o nome do posicional (obrigatorio, na ordem). escolhas vazia = qualquer valor. */
+    /**
+     * nome: "--flag" (VALOR, OBRIGATORIA = required=True do argparse, FLAG) ou o nome do posicional (obrigatorio, na
+     * ordem). escolhas vazia = qualquer valor.
+     */
     public record Opcao(String nome, Tipo tipo, List<String> escolhas) {
         public static Opcao valor(String nome, String... escolhas) {
             return new Opcao(nome, Tipo.VALOR, List.of(escolhas));
+        }
+
+        public static Opcao obrigatoria(String nome) {
+            return new Opcao(nome, Tipo.OBRIGATORIA, List.of());
         }
 
         public static Opcao flag(String nome) {
@@ -226,8 +240,9 @@ public final class Comandos {
                 lidas.put(nome, v);
             }
         }
-        List<String> faltam = new ArrayList<>();
-        posicionais.forEachRemaining(o -> faltam.add(o.nome()));
+        List<String> faltam = d.opcoes().stream() // na ordem da definicao, como o argparse
+                .filter(o -> (o.tipo() == Tipo.POSICIONAL || o.tipo() == Tipo.OBRIGATORIA) && !lidas.containsKey(o.nome()))
+                .map(Opcao::nome).toList();
         if (!faltam.isEmpty()) {
             throw new ErroDeUso("the following arguments are required: " + String.join(", ", faltam));
         }
@@ -242,10 +257,11 @@ public final class Comandos {
         for (Opcao o : d.opcoes()) {
             if (o.tipo() == Tipo.FLAG) {
                 s.append(" [").append(o.nome()).append("]");
-            } else if (o.tipo() == Tipo.VALOR) {
-                s.append(" [").append(o.nome()).append(" ").append(o.escolhas().isEmpty()
+            } else if (o.tipo() != Tipo.POSICIONAL) {
+                String v = o.nome() + " " + (o.escolhas().isEmpty()
                         ? o.nome().substring(2).toUpperCase(java.util.Locale.ROOT).replace('-', '_')
-                        : "{" + String.join(",", o.escolhas()) + "}").append("]");
+                        : "{" + String.join(",", o.escolhas()) + "}");
+                s.append(" ").append(o.tipo() == Tipo.OBRIGATORIA ? v : "[" + v + "]");
             }
         }
         d.opcoes().stream().filter(o -> o.tipo() == Tipo.POSICIONAL).forEach(o -> s.append(" ").append(o.nome()));

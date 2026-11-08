@@ -27,4 +27,13 @@ class TextoPythonTest {
         assertThat(TextoPython.repr(new ObjectMapper().readTree("{\"a\\\"b\": \"x\\ty\", \"k\": [true, null, 1.0]}")))
                 .isEqualTo("{'a\"b': 'x\\ty', 'k': [True, None, 1.0]}");
     }
+
+    @Test
+    void reprDeStringComoNoPython() {
+        // python3 -c "print(repr(\"it's\"), repr('a\"b'), repr('x\\'y\"z'), repr('ação'))"
+        assertThat(TextoPython.repr("it's")).isEqualTo("\"it's\"");
+        assertThat(TextoPython.repr("a\"b")).isEqualTo("'a\"b'");
+        assertThat(TextoPython.repr("x'y\"z")).isEqualTo("'x\\'y\"z'");
+        assertThat(TextoPython.repr("KM’s Pela Vida")).isEqualTo("'KM’s Pela Vida'"); // o tipografico nao conta
+    }
 }
