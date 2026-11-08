@@ -14,6 +14,7 @@ import me.clama.CaixaDeSaidaEmMemoria;
 import me.clama.EmailDeTeste;
 import me.clama.conta.Papel;
 import me.clama.conta.UsuarioRepository;
+import me.clama.infra.email.EnvioAssincrono;
 import me.clama.infra.seguranca.LimiteDeTaxa;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,11 +35,20 @@ class EsqueciSenhaTest {
 	@Autowired PasswordEncoder encoder;
 	@Autowired LimiteDeTaxa limite;
 	@Autowired CaixaDeSaidaEmMemoria caixa;
+	@Autowired EnvioAssincrono envio;
 
 	@BeforeEach
-	void zerar() {
+	void zerar() throws Exception {
+		ociosa();
 		limite.limpar();
 		caixa.limpar();
+	}
+
+	/** Espera o executor de e-mail esvaziar (prazo de 10 s). */
+	private void ociosa() throws Exception {
+		var prazo = System.nanoTime() + 10_000_000_000L;
+		while (envio.pendentes() > 0 && System.nanoTime() < prazo) Thread.sleep(10);
+		assertThat(envio.pendentes()).isZero();
 	}
 
 	private java.net.http.HttpResponse<String> pedir(String email) throws Exception {
@@ -64,6 +74,8 @@ class EsqueciSenhaTest {
 			corpos.add(res.body());
 		}
 		assertThat(corpos).hasSize(3).allMatch(c -> c.equals(corpos.get(0)));
+		caixa.aguardarPara(existente, 1);
+		ociosa();
 		assertThat(caixa.enviados()).hasSize(1);
 		var enviado = caixa.enviados().get(0);
 		assertThat(enviado.email().para()).isEqualTo(existente);
@@ -78,6 +90,8 @@ class EsqueciSenhaTest {
 		Navegador.usuario(usuarios, encoder, existente, "senha-forte-123", Papel.CLIENTE);
 		pedir(existente); // aquece JIT, pool e conexoes
 		pedir(emailUnico());
+		ociosa();
+		caixa.atrasar(500); // a Resend lenta nao pode aparecer no tempo da resposta
 		var comConta = new ArrayList<Long>();
 		var semConta = new ArrayList<Long>();
 		for (int i = 0; i < 5; i++) {
@@ -88,8 +102,12 @@ class EsqueciSenhaTest {
 		}
 		Collections.sort(comConta);
 		Collections.sort(semConta);
-		var diferenca = Duration.ofNanos(Math.abs(comConta.get(2) - semConta.get(2)));
-		assertThat(diferenca).isLessThan(Duration.ofMillis(200));
+		var comContaMs = Duration.ofNanos(comConta.get(2));
+		var semContaMs = Duration.ofNanos(semConta.get(2));
+		assertThat(comContaMs).isLessThan(Duration.ofMillis(200));
+		assertThat(semContaMs).isLessThan(Duration.ofMillis(200));
+		assertThat(Duration.ofNanos(Math.abs(comConta.get(2) - semConta.get(2)))).isLessThan(Duration.ofMillis(200));
+		caixa.atrasar(0);
 	}
 
 	private long medir(String email) throws Exception {
@@ -103,7 +121,7 @@ class EsqueciSenhaTest {
 		var email = emailUnico();
 		Navegador.usuario(usuarios, encoder, email, "senha-forte-123", Papel.ADMIN);
 		assertThat(pedir(email).statusCode()).isEqualTo(200);
-		assertThat(caixa.para(email)).hasSize(1);
+		assertThat(caixa.aguardarPara(email, 1)).hasSize(1);
 	}
 
 	@Test
@@ -111,7 +129,7 @@ class EsqueciSenhaTest {
 		var local = "pessoa" + System.nanoTime();
 		Navegador.usuario(usuarios, encoder, local + "@gmail.com", "senha-forte-123", Papel.CLIENTE);
 		assertThat(pedir(local.substring(0, 3) + "." + local.substring(3) + "+x@Gmail.com").statusCode()).isEqualTo(200);
-		assertThat(caixa.para(local + "@gmail.com")).hasSize(1);
+		assertThat(caixa.aguardarPara(local + "@gmail.com", 1)).hasSize(1);
 	}
 
 	@Test
@@ -122,6 +140,15 @@ class EsqueciSenhaTest {
 		var res = pedir(email);
 		assertThat(res.statusCode()).isEqualTo(200);
 		assertThat(json(res).get("mensagemPastoral").asString()).isEqualTo(PASTORAL);
+		ociosa(); // a falha foi engolida no executor (log + Sentry)
+	}
+
+	@Test
+	void variantesDoGmailCompartilhamOLimite() throws Exception {
+		for (var v : new String[] {"a.b+1@gmail.com", "ab@gmail.com", "a.b@Gmail.com"}) {
+			assertThat(pedir(v).statusCode()).isEqualTo(200);
+		}
+		assertThat(pedir("a.b+2@gmail.com").statusCode()).isEqualTo(429);
 	}
 
 	@Test

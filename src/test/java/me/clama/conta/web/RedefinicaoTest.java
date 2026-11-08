@@ -52,7 +52,9 @@ class RedefinicaoTest {
 	private String pedirToken(String email) throws Exception {
 		var nav = new Navegador(porta);
 		nav.get("/api/auth/eu");
+		var antes = caixa.para(email).size();
 		assertThat(nav.post("/api/auth/esqueci-senha", "{\"email\":\"" + email + "\"}").statusCode()).isEqualTo(200);
+		caixa.aguardarPara(email, antes + 1); // o envio e assincrono
 		return ultimoToken(email);
 	}
 
@@ -148,6 +150,27 @@ class RedefinicaoTest {
 		assertThat(texto).contains("http://localhost:5173/definir-senha?token=");
 		assertThat(redefinir(ultimoToken(email), NOVA).statusCode()).isEqualTo(200);
 		assertThat(new Navegador(porta).login(email, NOVA).statusCode()).isEqualTo(200);
+	}
+
+	@Test
+	void redefinirRevogaOutrosLinksPendentes() throws Exception {
+		var email = emailUnico();
+		transacao.executeWithoutResult(s -> contaApi.provisionarOuVincular(email, "Maria"));
+		var definir = ultimoToken(email); // link DEFINIR da conta nova
+		var redefinir = pedirToken(email);
+		assertThat(redefinir(redefinir, NOVA).statusCode()).isEqualTo(200);
+		assertLinkInvalido(redefinir(definir, "mais-uma-senha-forte-7"));
+	}
+
+	@Test
+	void trocarSenhaRevogaLinksPendentes() throws Exception {
+		var email = conta();
+		var token = pedirToken(email);
+		var nav = new Navegador(porta);
+		assertThat(nav.login(email, ANTIGA).statusCode()).isEqualTo(200);
+		assertThat(nav.post("/api/conta/senha", "{\"senhaAtual\":\"" + ANTIGA + "\",\"novaSenha\":\"" + NOVA + "\"}")
+				.statusCode()).isEqualTo(200);
+		assertLinkInvalido(redefinir(token, "mais-uma-senha-forte-7"));
 	}
 
 	@Test

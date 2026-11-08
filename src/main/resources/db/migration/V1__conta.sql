@@ -1,3 +1,4 @@
+-- editavel ate o primeiro deploy
 CREATE TABLE usuario (
 	id bigserial PRIMARY KEY,
 	email varchar(254) NOT NULL UNIQUE CHECK (email = lower(email)),
@@ -20,6 +21,7 @@ CREATE TABLE token_de_senha (
 	expira_em timestamptz NOT NULL,
 	usado_em timestamptz
 );
+CREATE INDEX token_de_senha_usuario_ix ON token_de_senha (usuario_id);
 
 CREATE TABLE auditoria (
 	id bigserial PRIMARY KEY,

@@ -27,9 +27,12 @@ public class TrocaDeSenhaServico {
 	private final VagasDeHash vagas;
 	private final SessoesDoUsuario sessoes;
 	private final TransactionTemplate transacao;
+	private final TokensDeSenha tokens;
 
 	TrocaDeSenhaServico(UsuarioRepository usuarios, PasswordEncoder senhas, ValidadorDeSenha validador,
-			LimiteDeTaxa limite, VagasDeHash vagas, SessoesDoUsuario sessoes, TransactionTemplate transacao) {
+			LimiteDeTaxa limite, VagasDeHash vagas, SessoesDoUsuario sessoes, TransactionTemplate transacao,
+			TokensDeSenha tokens) {
+		this.tokens = tokens;
 		this.usuarios = usuarios;
 		this.senhas = senhas;
 		this.validador = validador;
@@ -71,6 +74,7 @@ public class TrocaDeSenhaServico {
 						"Sua senha acabou de mudar. Tente de novo.");
 			}
 			travado.definirSenha(novoHash);
+			tokens.revogarTodos(id); // link pendente de antes da troca nao vale mais
 		});
 		sessoes.derrubarOutras(id, sessaoAtualId); // depois do commit: so cai a sessao se a senha de fato mudou
 	}

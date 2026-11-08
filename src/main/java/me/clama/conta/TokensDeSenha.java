@@ -82,6 +82,13 @@ class TokensDeSenha {
 				.param("h", hash(token)).param("agora", agora).query(Long.class).optional();
 	}
 
+	/** Revoga todo link pendente do usuario (troca de senha, redefinicao, e depois a administracao). Na transacao de quem chama. */
+	@Transactional
+	void revogarTodos(Long usuarioId) {
+		jdbc.sql("update token_de_senha set usado_em = :agora where usuario_id = :u and usado_em is null")
+				.param("agora", agora()).param("u", usuarioId).update();
+	}
+
 	private OffsetDateTime agora() {
 		return OffsetDateTime.ofInstant(relogio.instant(), java.time.ZoneOffset.UTC);
 	}

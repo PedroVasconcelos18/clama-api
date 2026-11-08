@@ -11,7 +11,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Adaptador da Resend (SDK oficial). A chave de idempotencia vai no header {@code Idempotency-Key}. "Ja enviado"
- * (409 invalid_idempotent_request) e sucesso; 5xx e erro de rede tentam ate 3 vezes (1 s e 2 s de espera); 4xx nao.
+ * (409 invalid_idempotent_request) e sucesso; 5xx, 429 e erro de rede tentam ate 3 vezes (1 s e 2 s de espera);
+ * os demais 4xx nao. Cada chamada tem prazo de 10 s.
  */
 // ponytail: laco simples em vez de @Retryable: a regra "5xx sim, 4xx e ja-enviado nao" e o teste sem dormir ficam
 // triviais sem proxy nem contexto Spring.
@@ -38,24 +39,33 @@ public class ResendEmail implements EnviadorDeEmail {
 		}
 		var opcoes = CreateEmailOptions.builder().from(remetente).to(email.para()).subject(email.assunto())
 				.text(email.texto()).html(email.html()).replyTo(RESPONDER_PARA).build();
-		var requisicao = RequestOptions.builder().setIdempotencyKey(chaveIdempotencia).build();
+		var requisicao = RequestOptions.builder().setIdempotencyKey(chaveIdempotencia)
+				.timeout(Duration.ofSeconds(10)).build();
 		for (int tentativa = 1;; tentativa++) {
 			try {
 				emails.send(opcoes, requisicao);
 				return;
+			} catch (RuntimeException e) { // o SDK pode embrulhar falha de rede; so ela e retentada
+				if (!causadoPorRede(e) || tentativa == TENTATIVAS) throw e;
+				dormir.accept(Duration.ofSeconds(1L << (tentativa - 1)));
 			} catch (ResendException e) {
 				if (jaEnviado(e)) {
 					LOG.warn("Resend: e-mail ja enviado (chave {})", chaveIdempotencia);
 					return;
 				}
 				var status = e.getStatusCode();
-				boolean retentavel = status == null || status >= 500; // sem status = falha de rede
+				boolean retentavel = status == null || status >= 500 || status == 429; // sem status = falha de rede
 				if (!retentavel || tentativa == TENTATIVAS) {
 					throw new IllegalStateException("Resend recusou o e-mail (status " + status + ")", e);
 				}
 				dormir.accept(Duration.ofSeconds(1L << (tentativa - 1)));
 			}
 		}
+	}
+
+	private static boolean causadoPorRede(Throwable e) {
+		for (var c = e; c != null; c = c.getCause()) if (c instanceof java.io.IOException) return true;
+		return false;
 	}
 
 	private static boolean jaEnviado(ResendException e) {

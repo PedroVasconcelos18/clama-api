@@ -1,10 +1,9 @@
 package me.clama.conta;
 
 import java.util.Map;
+import me.clama.infra.email.EnvioAssincrono;
 import me.clama.infra.email.EnviadorDeEmail;
 import me.clama.infra.email.ModelosDeEmail;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -14,8 +13,6 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 @EnableConfigurationProperties(ContaProps.class)
 class EmailsDaConta {
-
-	private static final Logger LOG = LoggerFactory.getLogger(EmailsDaConta.class);
 
 	private final ModelosDeEmail modelos;
 	private final EnviadorDeEmail enviador;
@@ -52,7 +49,7 @@ class EmailsDaConta {
 			var token = tokens.emitir(usuario.getId(), TokensDeSenha.Finalidade.DEFINIR);
 			enviar(usuario, token, "definir-senha", "Bem-vinda ao Clama — defina sua senha", "definir_senha");
 		} catch (RuntimeException e) {
-			LOG.warn("Falha ao enviar o link de definir senha da conta {}", evento.id(), e);
+			EnvioAssincrono.registrar("link de definir senha da conta " + evento.id(), e);
 		}
 	}
 }

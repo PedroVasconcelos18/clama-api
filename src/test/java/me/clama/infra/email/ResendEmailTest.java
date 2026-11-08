@@ -69,6 +69,38 @@ class ResendEmailTest {
 	}
 
 	@Test
+	void erro429ETentadoDeNovo() throws Exception {
+		when(sdk.send(any(CreateEmailOptions.class), any(RequestOptions.class)))
+				.thenThrow(new ResendException(429, "rate limit")).thenReturn(new CreateEmailResponse("id"));
+		envio.enviar(EMAIL, "k");
+		verify(sdk, times(2)).send(any(CreateEmailOptions.class), any(RequestOptions.class));
+	}
+
+	@Test
+	void erroDeRedeEmbrulhadoNoSdkETentadoDeNovo() throws Exception {
+		when(sdk.send(any(CreateEmailOptions.class), any(RequestOptions.class)))
+				.thenThrow(new RuntimeException(new java.io.IOException("timeout"))).thenReturn(new CreateEmailResponse("id"));
+		envio.enviar(EMAIL, "k");
+		verify(sdk, times(2)).send(any(CreateEmailOptions.class), any(RequestOptions.class));
+	}
+
+	@Test
+	void runtimeSemCausaDeRedeNaoETentado() throws Exception {
+		when(sdk.send(any(CreateEmailOptions.class), any(RequestOptions.class))).thenThrow(new IllegalArgumentException("bug"));
+		assertThatThrownBy(() -> envio.enviar(EMAIL, "k")).isInstanceOf(IllegalArgumentException.class);
+		verify(sdk, times(1)).send(any(CreateEmailOptions.class), any(RequestOptions.class));
+	}
+
+	@Test
+	void chamadaTemPrazoDe10s() throws Exception {
+		when(sdk.send(any(CreateEmailOptions.class), any(RequestOptions.class))).thenReturn(new CreateEmailResponse("id"));
+		envio.enviar(EMAIL, "k");
+		var req = ArgumentCaptor.forClass(RequestOptions.class);
+		verify(sdk).send(any(CreateEmailOptions.class), req.capture());
+		assertThat(req.getValue().getTimeout()).isEqualTo(Duration.ofSeconds(10));
+	}
+
+	@Test
 	void erro4xxNaoTentaDeNovo() throws Exception {
 		when(sdk.send(any(CreateEmailOptions.class), any(RequestOptions.class)))
 				.thenThrow(new ResendException(422, "destinatario invalido"));

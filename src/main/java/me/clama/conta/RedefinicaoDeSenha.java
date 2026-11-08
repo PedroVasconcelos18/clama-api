@@ -7,8 +7,7 @@ import me.clama.infra.seguranca.LimiteDeTaxa;
 import me.clama.infra.seguranca.LimiteDeTaxa.Cota;
 import me.clama.infra.web.ErroDeCampo;
 import me.clama.infra.web.ErroDeNegocio;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import me.clama.infra.email.EnvioAssincrono;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,7 +17,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 public class RedefinicaoDeSenha {
 
-	private static final Logger LOG = LoggerFactory.getLogger(RedefinicaoDeSenha.class);
 	public static final String PASTORAL_ESQUECI = "Se este e-mail estiver cadastrado, você receberá um link para criar uma nova senha em instantes. Verifique também a caixa de spam.";
 	public static final String PASTORAL_REDEFINIDA = "Senha criada — agora é só entrar.";
 	static final String LINK_INVALIDO = "Este link não vale mais. Peça um novo.";
@@ -32,10 +30,12 @@ public class RedefinicaoDeSenha {
 	private final VagasDeHash vagas;
 	private final SessoesDoUsuario sessoes;
 	private final TransactionTemplate transacao;
+	private final EnvioAssincrono envio;
 
 	RedefinicaoDeSenha(UsuarioRepository usuarios, TokensDeSenha tokens, EmailsDaConta emails, LimiteDeTaxa limite,
 			ValidadorDeSenha validador, PasswordEncoder senhas, VagasDeHash vagas, SessoesDoUsuario sessoes,
-			TransactionTemplate transacao) {
+			TransactionTemplate transacao, EnvioAssincrono envio) {
+		this.envio = envio;
 		this.usuarios = usuarios;
 		this.tokens = tokens;
 		this.emails = emails;
@@ -47,24 +47,23 @@ public class RedefinicaoDeSenha {
 		this.transacao = transacao;
 	}
 
-	/** Nunca revela se a conta existe: quem nao tem conta ativa gasta o mesmo trabalho (token + SHA-256), sem gravar. */
+	/**
+	 * Nunca revela se a conta existe: depois do limite responde na hora; busca, token e envio rodam no executor, igual
+	 * para quem tem conta e para quem nao tem (o tempo da resposta nao diz nada).
+	 */
 	public void pedir(String email, String ip) {
 		var minusculo = email.strip().toLowerCase(Locale.ROOT);
-		limite.exigir(new Cota("esqueci:email:" + minusculo, 3, Duration.ofHours(1)),
+		limite.exigir(new Cota("esqueci:email:" + EmailCanonico.de(minusculo), 3, Duration.ofHours(1)),
 				new Cota("esqueci:ip:" + ip, 20, Duration.ofHours(1)));
+		envio.executar("link de redefinir senha", () -> enviarLink(minusculo));
+	}
 
+	private void enviarLink(String minusculo) {
 		var usuario = usuarios.findByEmail(minusculo).or(() -> usuarios.findByEmailCanonico(EmailCanonico.de(minusculo)))
 				.filter(Usuario::isAtivo);
-		if (usuario.isEmpty()) {
-			TokensDeSenha.hash(TokensDeSenha.novoToken()); // mesmo custo do caminho real
-			return;
-		}
+		if (usuario.isEmpty()) return;
 		var token = tokens.emitir(usuario.get().getId(), TokensDeSenha.Finalidade.REDEFINIR);
-		try { // sincrono, fora de transacao; falha nao muda a resposta
-			emails.enviarRedefinicao(usuario.get(), token);
-		} catch (RuntimeException e) {
-			LOG.warn("Falha ao enviar o link de redefinir senha da conta {}", usuario.get().getId(), e);
-		}
+		emails.enviarRedefinicao(usuario.get(), token); // falha: EnvioAssincrono registra no log e no Sentry
 	}
 
 	public void redefinir(String token, String novaSenha) {
@@ -79,6 +78,7 @@ public class RedefinicaoDeSenha {
 
 		transacao.executeWithoutResult(s -> {
 			var dono = tokens.consumir(token).orElseThrow(RedefinicaoDeSenha::linkInvalido); // atomico: so um ganha
+			tokens.revogarTodos(dono); // os demais links pendentes (inclusive DEFINIR) morrem junto
 			var travado = usuarios.travar(dono).filter(Usuario::isAtivo).orElseThrow(RedefinicaoDeSenha::linkInvalido);
 			travado.definirSenha(novoHash);
 		});

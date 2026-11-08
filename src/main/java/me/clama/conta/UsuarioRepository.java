@@ -20,10 +20,10 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 	@Query("select u from Usuario u where u.id = :id")
 	Optional<Usuario> travar(Long id);
 
-	/** Cria um CLIENTE sem senha; 0 se ja existe (qualquer unique): sem excecao, a transacao do chamador segue sa. */
+	/** Cria um CLIENTE sem senha; 0 se o e-mail canonico ja existe: sem excecao, a transacao do chamador segue sa. */
 	@Modifying(flushAutomatically = true)
 	@Query(nativeQuery = true, value = """
 			insert into usuario (email, email_canonico, nome_completo, papel, ativo, criado_em)
-			values (:email, :canonico, :nome, 'CLIENTE', true, :criadoEm) on conflict do nothing""")
+			values (:email, :canonico, :nome, 'CLIENTE', true, :criadoEm) on conflict (email_canonico) do nothing""")
 	int inserirSeAusente(String email, String canonico, String nome, Instant criadoEm);
 }

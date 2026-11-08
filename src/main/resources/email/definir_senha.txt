@@ -2,8 +2,7 @@ CLAMA.
 
 Paz e bem, {{primeiro_nome}}.
 
-Que alegria ter você aqui. Sua doação foi recebida com muito carinho —
-e, com ela, criamos uma conta no Clama para você.
+Que alegria ter você aqui. Sua conta no Clama foi criada.
 
 Para entrar, defina a sua senha pelo link abaixo. Ele vale por 72 horas
 e só pode ser usado uma vez.
