@@ -1,6 +1,7 @@
 package me.clama.infra.seguranca;
 
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,6 +19,13 @@ class RotasDeSegurancaParaTeste {
 
 	@PostMapping("/admin/teste")
 	String adminPost() {
+		return "ok";
+	}
+
+	/** A cadeia exige ADMIN; o @PreAuthorize restringe ao SUPERUSUARIO (prova o @EnableMethodSecurity). */
+	@GetMapping("/admin/teste/so-superusuario")
+	@PreAuthorize("hasRole('SUPERUSUARIO')")
+	String soSuperusuario() {
 		return "ok";
 	}
 

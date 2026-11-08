@@ -2,6 +2,13 @@ server:
   port: ${PORT:8080}
   shutdown: graceful
   forward-headers-strategy: native
+  servlet:
+    session:
+      timeout: 7d # deslizante: cada requisicao renova
+      cookie:
+        # Secure fica no automatico do Spring Session (segue request.isSecure(): https sim, http local nao)
+        same-site: lax
+        http-only: true
 
 spring:
   datasource:
@@ -14,6 +21,10 @@ spring:
         logServerErrorDetail: "false"
   application:
     name: clama-api
+  autoconfigure:
+    # login manual (conta.LoginServico), sem UserDetailsService: sem isto o Boot cria um usuario com senha gerada.
+    # Aqui e nao no @SpringBootApplication porque os slices (@WebMvcTest) tambem respeitam a propriedade
+    exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
   session:
     jdbc:
       initialize-schema: never

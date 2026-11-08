@@ -1,7 +1,6 @@
 package me.clama.infra.seguranca;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -25,14 +24,13 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.web.servlet.MockMvc;
@@ -74,7 +72,7 @@ class SegurancaTest {
 	@Test
 	void anonimo401NaoCriaSessao() throws Exception {
 		var res = mvc.perform(get("/api/admin/x")).andExpect(status().isUnauthorized()).andReturn().getResponse();
-		assertThat(res.getHeaders("Set-Cookie")).noneMatch(c -> c.contains("JSESSIONID"));
+		assertThat(res.getHeaders("Set-Cookie")).noneMatch(c -> c.contains("SESSION")); // SESSION e JSESSIONID
 	}
 
 	@Test
@@ -88,7 +86,7 @@ class SegurancaTest {
 	}
 
 	@Autowired
-	UserDetailsService usuarios;
+	ApplicationContext contexto;
 
 	@Test
 	void cadeiaDeModuloLiberaSuaRotaComCookieCsrfENaoESombreada() throws Exception {
@@ -211,8 +209,7 @@ class SegurancaTest {
 	@Test
 	void semSenhaGeradaPeloBoot(CapturedOutput saida) {
 		assertThat(saida).doesNotContain("Using generated security password");
-		assertThat(usuarios).isNotInstanceOf(InMemoryUserDetailsManager.class);
-		assertThrows(UsernameNotFoundException.class,
-				() -> usuarios.loadUserByUsername("qualquer"));
+		// o log so aparece se este teste subir o contexto; a ausencia do bean prova o mesmo em qualquer ordem
+		assertThat(contexto.getBeanNamesForType(UserDetailsService.class)).isEmpty();
 	}
 }

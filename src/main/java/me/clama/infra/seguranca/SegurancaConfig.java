@@ -6,19 +6,23 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.header.writers.CrossOriginOpenerPolicyHeaderWriter.CrossOriginOpenerPolicy;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -28,7 +32,20 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * proprias rotas publicas num SecurityFilterChain proprio, com @Order menor e securityMatcher.
  */
 @Configuration
+@EnableMethodSecurity
 public class SegurancaConfig {
+
+	/** Vale nas regras das cadeias (hasRole) e no @PreAuthorize: o Security aplica o bean nos dois. */
+	@Bean
+	static RoleHierarchy hierarquiaDePapeis() {
+		return RoleHierarchyImpl.fromHierarchy("ROLE_SUPERUSUARIO > ROLE_ADMIN > ROLE_CLIENTE");
+	}
+
+	/** Cookie XSRF-TOKEN legivel pelo JS; o mesmo que o login usa para trocar o token. */
+	@Bean
+	public CsrfTokenRepository repositorioCsrf() {
+		return CookieCsrfTokenRepository.withHttpOnlyFalse();
+	}
 
 	/**
 	 * Cadeia que nega por padrao; fica por ultimo para nunca sombrear a cadeia de um modulo.
@@ -54,7 +71,10 @@ public class SegurancaConfig {
 				// dispatch de ERROR (firewall, excecao de filtro) nao pode virar 401; vale para toda cadeia
 				.authorizeHttpRequests(a -> a.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll())
 				.requestCache(c -> c.disable()) // 401 anonimo nao deve criar sessao so para lembrar a URL
-				.csrf(c -> c.spa()) // cookie XSRF-TOKEN (legivel pelo JS) + handler de SPA; header X-XSRF-TOKEN
+				// cookie XSRF-TOKEN (legivel pelo JS) + handler de SPA; header X-XSRF-TOKEN. O repositorio e o bean,
+				// para o login trocar o token no mesmo lugar em que a cadeia le
+				.csrf(c -> c.spa().csrfTokenRepository(
+						http.getSharedObject(ApplicationContext.class).getBean(CsrfTokenRepository.class)))
 				.addFilterAfter(new CookieCsrfFilter(), CsrfFilter.class)
 				.httpBasic(b -> b.disable())
 				.formLogin(f -> f.disable())
@@ -78,13 +98,5 @@ public class SegurancaConfig {
 			if (token != null) token.getToken();
 			chain.doFilter(req, res);
 		}
-	}
-
-	/** Ninguem existe ate a onda 2 (login por sessao); evita o usuario em memoria e a senha gerada do Boot. */
-	@Bean
-	UserDetailsService usuarios() {
-		return username -> {
-			throw new UsernameNotFoundException("Login por sessao chega na onda 2");
-		};
 	}
 }

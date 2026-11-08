@@ -24,7 +24,7 @@ public class Usuario {
 	@Column(name = "email_canonico")
 	private String emailCanonico;
 
-	/** Hash do PasswordEncoder; nulo = sem senha utilizavel. */
+	/** Hash do PasswordEncoder; nulo ou em branco = sem senha utilizavel. */
 	private String senha;
 
 	@Column(name = "nome_completo")
@@ -68,7 +68,7 @@ public class Usuario {
 	public boolean isAtivo() { return ativo; }
 	public Instant getCriadoEm() { return criadoEm; }
 	public Instant getUltimoLoginEm() { return ultimoLoginEm; }
-	public boolean temSenha() { return senha != null; }
+	public boolean temSenha() { return senha != null && !senha.isBlank(); }
 
 	public void definirSenha(String hash) { this.senha = hash; }
 	public void registrarLogin(Instant quando) { this.ultimoLoginEm = quando; }
