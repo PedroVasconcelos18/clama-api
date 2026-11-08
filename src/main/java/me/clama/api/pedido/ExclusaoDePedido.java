@@ -5,8 +5,12 @@ import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 import me.clama.api.comum.cripto.Fernet;
+import me.clama.api.freemium.JobConfirmacaoFreemium;
+import me.clama.api.oracao.JobAlertaAdmin;
 import me.clama.api.oracao.JobEnviarOracao;
 import me.clama.api.oracao.JobGerarOracao;
 import me.clama.api.oracao.JobReenviarOracao;
@@ -20,13 +24,17 @@ import org.springframework.transaction.annotation.Transactional;
  * O delete de Pedido do lgpd_delete (mapa 8 §8.4, D2), na transacao do chamador (a mesma do ExclusaoDeUsuario). As FKs
  * sao DEFERRABLE sem ON DELETE: o CASCADE e o SET_NULL do ORM estao aqui, e o PROTECT do Repasse vira anonimizacao
  * (registro contabil de dinheiro repassado a terceiro; LGPD art. 16, I). Ordem: tokens do freemium (CASCADE),
- * webhookevento.pedido (SET_NULL), jobs pendentes do pedido, e o pedido.
+ * webhookevento.pedido (SET_NULL), jobs pendentes do pedido (gerar, enviar, reenviar, alerta-admin, confirmacao-freemium), e o pedido.
  */
 @Service
 public class ExclusaoDePedido {
-    /** Jobs que leem o pedido e mandariam e-mail/oracao de um pedido anonimizado. */
-    private static final List<String> JOBS = List.of(JobGerarOracao.NOME, JobEnviarOracao.NOME,
-            JobReenviarOracao.NOME);
+    /** Jobs que leem o pedido e mandariam e-mail/oracao/alerta de um pedido anonimizado: nome e chave de instancia. */
+    private static final Map<String, Function<UUID, String>> JOBS = Map.of(
+            JobGerarOracao.NOME, JobGerarOracao::instancia,
+            JobEnviarOracao.NOME, JobEnviarOracao::instancia,
+            JobReenviarOracao.NOME, JobReenviarOracao::instancia,
+            JobAlertaAdmin.NOME, JobAlertaAdmin::instancia,
+            JobConfirmacaoFreemium.NOME, JobConfirmacaoFreemium::instancia);
 
     private final JdbcTemplate jdbc;
     private final Fernet fernet;
@@ -49,9 +57,9 @@ public class ExclusaoDePedido {
         // scheduled_tasks nasce no 1o deploy do Java (Flyway); antes dele, o comando roda sem a tabela (D6)
         if (Boolean.TRUE.equals(jdbc.queryForObject("select to_regclass('scheduled_tasks') is not null",
                 Boolean.class))) {
-            Object[] instancias = pedidos.stream().flatMap(p -> JOBS.stream().map(j -> j + "/" + p)).toArray();
+            Object[] instancias = pedidos.stream().flatMap(p -> JOBS.values().stream().map(j -> j.apply(p))).toArray();
             jdbc.update("delete from scheduled_tasks where task_name = any(?) and task_instance = any(?)",
-                    array("text", JOBS.toArray()), array("text", instancias));
+                    array("text", JOBS.keySet().toArray()), array("text", instancias));
         }
         // o campo cifrado vazio e a cifra de "" (NOT NULL), como o django-encrypted-model-fields grava
         String vazio = fernet.cifrar("");
