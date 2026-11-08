@@ -109,7 +109,7 @@ class MarcarRepasseTransferidoTest {
         assertThat(((java.sql.Timestamp) l.get("transferido_em")).toInstant()).isEqualTo(AGORA); // Clock injetado
     }
 
-    /** Pagar o mesmo repasse duas vezes e o erro caro que isso previne. */
+    /** Pagar o mesmo repasse duas vezes e o erro caro que isso previne (o UPDATE condicional faz o papel da guarda do model). */
     @Test
     void recusaQuitarDuasVezes() {
         UUID r = repasse();
@@ -265,6 +265,48 @@ class MarcarRepasseTransferidoTest {
         String comprovante = venceu.out().contains("'PIX-A'") ? "PIX-A" : "PIX-B";
         assertThat(List.of(linha(a), linha(b))).allSatisfy(l -> assertThat(l)
                 .containsEntry("status", "transferido").containsEntry("comprovante", comprovante));
+    }
+
+    /**
+     * Quitacao parcial: com dois repasses no periodo, a trava segura o UPDATE do comando; nela mesma (outra transacao
+     * que nao a do comando) um dos dois e quitado e confirmado. Solta, a contagem nao fecha (1 de 2): falha, o outro
+     * continua registrado e, com --autor, nao sobra django_admin_log.
+     */
+    @Test
+    void quitacaoParcialFazRollbackSemAuditoria() throws Exception {
+        Usuario u = new Usuario();
+        u.setEmail("tesouraria@exemplo.com");
+        u.setPassword("x");
+        long autor = usuarios.saveAndFlush(u).getId();
+        jdbc.update("update users_user set is_staff = true where id = ?", autor);
+        jdbc.update("insert into django_content_type (app_label, model) values ('instituicoes', 'repasse') "
+                + "on conflict do nothing");
+        UUID a = repasse();
+        UUID b = repasse();
+        CompletableFuture<Saida> comando;
+        try (Connection trava = dataSource.getConnection()) {
+            trava.setAutoCommit(false);
+            trava.createStatement().execute("select id from instituicoes_repasse for update");
+            comando = CompletableFuture.supplyAsync(() -> marcar("--comprovante=PIX-CMD", "--confirmar", "--autor=" + autor));
+            long limite = System.nanoTime() + TimeUnit.SECONDS.toNanos(20);
+            while (esperandoTrava() < 1) {
+                assertThat(System.nanoTime()).as("o comando no UPDATE").isLessThan(limite);
+                Thread.onSpinWait();
+            }
+            try (var quita = trava.prepareStatement("update instituicoes_repasse set status = 'transferido', "
+                    + "comprovante = 'PIX-OUTRA' where id = ?")) {
+                quita.setObject(1, a);
+                quita.executeUpdate();
+            }
+            trava.commit();
+        }
+        Saida s = comando.get(30, TimeUnit.SECONDS);
+
+        assertThat(s.exit()).as(s.err()).isEqualTo(1);
+        assertThat(s.err()).startsWith("CommandError: 1 de 2 repasse(s) já não estavam pendentes");
+        assertThat(linha(a)).containsEntry("status", "transferido").containsEntry("comprovante", "PIX-OUTRA");
+        assertThat(linha(b)).containsEntry("status", "registrado").containsEntry("comprovante", "");
+        assertThat(jdbc.queryForObject("select count(*) from django_admin_log", Integer.class)).isZero();
     }
 
     private int esperandoTrava() {
