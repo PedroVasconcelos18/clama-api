@@ -1,8 +1,6 @@
 package me.clama.api.identidade.api;
 
 import jakarta.servlet.http.HttpServletRequest;
-import java.time.Clock;
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,11 +12,10 @@ import me.clama.api.comum.api.DatasDrf;
 import me.clama.api.comum.api.PaginaLimitOffset;
 import me.clama.api.comum.api.ParametrosDeQuery;
 import me.clama.api.comum.auditoria.RegistroDeAuditoria;
-import me.clama.api.comum.cripto.HashIdentificador;
 import me.clama.api.comum.email.ValidadorDeEmail;
 import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.comum.texto.TextoPython;
-import me.clama.api.conta.ProvisionamentoDeConta;
+import me.clama.api.identidade.CriacaoDeAdmin;
 import me.clama.api.identidade.ExclusaoDeUsuario;
 import me.clama.api.identidade.Usuario;
 import me.clama.api.identidade.UsuarioRepository;
@@ -49,7 +46,6 @@ class ClientesAdminController {
     private static final String ITEM = "/api/admin/customers/{id:[0-9]+}/";
     private static final String APP = "users";
     private static final String MODEL = "user";
-    private static final Object ADICIONADO = List.of(Map.of("added", Map.of()));
     /** AdminPasswordChangeForm.changed_data e ["password"]. */
     private static final Object SENHA_MUDOU = List.of(Map.of("changed", Map.of("fields", List.of("password"))));
     private static final String CONTAGENS = """
@@ -68,26 +64,22 @@ class ClientesAdminController {
     private final SenhaDjango senhas;
     private final ValidadorDeSenha validador;
     private final ServicoDeTokens tokens;
-    private final ProvisionamentoDeConta contas;
+    private final CriacaoDeAdmin criacao;
     private final ExclusaoDeUsuario exclusao;
     private final RegistroDeAuditoria auditoria;
-    private final Clock relogio;
-    private final HashIdentificador hash;
 
     ClientesAdminController(JdbcTemplate jdbc, TransactionTemplate tx, UsuarioRepository usuarios, SenhaDjango senhas,
-            ValidadorDeSenha validador, ServicoDeTokens tokens, ProvisionamentoDeConta contas,
-            ExclusaoDeUsuario exclusao, RegistroDeAuditoria auditoria, Clock relogio, HashIdentificador hash) {
+            ValidadorDeSenha validador, ServicoDeTokens tokens, CriacaoDeAdmin criacao,
+            ExclusaoDeUsuario exclusao, RegistroDeAuditoria auditoria) {
         this.jdbc = jdbc;
         this.tx = tx;
         this.usuarios = usuarios;
         this.senhas = senhas;
         this.validador = validador;
         this.tokens = tokens;
-        this.contas = contas;
+        this.criacao = criacao;
         this.exclusao = exclusao;
         this.auditoria = auditoria;
-        this.relogio = relogio;
-        this.hash = hash;
     }
 
     record Item(long id, String email, String nome_completo, String date_joined, String freemium_used_at,
@@ -207,26 +199,12 @@ class ClientesAdminController {
         String nome = campos.texto("nome_completo", false, null, CamposDrf.maxLength(120));
         String senha = campos.texto("password", s -> validador.validar(s, email));
         campos.validar();
-        long novo = tx.execute(st -> {
-            contas.travarConta(email);
-            // o unico do model e sensivel a caixa; aqui vale o e-mail em minusculas ou o hash canonico (Gmail sem
-            // pontos/+tag), o mesmo casamento do provisionamento: senao a doacao do doador cairia na conta do admin.
-            // Customer existente se promove pelo PATCH.
-            if (!usuarios.buscarPorEmailOuHash(email, hash.hashEmail(email)).isEmpty()) {
-                throw new CamposDrf.Invalidos(Map.of("email", List.of("Usuário com este E-mail já existe.")));
-            }
-            Usuario u = new Usuario();
-            u.setEmail(email);
-            u.setNomeCompleto(nome == null ? "" : nome);
-            u.setPassword(senhas.encode(senha));
-            u.setClamaAdmin(true);
-            u.setStaff(true);
-            u.setDateJoined(OffsetDateTime.now(relogio));
-            long id = usuarios.saveAndFlush(u).getId();
-            auditoria.registrar(eu.getId(), APP, MODEL, String.valueOf(id), String.valueOf(id),
-                    RegistroDeAuditoria.ADICAO, ADICIONADO);
-            return id;
-        });
+        long novo;
+        try {
+            novo = criacao.criar(email, nome, senha, false, eu.getId());
+        } catch (CriacaoDeAdmin.EmailJaExiste e) {
+            throw new CamposDrf.Invalidos(Map.of("email", List.of(e.getMessage())));
+        }
         return ResponseEntity.status(201).body(detalhe(String.valueOf(novo)));
     }
 

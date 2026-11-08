@@ -54,10 +54,14 @@ public class ExclusaoDeUsuario {
 
     /** Comentario.customer e Reacao.customer (CASCADE). O usuario, os pedidos e os bans ficam. */
     @Transactional
-    public void purgarBlog(long id) {
-        jdbc.update("delete from blog_comentario where customer_id = ?", id);
-        jdbc.update("delete from blog_reacao where customer_id = ?", id);
+    public Purga purgarBlog(long id) {
+        int comentarios = jdbc.update("delete from blog_comentario where customer_id = ?", id);
+        int reacoes = jdbc.update("delete from blog_reacao where customer_id = ?", id);
+        return new Purga(comentarios, reacoes);
     }
+
+    /** O que purgarBlog apagou. */
+    public record Purga(int comentarios, int reacoes) {}
 
     /** false se o usuario nao existe. 409 pastoral nas guardas; nada e apagado. */
     @Transactional

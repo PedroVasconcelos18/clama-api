@@ -16,13 +16,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import me.clama.api.ClamaApiApplication;
+import me.clama.api.blog.comando.PurgarDadosBlogCustomer;
 import me.clama.api.catalogo.instituicao.ComandoInstituicoes;
 import me.clama.api.comum.agenda.ComandoTarefa;
 import me.clama.api.comum.erro.PastoralException;
 import me.clama.api.comum.observabilidade.SentryConfig;
+import me.clama.api.identidade.comando.CreateClamaAdmin;
 import me.clama.api.instituicao.repasse.comando.AuditarRepasses;
 import me.clama.api.instituicao.repasse.comando.MarcarRepasseTransferido;
 import me.clama.api.instituicao.repasse.comando.RelatorioRepasse;
+import me.clama.api.pedido.comando.AdotarPedidosOrfaos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.Banner;
@@ -50,7 +53,11 @@ public final class Comandos {
             new Definicao("relatorio_repasse", RelatorioRepasse.class, RelatorioRepasse.OPCOES),
             new Definicao("auditar_repasses", AuditarRepasses.class, AuditarRepasses.OPCOES),
             new Definicao("marcar_repasse_transferido", MarcarRepasseTransferido.class,
-                    MarcarRepasseTransferido.OPCOES));
+                    MarcarRepasseTransferido.OPCOES),
+            new Definicao("adotar_pedidos_orfaos", AdotarPedidosOrfaos.class, AdotarPedidosOrfaos.OPCOES),
+            new Definicao("create_clama_admin", CreateClamaAdmin.class, CreateClamaAdmin.OPCOES),
+            new Definicao("purgar_dados_blog_customer", PurgarDadosBlogCustomer.class,
+                    PurgarDadosBlogCustomer.OPCOES));
 
     private Comandos() {
     }
