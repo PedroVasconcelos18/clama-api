@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.sql.Array;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -102,6 +103,7 @@ public class LgpdDelete implements Comando {
             c.out().println("Execute com --confirm para deletar permanentemente.");
             return 0;
         }
+        recusarEmProcessamento(t.pedidos(), false);
         c.out().println();
         c.out().println("ATENÇÃO: Você está prestes a DELETAR PERMANENTEMENTE " + (linhas.size() - comRepasse)
                 + " pedido(s), anonimizar " + comRepasse + " pedido(s) com repasse e excluir " + t.contas().size()
@@ -121,6 +123,14 @@ public class LgpdDelete implements Comando {
         // ids coletados antes: o excluir() solta o user_id dos pedidos da conta
         int[] contas = {0};
         ExclusaoDePedido.Resultado r = tx.execute(st -> {
+            // a busca e o prompt levam tempo: o que sera apagado tem de ser exatamente o que foi listado
+            BuscaDoTitular.Titular agora = busca.buscar(email);
+            if (!new HashSet<>(agora.pedidos()).equals(new HashSet<>(t.pedidos()))
+                    || !new HashSet<>(agora.contas()).equals(new HashSet<>(t.contas()))) {
+                throw new ErroDeComando("Os pedidos ou contas do titular mudaram desde a listagem. Nada foi "
+                        + "deletado; rode de novo.");
+            }
+            recusarEmProcessamento(t.pedidos(), true);
             for (long conta : t.contas()) {
                 contas[0] += exclusaoDeUsuario.excluir(conta) ? 1 : 0;
             }
@@ -153,6 +163,21 @@ public class LgpdDelete implements Comando {
         }
         c.out().println("A ação foi registrada no log e Sentry para fins de auditoria.");
         return 0;
+    }
+
+    /** Status com job na fila ou varredura que reescreveria ou usaria a linha anonimizada. */
+    private static final List<String> EM_PROCESSAMENTO = List.of("pago", "gerando_oracao", "oracao_gerada",
+            "aguardando_reenvio");
+
+    /** Na transacao, trava as linhas (for update): o status nao muda entre a checagem e o delete. */
+    private void recusarEmProcessamento(List<UUID> pedidos, boolean travar) {
+        List<UUID> ocupados = jdbc.queryForList("select id from orders_pedido where id = any(?) and status = any(?)"
+                + (travar ? " for update" : ""), UUID.class, array("uuid", pedidos.toArray()),
+                array("text", EM_PROCESSAMENTO.toArray()));
+        if (!ocupados.isEmpty()) {
+            throw new ErroDeComando("Pedido em processamento, tente mais tarde (" + ocupados.size()
+                    + " pedido(s) em pago, gerando_oracao, oracao_gerada ou aguardando_reenvio). Nada foi deletado.");
+        }
     }
 
     private int contar(String tabela, long customer) {

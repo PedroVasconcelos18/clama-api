@@ -27,6 +27,11 @@ import me.clama.api.comum.observabilidade.TransportEmMemoria;
 import me.clama.api.identidade.Usuario;
 import me.clama.api.identidade.UsuarioRepository;
 import me.clama.api.pedido.ExclusaoDePedido;
+import me.clama.api.freemium.JobConfirmacaoFreemium;
+import me.clama.api.oracao.JobAlertaAdmin;
+import me.clama.api.oracao.JobEnviarOracao;
+import me.clama.api.oracao.JobGerarOracao;
+import me.clama.api.oracao.JobReenviarOracao;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -157,11 +162,14 @@ class LgpdTest {
     }
 
     void jobs(UUID pedido) {
-        for (String nome : List.of("gerar-oracao", "enviar-oracao", "reenviar-oracao")) {
-            jdbc.update("""
-                    insert into scheduled_tasks (task_name, task_instance, execution_time, picked, version)
-                    values (?, ?, now() + interval '1 hour', false, 1)""", nome, nome + "/" + pedido);
-        }
+        Map<String, String> instancias = Map.of(JobGerarOracao.NOME, JobGerarOracao.instancia(pedido),
+                JobEnviarOracao.NOME, JobEnviarOracao.instancia(pedido), JobReenviarOracao.NOME,
+                JobReenviarOracao.instancia(pedido), JobAlertaAdmin.NOME, JobAlertaAdmin.instancia(pedido),
+                JobConfirmacaoFreemium.NOME, JobConfirmacaoFreemium.instancia(pedido));
+        instancias.forEach((nome, instancia) -> jdbc.update("""
+                insert into scheduled_tasks (task_name, task_instance, execution_time, picked, version)
+                values (?, ?, now() + interval '1 hour', false, 1)""", nome, instancia));
+        assertThat(instancias.values()).contains("alerta-admin/" + pedido, "confirmacao-freemium/" + pedido);
     }
 
     void blacklist(String email) {
@@ -198,10 +206,14 @@ class LgpdTest {
     record Saida(String out, String err, int exit) {}
 
     Saida rodar(String stdin, String... args) {
+        return rodar(new BufferedReader(new StringReader(stdin)), args);
+    }
+
+    Saida rodar(BufferedReader stdin, String... args) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ByteArrayOutputStream err = new ByteArrayOutputStream();
         int exit = Comandos.executar(args, new PrintStream(out, true, UTF_8), new PrintStream(err, true, UTF_8),
-                new BufferedReader(new StringReader(stdin)), dir, ctx);
+                stdin, dir, ctx);
         return new Saida(out.toString(UTF_8), err.toString(UTF_8), exit);
     }
 
@@ -383,6 +395,42 @@ class LgpdTest {
         assertThat(s.exit()).isOne();
         assertThat(s.err()).startsWith("CommandError: Essa é a última conta de admin ativa.");
         assertThat(estado()).isEqualTo(antes);
+    }
+
+    @Test
+    void pedidoEmProcessamentoRecusaTudoEExit1() {
+        Pessoa p = pessoa();
+        for (String status : List.of("pago", "gerando_oracao", "oracao_gerada", "aguardando_reenvio")) {
+            jdbc.update("update orders_pedido set status = ? where id = ?", status, p.comRepasse());
+            String antes = estado();
+
+            Saida s = deletar("DELETAR\n", "--confirm");
+
+            assertThat(s.exit()).as(status).isOne();
+            assertThat(s.err()).as(status).startsWith("CommandError: Pedido em processamento, tente mais tarde");
+            assertThat(estado()).as(status).isEqualTo(antes);
+        }
+    }
+
+    /** O titular ganha um pedido entre a listagem e a confirmacao (a resposta do stdin chega tarde): aborta, nada muda. */
+    @Test
+    void conjuntoQueMudouDepoisDaListagemAbortaSemApagarNada() {
+        pessoa();
+        String[] antes = {null};
+        BufferedReader lento = new BufferedReader(new StringReader("DELETAR\n")) {
+            @Override
+            public String readLine() throws java.io.IOException {
+                pedido(EMAIL, null); // pedido novo, sem conta
+                antes[0] = estado();
+                return super.readLine();
+            }
+        };
+
+        Saida s = rodar(lento, "lgpd_delete", "--email", EMAIL, "--confirm");
+
+        assertThat(s.exit()).as(s.out()).isOne();
+        assertThat(s.err()).startsWith("CommandError: Os pedidos ou contas do titular mudaram desde a listagem");
+        assertThat(estado()).isEqualTo(antes[0]);
     }
 
     @Test
