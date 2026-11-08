@@ -3,17 +3,21 @@ package me.clama.api.instituicao.repasse.comando;
 import static me.clama.api.comum.texto.TextoPython.repr;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import me.clama.api.comum.comando.Chamada;
 import me.clama.api.comum.comando.Comando;
 import me.clama.api.comum.comando.Comandos.Opcao;
 import me.clama.api.comum.comando.ErroDeComando;
 import me.clama.api.instituicao.repasse.comando.RelatorioRepasse.Alvo;
+import me.clama.api.pedido.StatusPedido;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -28,8 +32,9 @@ public class AuditarRepasses implements Comando {
     static final String CRITICO = "CRÍTICO";
     static final String ATENCAO = "ATENÇÃO";
     /** STATUS_POS_PAGAMENTO: tudo menos aguardando_pagamento e aguardando_confirmacao_email (ERRO entra). */
-    static final Set<String> POS_PAGAMENTO = Set.of("pago", "gerando_oracao", "oracao_gerada", "enviada",
-            "aguardando_reenvio", "erro");
+    static final Set<String> POS_PAGAMENTO = Arrays.stream(StatusPedido.values())
+            .filter(s -> s != StatusPedido.AGUARDANDO_PAGAMENTO && s != StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL)
+            .map(StatusPedido::valor).collect(Collectors.toUnmodifiableSet());
 
     /** TipoAchado, com a gravidade e a EXPLICACAO do comando. */
     enum Tipo {
@@ -137,7 +142,7 @@ public class AuditarRepasses implements Comando {
                 select p.id, p.status, p.valor_centavos, i.nome
                 from orders_pedido p join instituicoes_instituicao i on i.id = p.instituicao_id
                 where p.eh_gratuito = false and p.valor_centavos > 0
-                  and p.status in ('pago', 'gerando_oracao', 'oracao_gerada', 'enviada', 'aguardando_reenvio', 'erro')
+                  and p.status = any(?)
                   and not exists (select 1 from instituicoes_repasse r where r.pedido_id = p.id)"""
                 + filtroPedido + " order by p.created_at desc, p.id", rs -> {
                     long v = rs.getLong("valor_centavos");
@@ -145,7 +150,8 @@ public class AuditarRepasses implements Comando {
                     achados.add(new Achado(Tipo.ORFAO, rs.getString("nome"), rs.getString("id"), "pedido "
                             + rs.getString("status") + " de " + v + " centavos sem linha no ledger (repasse devido: "
                             + devido + " centavos)", devido));
-                }, args);
+                }, Stream.concat(Stream.of((Object) POS_PAGAMENTO.toArray(String[]::new)), Arrays.stream(args))
+                        .toArray());
         // problemas do ledger: o Django nao ordena (ordem fisica); aqui created_at, id
         jdbc.query("""
                 select r.pedido_id, r.valor_base_centavos, r.percentual, r.valor_centavos, i.nome, p.status,
