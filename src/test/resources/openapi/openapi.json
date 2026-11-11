@@ -76,6 +76,31 @@
         },
         "type" : "object"
       },
+      "InstituicaoAdmin" : {
+        "properties" : {
+          "ativo" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "logoUrl" : {
+            "type" : "string"
+          },
+          "nome" : {
+            "type" : "string"
+          },
+          "ordem" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "temLogo" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
       "InstituicaoPublica" : {
         "properties" : {
           "id" : {
@@ -99,6 +124,78 @@
         },
         "type" : "object"
       },
+      "MudancaDeInstituicao" : {
+        "properties" : {
+          "ativo" : {
+            "type" : "boolean"
+          },
+          "nome" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "pattern" : ".*\\S.*",
+            "type" : "string"
+          },
+          "ordem" : {
+            "format" : "int32",
+            "maximum" : 32767,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "MudancaDePlano" : {
+        "properties" : {
+          "ativo" : {
+            "type" : "boolean"
+          },
+          "complexidade" : {
+            "enum" : [ "SIMPLES", "COM_VERSICULO", "COM_PROFECIA_E_VERSICULOS" ],
+            "type" : "string"
+          },
+          "descricao" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "nome" : {
+            "maxLength" : 80,
+            "minLength" : 0,
+            "pattern" : ".*\\S.*",
+            "type" : "string"
+          },
+          "ordem" : {
+            "format" : "int32",
+            "maximum" : 32767,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "valorCentavos" : {
+            "format" : "int64",
+            "maximum" : 2147483647,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "NovaInstituicao" : {
+        "properties" : {
+          "nome" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "ordem" : {
+            "format" : "int32",
+            "maximum" : 32767,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "nome" ],
+        "type" : "object"
+      },
       "NovaSenhaDoAdmin" : {
         "properties" : {
           "senha" : {
@@ -108,6 +205,38 @@
           }
         },
         "required" : [ "senha" ],
+        "type" : "object"
+      },
+      "NovoPlano" : {
+        "properties" : {
+          "complexidade" : {
+            "enum" : [ "SIMPLES", "COM_VERSICULO", "COM_PROFECIA_E_VERSICULOS" ],
+            "type" : "string"
+          },
+          "descricao" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "nome" : {
+            "maxLength" : 80,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "ordem" : {
+            "format" : "int32",
+            "maximum" : 32767,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "valorCentavos" : {
+            "format" : "int64",
+            "maximum" : 2147483647,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "nome", "valorCentavos" ],
         "type" : "object"
       },
       "PageMetadata" : {
@@ -157,6 +286,40 @@
           }
         },
         "required" : [ "email" ],
+        "type" : "object"
+      },
+      "PlanoAdmin" : {
+        "properties" : {
+          "ativo" : {
+            "type" : "boolean"
+          },
+          "complexidade" : {
+            "enum" : [ "SIMPLES", "COM_VERSICULO", "COM_PROFECIA_E_VERSICULOS" ],
+            "type" : "string"
+          },
+          "descricao" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "nome" : {
+            "type" : "string"
+          },
+          "ordem" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tipo" : {
+            "enum" : [ "COMUM", "GRATUITO", "VALOR_LIVRE" ],
+            "type" : "string"
+          },
+          "valorCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
         "type" : "object"
       },
       "PlanoPublico" : {
@@ -319,6 +482,174 @@
   },
   "openapi" : "3.1.0",
   "paths" : {
+    "/api/admin/instituicoes" : {
+      "get" : {
+        "operationId" : "instituicoes",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/InstituicaoAdmin"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "catalogo-admin-controller" ]
+      },
+      "post" : {
+        "operationId" : "criarInstituicao",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/NovaInstituicao"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InstituicaoAdmin"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "catalogo-admin-controller" ]
+      }
+    },
+    "/api/admin/instituicoes/{id}" : {
+      "patch" : {
+        "operationId" : "alterarInstituicao",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MudancaDeInstituicao"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InstituicaoAdmin"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "catalogo-admin-controller" ]
+      }
+    },
+    "/api/admin/planos" : {
+      "get" : {
+        "operationId" : "planos",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/PlanoAdmin"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "catalogo-admin-controller" ]
+      },
+      "post" : {
+        "operationId" : "criarPlano",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/NovoPlano"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlanoAdmin"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "catalogo-admin-controller" ]
+      }
+    },
+    "/api/admin/planos/{id}" : {
+      "patch" : {
+        "operationId" : "alterarPlano",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MudancaDePlano"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlanoAdmin"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "catalogo-admin-controller" ]
+      }
+    },
     "/api/admin/usuarios" : {
       "get" : {
         "operationId" : "listar",
@@ -707,7 +1038,7 @@
     },
     "/api/instituicoes" : {
       "get" : {
-        "operationId" : "instituicoes",
+        "operationId" : "instituicoes_1",
         "responses" : {
           "200" : {
             "content" : {
@@ -756,7 +1087,7 @@
     },
     "/api/planos" : {
       "get" : {
-        "operationId" : "planos",
+        "operationId" : "planos_1",
         "responses" : {
           "200" : {
             "content" : {

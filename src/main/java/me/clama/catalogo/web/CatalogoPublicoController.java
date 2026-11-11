@@ -66,9 +66,7 @@ class CatalogoPublicoController {
 		Map<Long, String> hashes = logos.hashes(ativas.stream().map(i -> i.getId()).toList()).stream()
 				.collect(Collectors.toMap(h -> h.getInstituicaoId(), h -> h.getSha256()));
 		var lista = ativas.stream().map(i -> new InstituicaoPublica(i.getId(), i.getNome(),
-				hashes.containsKey(i.getId())
-						? "/api/instituicoes/" + i.getId() + "/logo?v=" + hashes.get(i.getId()).substring(0, 8)
-						: null))
+				InstituicaoPublica.urlDaLogo(i.getId(), hashes.get(i.getId()))))
 				.toList();
 		return ResponseEntity.ok().cacheControl(LISTA).eTag(etag(lista.toString())).body(lista);
 	}
