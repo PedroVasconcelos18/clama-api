@@ -32,6 +32,11 @@ class ValidadorDeLogoTest {
 	}
 
 	@Test
+	void poliglotaEAceitoPeloDesenhoOMimGravadoENosniffProtegem() {
+		assertThat(ValidadorDeLogo.validar(ascii("GIF89a<script>alert(1)</script>"))).isEqualTo("image/gif");
+	}
+
+	@Test
 	void recusaOQueNaoEImagemRaster() {
 		var svg = ascii("<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>");
 		var textoComoPng = "isto nao e um png".getBytes(StandardCharsets.UTF_8);

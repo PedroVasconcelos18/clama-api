@@ -90,6 +90,14 @@ class LogoUploadTest {
 		throw new AssertionError("instituicao sumiu");
 	}
 
+	private String listaPublicaUrl(long id) throws Exception {
+		var res = HttpClient.newHttpClient().send(
+				HttpRequest.newBuilder(URI.create("http://localhost:" + porta + "/api/instituicoes")).build(),
+				HttpResponse.BodyHandlers.ofString());
+		for (var n : json(res)) if (n.get("id").asLong() == id) return n.get("logoUrl").asString();
+		throw new AssertionError("instituicao sumiu da lista publica");
+	}
+
 	private String auditoriaDoLogo(long id) {
 		return jdbc.sql("select diff::text from auditoria where entidade = 'instituicao' and entidade_id = :id and acao = 'MUDANCA' order by id desc limit 1")
 				.param("id", Long.toString(id)).query(String.class).single();
@@ -110,6 +118,7 @@ class LogoUploadTest {
 		assertThat(primeira.headers().firstValue("Content-Type")).hasValue("image/png"); // detectado, nao declarado
 		var etag1 = primeira.headers().firstValue("ETag").orElseThrow();
 		var url1 = logoUrlDaLista(admin, id);
+		var publica1 = listaPublicaUrl(id);
 		assertThat(auditoriaDoLogo(id)).contains("logo").contains("\"antes\": null").doesNotContain("PNG");
 
 		assertThat(admin.putArquivo(caminho(id), "logo", "b.png", "image/png", PNG2).statusCode()).isEqualTo(200);
@@ -117,7 +126,20 @@ class LogoUploadTest {
 		assertThat(segunda.body()).isEqualTo(PNG2);
 		assertThat(segunda.headers().firstValue("ETag").orElseThrow()).isNotEqualTo(etag1);
 		assertThat(logoUrlDaLista(admin, id)).isNotEqualTo(url1);
+		assertThat(listaPublicaUrl(id)).isNotEqualTo(publica1);
 		assertThat(auditoriaDoLogo(id)).doesNotContain("\"antes\": null");
+	}
+
+	@Test
+	void poliglotaGifComScriptEServidoComoGifNosniff() throws Exception {
+		var admin = entrar(Papel.ADMIN);
+		var id = instituicao(admin);
+		var poliglota = "GIF89a<script>alert(1)</script>".getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
+		assertThat(admin.putArquivo(caminho(id), "logo", "x.html", "text/html", poliglota).statusCode()).isEqualTo(200);
+		var res = publica(id);
+		assertThat(res.statusCode()).isEqualTo(200);
+		assertThat(res.headers().firstValue("Content-Type")).hasValue("image/gif");
+		assertThat(res.headers().firstValue("X-Content-Type-Options")).hasValue("nosniff");
 	}
 
 	@Test

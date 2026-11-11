@@ -204,7 +204,6 @@ public class CatalogoAdminServico {
 		}
 	}
 
-
 	/** Roda na transacao propria; a violacao do indice do nome ativo vira 400 depois do rollback. */
 	private <T> T gravar(String mensagemDuplicado, Supplier<T> escrita) {
 		try {
