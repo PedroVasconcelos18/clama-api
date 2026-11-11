@@ -121,8 +121,8 @@ abstract class PagamentoAdminBase {
 		var transferido = status.equals("TRANSFERIDO") ? "now()" : "null";
 		var cancelado = status.equals("CANCELADO") ? "now()" : "null";
 		return jdbc.queryForObject("insert into repasse (pedido_id, instituicao_id, valor_base_centavos, percentual, valor_centavos, "
-				+ "status, criado_em, transferido_em, cancelado_em) values (?, ?, 3000, 20, 600, ?, now(), " + transferido + ", "
-				+ cancelado + ") returning id", Long.class, pedido, instituicao, status);
+				+ "status, criado_em, transferido_em, cancelado_em, comprovante) values (?, ?, 3000, 20, 600, ?, now(), " + transferido + ", "
+				+ cancelado + ", " + (status.equals("TRANSFERIDO") ? "'comp-teste'" : "null") + ") returning id", Long.class, pedido, instituicao, status);
 	}
 
 	static void aprovado(UUID pedido) {

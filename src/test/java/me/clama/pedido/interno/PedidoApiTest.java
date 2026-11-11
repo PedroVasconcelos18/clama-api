@@ -123,6 +123,21 @@ class PedidoApiTest {
 	}
 
 	@Test
+	void ultimoErroApareceNoResumoENosDadosELimpaAoRegistrarOracao() {
+		var id = novo("doador-" + UUID.randomUUID() + "@exemplo.com").getId();
+		assertThat(api.resumo(id).orElseThrow().ultimoErro()).isNull();
+		api.confirmarPagamento(id);
+		api.iniciarGeracao(id);
+		api.agendarNovaTentativa(id, "timeout");
+		assertThat(api.resumo(id).orElseThrow().ultimoErro()).isEqualTo("timeout");
+		assertThat(api.dadosParaOracao(id).ultimoErro()).isEqualTo("timeout");
+		api.iniciarGeracao(id);
+		api.registrarOracao(id, "Senhor...");
+		assertThat(api.resumo(id).orElseThrow().ultimoErro()).isNull();
+		assertThat(api.dadosParaOracao(id).ultimoErro()).isNull();
+	}
+
+	@Test
 	void cicloDeGeracaoPelaApi() {
 		var id = novo("doador-" + UUID.randomUUID() + "@exemplo.com").getId();
 		api.confirmarPagamento(id);

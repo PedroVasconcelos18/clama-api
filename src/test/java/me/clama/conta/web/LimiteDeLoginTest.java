@@ -57,6 +57,15 @@ class LimiteDeLoginTest {
 	}
 
 	@Test
+	void variantesDoMesmoGmailDividemOLimite() throws Exception {
+		var sufixo = Long.toHexString(System.nanoTime());
+		var nav = new Navegador(porta);
+		for (int i = 0; i < 5; i++) assertThat(nav.login("a.b" + sufixo + "@gmail.com", "errada").statusCode()).isEqualTo(401);
+
+		assert429(nav.login("ab" + sufixo + "+x@gmail.com", "errada")); // mesmo e-mail canonico
+	}
+
+	@Test
 	void xffForjadoNaoBurlaLimitePorEmail() throws Exception {
 		var email = emailUnico();
 		var nav = new Navegador(porta);

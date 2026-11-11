@@ -32,9 +32,6 @@ public interface PedidoApi {
 	/** Admin: pede reenvio de oracao ja gerada e publica {@link ReenvioSolicitado}. */
 	void solicitarReenvio(UUID id);
 
-	/** Admin (D22): corrige so dados, com o pedido travado; devolve os nomes dos campos que mudaram. Status, plano e valor ficam. */
-	List<String> corrigirDados(UUID id, CorrecaoDeDados correcao);
-
 	DadosParaOracao dadosParaOracao(UUID id);
 
 	/** Job de geracao, ao comecar (tambem na retentativa). Nunca a partir de AGUARDANDO_PAGAMENTO. */

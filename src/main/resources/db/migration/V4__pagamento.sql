@@ -49,6 +49,8 @@ CREATE TABLE repasse (
 	transferido_em timestamptz,
 	cancelado_em timestamptz,
 	motivo varchar(200),
+	comprovante varchar(120),
+	CHECK (status <> 'TRANSFERIDO' OR comprovante IS NOT NULL),
 	CHECK ((status = 'TRANSFERIDO') = (transferido_em IS NOT NULL)),
 	CHECK ((status = 'CANCELADO') = (cancelado_em IS NOT NULL))
 );

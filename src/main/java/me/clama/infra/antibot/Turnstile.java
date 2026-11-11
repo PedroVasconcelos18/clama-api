@@ -3,10 +3,12 @@ package me.clama.infra.antibot;
 import io.sentry.Sentry;
 import java.time.Duration;
 import java.util.Map;
+import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.client.RestClient;
@@ -30,9 +32,16 @@ public class Turnstile {
 	private final Cliente cliente;
 	private final String secret;
 	private final boolean aceitaChaveDeTeste;
+	private final Consumer<Duration> dormir;
 
 	/** @param aceitaChaveDeTeste true so nos perfis local e de teste: la a chave de teste da Cloudflare aprova sem rede. */
 	public Turnstile(String url, String secret, boolean aceitaChaveDeTeste) {
+		this(url, secret, aceitaChaveDeTeste, Turnstile::dormir);
+	}
+
+	/** {@code dormir}: a espera entre as tentativas do 503 (injetavel para os testes nao esperarem). */
+	Turnstile(String url, String secret, boolean aceitaChaveDeTeste, Consumer<Duration> dormir) {
+		this.dormir = dormir;
 		var fabrica = new SimpleClientHttpRequestFactory();
 		fabrica.setConnectTimeout(Duration.ofSeconds(5));
 		fabrica.setReadTimeout(Duration.ofSeconds(10));
@@ -53,13 +62,34 @@ public class Turnstile {
 		form.add("secret", secret);
 		form.add("response", token);
 		if (ip != null && !ip.isBlank()) form.add("remoteip", ip);
+		// INV:130: 503 da Cloudflare e retentado com 1 s e 2 s de espera (3 tentativas); qualquer outra falha nao
+		for (int tentativa = 1;; tentativa++) {
+			try {
+				var resposta = cliente.siteverify(form);
+				return resposta != null && Boolean.TRUE.equals(resposta.get("success"));
+			} catch (HttpServerErrorException.ServiceUnavailable e) {
+				if (tentativa < 3) {
+					dormir.accept(Duration.ofSeconds(1L << (tentativa - 1)));
+					continue;
+				}
+				return indisponivel(e);
+			} catch (RuntimeException e) {
+				return indisponivel(e);
+			}
+		}
+	}
+
+	private static boolean indisponivel(RuntimeException e) {
+		LOG.warn("Turnstile indisponivel: {}", e.getMessage());
+		Sentry.captureException(e);
+		return false;
+	}
+
+	private static void dormir(Duration d) {
 		try {
-			var resposta = cliente.siteverify(form);
-			return resposta != null && Boolean.TRUE.equals(resposta.get("success"));
-		} catch (RuntimeException e) {
-			LOG.warn("Turnstile indisponivel: {}", e.getMessage());
-			Sentry.captureException(e);
-			return false;
+			Thread.sleep(d);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 		}
 	}
 }

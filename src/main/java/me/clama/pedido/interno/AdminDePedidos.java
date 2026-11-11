@@ -18,7 +18,6 @@ import me.clama.infra.auditoria.Auditoria;
 import me.clama.infra.cripto.HmacDeIdentificador;
 import me.clama.infra.web.FiltrosDeAdmin;
 import me.clama.pedido.CorrecaoDeDados;
-import me.clama.pedido.PedidoApi;
 import me.clama.pedido.PedidoNaoEncontradoException;
 import me.clama.pedido.StatusPedido;
 import org.springframework.data.domain.Page;
@@ -32,7 +31,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * Admin de pedidos. A lista filtra por colunas em claro e por HMAC (nada e decifrado para buscar). {@code q} (D4):
  * e-mail exato, CPF/CNPJ exato ou o comeco do id do pedido; nao ha busca por nome (esta cifrado). A correcao de dados
- * entra pela {@link PedidoApi}, com o pedido travado, e a auditoria grava so os nomes dos campos (D22).
+ * entra pela {@link PedidoApiImpl}, com o pedido travado, e a auditoria grava so os nomes dos campos (D22).
  */
 @Service
 public class AdminDePedidos {
@@ -52,12 +51,12 @@ public class AdminDePedidos {
 	@PersistenceContext
 	private EntityManager em;
 	private final PedidoRepository pedidos;
-	private final PedidoApi api;
+	private final PedidoApiImpl api;
 	private final HmacDeIdentificador hmac;
 	private final Auditoria auditoria;
 	private final TransactionTemplate transacao;
 
-	AdminDePedidos(PedidoRepository pedidos, PedidoApi api, HmacDeIdentificador hmac, Auditoria auditoria,
+	AdminDePedidos(PedidoRepository pedidos, PedidoApiImpl api, HmacDeIdentificador hmac, Auditoria auditoria,
 			TransactionTemplate transacao) {
 		this.pedidos = pedidos;
 		this.api = api;

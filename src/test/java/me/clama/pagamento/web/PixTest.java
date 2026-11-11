@@ -398,6 +398,27 @@ class PixTest {
 	}
 
 	@Test
+	void mpRecusaOCancelamentoPorqueJaAprovouDa409ENaoOutro422() throws Exception {
+		mpCria(201, PIX_CRIADO);
+		var id = pedido();
+		pix(id);
+		// a leitura ainda diz pending; o PUT chega depois da aprovacao e o MP recusa; a releitura mostra approved
+		MP.stubFor(get("/v1/payments/1325814423").inScenario("aprovacao").whenScenarioStateIs(com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED)
+				.willReturn(okJson("{\"id\": 1325814423, \"status\": \"pending\"}")).willSetStateTo("aprovado"));
+		MP.stubFor(get("/v1/payments/1325814423").inScenario("aprovacao").whenScenarioStateIs("aprovado")
+				.willReturn(okJson("{\"id\": 1325814423, \"status\": \"approved\"}")));
+		MP.stubFor(put("/v1/payments/1325814423").willReturn(badRequest().withHeader("Content-Type", "application/json")
+				.withBody("{\"message\": \"Cannot cancel an approved payment\", \"status\": 400}")));
+
+		var e = org.assertj.core.api.Assertions.catchThrowableOfType(me.clama.infra.web.ErroDeNegocio.class,
+				() -> tx.executeWithoutResult(s -> pagamento.cancelarCobranca(id)));
+
+		assertThat(e.status().value()).isEqualTo(409);
+		assertThat(e.codigo()).isEqualTo("pagamento_ja_aprovado");
+		assertThat(historico(id)).singleElement().satisfies(m -> assertThat(m).containsEntry("cancelada", false));
+	}
+
+	@Test
 	void cancelarSemCobrancaNaoFazNada() {
 		var id = pedido();
 		tx.executeWithoutResult(s -> pagamento.cancelarCobranca(id));

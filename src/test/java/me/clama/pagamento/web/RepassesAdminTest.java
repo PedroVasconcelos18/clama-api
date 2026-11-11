@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 /** Admin de repasses: lista paginada sem PII, filtros e "marcar transferido". */
 class RepassesAdminTest extends PagamentoAdminBase {
 
+	static final String COMP = "{\"comprovante\": \"PIX-E123\"}";
+
 	@Test
 	void anonimoRecebe401EClienteRecebe403() throws Exception {
 		var r = repasse(pedido(3000, instituicao("Lar")), instituicao("Outro"), "REGISTRADO");
@@ -18,7 +20,7 @@ class RepassesAdminTest extends PagamentoAdminBase {
 		for (var nav : List.of(anonimo, entrar(Papel.CLIENTE))) {
 			var esperado = nav == anonimo ? 401 : 403;
 			assertThat(nav.get("/api/admin/repasses").statusCode()).isEqualTo(esperado);
-			assertThat(nav.post("/api/admin/repasses/" + r + "/transferencia", "{}").statusCode()).isEqualTo(esperado);
+			assertThat(nav.post("/api/admin/repasses/" + r + "/transferencia", COMP).statusCode()).isEqualTo(esperado);
 		}
 		assertThat(jdbc.queryForObject("select status from repasse where id = ?", String.class, r)).isEqualTo("REGISTRADO");
 	}
@@ -35,7 +37,7 @@ class RepassesAdminTest extends PagamentoAdminBase {
 		var item = json(res).get("content").get(0);
 		assertThat(new java.util.LinkedHashSet<String>(item.propertyNames())).containsExactlyInAnyOrder("id", "pedidoId", "instituicaoId",
 				"instituicao", "valorBaseCentavos", "percentual", "valorCentavos", "status", "criadoEm", "transferidoEm", "canceladoEm",
-				"motivo");
+				"motivo", "comprovante");
 		assertThat(item.get("pedidoId").asString()).isEqualTo(p.toString());
 		assertThat(item.get("instituicao").asString()).isEqualTo("Lar Esperança");
 		assertThat(item.get("valorCentavos").asInt()).isEqualTo(600);
@@ -74,12 +76,28 @@ class RepassesAdminTest extends PagamentoAdminBase {
 	void transferenciaMarcaRegistradoEAudita() throws Exception {
 		var lar = instituicao("Lar");
 		var r = repasse(pedido(3000, lar), lar, "REGISTRADO");
-		var res = entrar(Papel.ADMIN).post("/api/admin/repasses/" + r + "/transferencia", "{}");
+		var res = entrar(Papel.ADMIN).post("/api/admin/repasses/" + r + "/transferencia", COMP);
 		assertThat(res.statusCode()).as(res.body()).isEqualTo(200);
 		assertThat(json(res).get("status").asString()).isEqualTo("TRANSFERIDO");
 		assertThat(json(res).get("transferidoEm").asString()).endsWith("Z");
 		assertThat(jdbc.queryForObject("select status from repasse where id = ?", String.class, r)).isEqualTo("TRANSFERIDO");
 		assertThat(contar("select count(*) from auditoria where entidade = 'repasse' and entidade_id = ?", String.valueOf(r))).isEqualTo(1);
+		assertThat(json(res).get("comprovante").asString()).isEqualTo("PIX-E123");
+		assertThat(jdbc.queryForObject("select comprovante from repasse where id = ?", String.class, r)).isEqualTo("PIX-E123");
+		var diff = jdbc.queryForObject("select diff::text from auditoria where entidade = 'repasse' and entidade_id = ?", String.class, String.valueOf(r));
+		assertThat(diff).contains("\"comprovante\"").doesNotContain("PIX-E123");
+	}
+
+	@Test
+	void semComprovanteOuComprovanteGrandeDemaisE400ENadaMuda() throws Exception {
+		var lar = instituicao("Lar");
+		var r = repasse(pedido(3000, lar), lar, "REGISTRADO");
+		var adm = entrar(Papel.ADMIN);
+		for (var corpo : List.of("{}", "{\"comprovante\": \"  \"}", "{\"comprovante\": \"" + "x".repeat(121) + "\"}")) {
+			assertThat(adm.post("/api/admin/repasses/" + r + "/transferencia", corpo).statusCode()).as(corpo).isEqualTo(400);
+		}
+		assertThat(jdbc.queryForObject("select status from repasse where id = ?", String.class, r)).isEqualTo("REGISTRADO");
+		assertThat(contar("select count(*) from auditoria where entidade = 'repasse'")).isZero();
 	}
 
 	@Test
@@ -87,8 +105,8 @@ class RepassesAdminTest extends PagamentoAdminBase {
 		var lar = instituicao("Lar");
 		var r = repasse(pedido(3000, lar), lar, "REGISTRADO");
 		var adm = entrar(Papel.ADMIN);
-		var primeira = json(adm.post("/api/admin/repasses/" + r + "/transferencia", "{}")).get("transferidoEm").asString();
-		var segunda = adm.post("/api/admin/repasses/" + r + "/transferencia", "{}");
+		var primeira = json(adm.post("/api/admin/repasses/" + r + "/transferencia", COMP)).get("transferidoEm").asString();
+		var segunda = adm.post("/api/admin/repasses/" + r + "/transferencia", COMP);
 		assertThat(segunda.statusCode()).isEqualTo(200);
 		assertThat(json(segunda).get("transferidoEm").asString()).isEqualTo(primeira);
 		assertThat(contar("select count(*) from auditoria where entidade = 'repasse'")).isEqualTo(1);
@@ -99,11 +117,11 @@ class RepassesAdminTest extends PagamentoAdminBase {
 		var lar = instituicao("Lar");
 		var r = repasse(pedido(3000, lar), lar, "CANCELADO");
 		var adm = entrar(Papel.ADMIN);
-		var res = adm.post("/api/admin/repasses/" + r + "/transferencia", "{}");
+		var res = adm.post("/api/admin/repasses/" + r + "/transferencia", COMP);
 		assertThat(res.statusCode()).isEqualTo(409);
 		assertThat(json(res).get("codigo").asString()).isEqualTo("repasse_cancelado");
 		assertThat(jdbc.queryForObject("select status from repasse where id = ?", String.class, r)).isEqualTo("CANCELADO");
 		assertThat(contar("select count(*) from auditoria where entidade = 'repasse'")).isZero();
-		assertThat(adm.post("/api/admin/repasses/999999/transferencia", "{}").statusCode()).isEqualTo(404);
+		assertThat(adm.post("/api/admin/repasses/999999/transferencia", COMP).statusCode()).isEqualTo(404);
 	}
 }

@@ -4,17 +4,25 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import io.sentry.Sentry;
+import com.github.tomakehurst.wiremock.stubbing.Scenario;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 @WireMockTest
 class TurnstileTest {
 
-	private static Turnstile turnstile(WireMockRuntimeInfo wm, String secret, boolean aceitaChaveDeTeste) {
-		return new Turnstile(wm.getHttpBaseUrl() + "/siteverify", secret, aceitaChaveDeTeste);
+	private final List<Duration> esperas = new ArrayList<>();
+
+	/** A espera do 503 so e registrada, nunca dormida. */
+	private Turnstile turnstile(WireMockRuntimeInfo wm, String secret, boolean aceitaChaveDeTeste) {
+		return new Turnstile(wm.getHttpBaseUrl() + "/siteverify", secret, aceitaChaveDeTeste, esperas::add);
 	}
 
 	@Test
@@ -49,6 +57,34 @@ class TurnstileTest {
 			assertThat(turnstile(wm, "segredo", false).verificar("tok", "1.1.1.1")).isFalse();
 			sentry.verify(() -> Sentry.captureException(any(Throwable.class)));
 		}
+	}
+
+	@Test
+	void indisponivelRetentaComUmEDoisSegundosEDesistePorFim(WireMockRuntimeInfo wm) {
+		stubFor(post("/siteverify").willReturn(serviceUnavailable()));
+		try (var sentry = mockStatic(Sentry.class)) {
+			assertThat(turnstile(wm, "segredo", false).verificar("tok", "1.1.1.1")).isFalse();
+			sentry.verify(() -> Sentry.captureException(any(Throwable.class)), times(1));
+		}
+		verify(3, postRequestedFor(urlEqualTo("/siteverify")));
+		assertThat(esperas).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
+	}
+
+	@Test
+	void indisponivelDepoisDeRecuperarAprova(WireMockRuntimeInfo wm) {
+		stubFor(post("/siteverify").inScenario("s").whenScenarioStateIs(Scenario.STARTED).willReturn(serviceUnavailable()).willSetStateTo("2"));
+		stubFor(post("/siteverify").inScenario("s").whenScenarioStateIs("2").willReturn(serviceUnavailable()).willSetStateTo("3"));
+		stubFor(post("/siteverify").inScenario("s").whenScenarioStateIs("3").willReturn(okJson("{\"success\":true}")));
+		assertThat(turnstile(wm, "segredo", false).verificar("tok", "1.1.1.1")).isTrue();
+		assertThat(esperas).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
+	}
+
+	@Test
+	void erroQueNaoE503NaoRetenta(WireMockRuntimeInfo wm) {
+		stubFor(post("/siteverify").willReturn(serverError()));
+		assertThat(turnstile(wm, "segredo", false).verificar("tok", "1.1.1.1")).isFalse();
+		verify(1, postRequestedFor(urlEqualTo("/siteverify")));
+		assertThat(esperas).isEmpty();
 	}
 
 	@Test

@@ -19,6 +19,17 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID>, org.sprin
 	@Query("select p from Pedido p where p.id = :id")
 	Optional<Pedido> travar(UUID id);
 
+	/** O que o status publico le: sem PII, sem hidratar o {@code Pedido} (a oracao cifrada so sai por {@link #oracaoDe}). */
+	record Status(UUID id, me.clama.pedido.StatusPedido status, Long planoId, Long instituicaoId, long valorCentavos,
+			Instant criadoEm, String ultimoErro) {}
+
+	@Query("select new me.clama.pedido.interno.PedidoRepository$Status(p.id, p.status, p.planoId, p.instituicaoId, p.valorCentavos, p.criadoEm, p.ultimoErro) from Pedido p where p.id = :id")
+	Optional<Status> status(UUID id);
+
+	/** Decifra so a oracao. */
+	@Query("select p.oracao from Pedido p where p.id = :id")
+	Optional<String> oracaoDe(UUID id);
+
 	List<Pedido> findByEmailHmac(String emailHmac);
 
 	/** Pedidos do usuario no intervalo (inclusivo), mais recentes primeiro. */

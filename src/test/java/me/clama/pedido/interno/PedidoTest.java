@@ -219,7 +219,7 @@ class PedidoTest {
 		assertThat(d.toString()).doesNotContain("Secreta", "segredo", "52998224725", "intimo", "203.0");
 		var cob = new me.clama.pedido.PedidoCobravel(java.util.UUID.randomUUID(), AGORA_STATUS, 1, "Maria Secreta", "segredo@exemplo.com", "52998224725");
 		assertThat(cob.toString()).doesNotContain("Secreta", "segredo", "52998224725");
-		var dados = new me.clama.pedido.DadosParaOracao(java.util.UUID.randomUUID(), AGORA_STATUS, 1L, false, "Maria Secreta", "segredo@exemplo.com", null, null, "pedido intimo", "oracao intima", 0);
+		var dados = new me.clama.pedido.DadosParaOracao(java.util.UUID.randomUUID(), AGORA_STATUS, 1L, false, "Maria Secreta", "segredo@exemplo.com", null, null, "pedido intimo", "oracao intima", 0, null);
 		assertThat(dados.toString()).doesNotContain("Secreta", "segredo", "intimo");
 	}
 

@@ -18,7 +18,9 @@ public class EmailNaoDescartavelValidator implements ConstraintValidator<EmailNa
 		static final Set<String> LISTA = carregar();
 
 		private static Set<String> carregar() {
-			try (var in = EmailNaoDescartavelValidator.class.getResourceAsStream("/disposable_email_domains.txt")) {
+			var arquivo = "/disposable_email_domains.txt";
+			try (var in = EmailNaoDescartavelValidator.class.getResourceAsStream(arquivo)) {
+				if (in == null) throw new IllegalStateException("Recurso " + arquivo + " nao encontrado no classpath");
 				return new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8)).lines().map(String::strip)
 						.filter(l -> !l.isEmpty() && !l.startsWith("#")).collect(Collectors.toUnmodifiableSet());
 			} catch (IOException e) {

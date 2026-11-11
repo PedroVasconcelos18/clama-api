@@ -79,4 +79,9 @@ class CifraTest {
 		runner.withPropertyValues("clama.cripto.chave=" + ok, "clama.cripto.chave-hmac=" + ok)
 				.run(ctx -> assertThat(ctx).hasNotFailed().hasSingleBean(Cifra.class).hasSingleBean(HmacDeIdentificador.class));
 	}
+
+	@Test
+	void criptoPropsNaoImprimeAsChaves() {
+		assertThat(new CriptoProps("chave-secreta-1", "chave-hmac-2").toString()).doesNotContain("chave-secreta-1", "chave-hmac-2");
+	}
 }

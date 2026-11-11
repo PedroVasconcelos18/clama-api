@@ -32,7 +32,7 @@ class WebhookMercadoPagoController {
 		this.processamento = processamento;
 	}
 
-	@PostMapping(CAMINHO)
+	@PostMapping({ CAMINHO, CAMINHO + "/" }) // a barra final: a URL antiga do painel do MP
 	RespostaDoWebhook receber(HttpServletRequest req) throws IOException {
 		var corpo = req.getInputStream().readNBytes(AssinaturaMercadoPago.LIMITE_DO_CORPO + 1);
 		if (corpo.length > AssinaturaMercadoPago.LIMITE_DO_CORPO) throw AssinaturaMercadoPago.corpoGrandeDemais();

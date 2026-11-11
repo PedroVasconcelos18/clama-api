@@ -151,7 +151,11 @@ class WebhookTest {
 	}
 
 	HttpResponse<String> enviar(String query, String corpo, String... headers) throws Exception {
-		var b = HttpRequest.newBuilder(URI.create("http://localhost:" + porta + "/api/webhooks/mercadopago" + query))
+		return enviarEm("/api/webhooks/mercadopago", query, corpo, headers);
+	}
+
+	HttpResponse<String> enviarEm(String caminho, String query, String corpo, String... headers) throws Exception {
+		var b = HttpRequest.newBuilder(URI.create("http://localhost:" + porta + caminho + query))
 				.header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(corpo));
 		if (headers.length > 0) b.headers(headers);
 		return http.send(b.build(), HttpResponse.BodyHandlers.ofString());
@@ -224,6 +228,20 @@ class WebhookTest {
 		}
 		assertThat(contar("select count(*) from pagamento_evento")).isZero();
 		assertThat(getsNoMp()).isZero();
+	}
+
+	@Test
+	void barraFinalDaUrlAntigaDoPainelTambemFunciona() throws Exception {
+		var corpo = "{\"id\": 1, \"type\": \"merchant_order\", \"data\": {\"id\": \"" + PAG + "\"}}";
+		var semAssinatura = enviarEm("/api/webhooks/mercadopago/", "?data.id=" + PAG, corpo);
+		assertThat(semAssinatura.statusCode()).as(semAssinatura.body()).isEqualTo(401); // chegou na cadeia do webhook
+		assertThat(Navegador.json(semAssinatura).get("codigo").asString()).isEqualTo("assinatura_invalida");
+
+		var ts = "1762434000";
+		var assinado = enviarEm("/api/webhooks/mercadopago/", "?data.id=" + PAG, corpo, "x-request-id", "r-barra", "x-signature",
+				"ts=" + ts + ",v1=" + assinar(String.valueOf(PAG), "r-barra", ts));
+		assertThat(assinado.statusCode()).as(assinado.body()).isEqualTo(200);
+		assertThat(status(assinado)).isEqualTo("ignored");
 	}
 
 	@Test
@@ -467,7 +485,7 @@ class WebhookTest {
 		cobranca(id, 1, PAG);
 		aprovado(PAG, id);
 		assertThat(status(notificar(1))).isEqualTo("ok");
-		jdbc.update("update repasse set status = 'TRANSFERIDO', transferido_em = now() where pedido_id = ?", id);
+		jdbc.update("update repasse set status = 'TRANSFERIDO', transferido_em = now(), comprovante = 'comp' where pedido_id = ?", id);
 
 		mp(PAG, "charged_back", id, "30.01", "BRL");
 		assertThat(status(notificar(2))).isEqualTo("ok");

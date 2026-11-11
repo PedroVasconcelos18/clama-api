@@ -100,11 +100,12 @@ class PedidosController {
 	@GetMapping("/api/pedidos/{id}")
 	StatusPublico status(@PathVariable String id, HttpServletRequest req) {
 		limite.exigir(new Cota("pedido-status:ip:" + ClienteIp.de(req), 120, Duration.ofMinutes(1)));
-		var p = uuid(id).flatMap(pedidos::findById).orElseThrow(PedidosController::naoEncontrado);
-		var plano = catalogo.planos(List.of(p.getPlanoId())).get(p.getPlanoId());
-		var creditos = p.getStatus() == StatusPedido.ERRO && "credit_balance".equals(p.getUltimoErro());
-		return new StatusPublico(p.getId(), p.getStatus(), plano == null ? null : plano.nome(), p.getInstituicaoId(),
-				p.getValorCentavos(), p.getCriadoEm(), creditos ? MENSAGEM_CREDITOS : null, oracaoVisivel(p));
+		var p = uuid(id).flatMap(pedidos::status).orElseThrow(PedidosController::naoEncontrado);
+		var plano = catalogo.planos(List.of(p.planoId())).get(p.planoId());
+		var creditos = p.status() == StatusPedido.ERRO && "credit_balance".equals(p.ultimoErro());
+		var oracao = p.status() == StatusPedido.ENVIADA ? pedidos.oracaoDe(p.id()).orElse(null) : null; // so em ENVIADA decifra
+		return new StatusPublico(p.id(), p.status(), plano == null ? null : plano.nome(), p.instituicaoId(),
+				p.valorCentavos(), p.criadoEm(), creditos ? MENSAGEM_CREDITOS : null, oracao);
 	}
 
 	/** Pedidos do logado, mais recentes primeiro; {@code from} e {@code to} sao dias (AAAA-MM-DD) em Sao Paulo, inclusivos. */

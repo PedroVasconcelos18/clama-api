@@ -884,6 +884,9 @@
             "format" : "date-time",
             "type" : [ "string", "null" ]
           },
+          "comprovante" : {
+            "type" : [ "string", "null" ]
+          },
           "criadoEm" : {
             "format" : "date-time",
             "type" : "string"
@@ -1007,6 +1010,17 @@
             "type" : "integer"
           }
         },
+        "type" : "object"
+      },
+      "Transferencia" : {
+        "properties" : {
+          "comprovante" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "comprovante" ],
         "type" : "object"
       },
       "TrocaDeSenha" : {
@@ -1695,6 +1709,16 @@
             "type" : "integer"
           }
         } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Transferencia"
+              }
+            }
+          },
+          "required" : true
+        },
         "responses" : {
           "200" : {
             "content" : {
@@ -2341,6 +2365,24 @@
     "/api/webhooks/mercadopago" : {
       "post" : {
         "operationId" : "receber",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RespostaDoWebhook"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "webhook-mercado-pago-controller" ]
+      }
+    },
+    "/api/webhooks/mercadopago/" : {
+      "post" : {
+        "operationId" : "receber_1",
         "responses" : {
           "200" : {
             "content" : {

@@ -1,10 +1,9 @@
 package me.clama.infra.alerta;
 
-import java.text.NumberFormat;
-import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import me.clama.infra.email.EnviadorDeEmail;
+import me.clama.infra.formato.Dinheiro;
 import me.clama.infra.email.EnvioAssincrono;
 import me.clama.infra.email.ModelosDeEmail;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -54,15 +53,9 @@ public class AlertaAoAdmin {
 						"pedido_id", id,
 						"status", ou(a.status()),
 						"plano", ou(a.plano()),
-						"valor", a.valorCentavos() == null ? "-" : reais(a.valorCentavos()),
+						"valor", a.valorCentavos() == null ? "-" : Dinheiro.reais(a.valorCentavos()),
 						"link", props.frontendUrl().replaceAll("/+$", "") + "/admin/pedidos?id=" + id));
 		envio.executar("alerta ao admin (" + a.motivo() + ")", () -> enviador.enviar(email, "alerta/" + chave));
-	}
-
-	/** "R$ 1.234,50". */
-	public static String reais(long centavos) {
-		return "R$ " + NumberFormat.getIntegerInstance(Locale.of("pt", "BR")).format(centavos / 100)
-				+ String.format(",%02d", Math.abs(centavos % 100));
 	}
 
 	private static String ou(String s) {

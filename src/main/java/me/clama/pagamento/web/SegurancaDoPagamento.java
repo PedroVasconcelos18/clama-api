@@ -36,7 +36,8 @@ class SegurancaDoPagamento {
 	SecurityFilterChain cadeiaDoWebhook(HttpSecurity http, RespostasDeSeguranca respostas, Environment env,
 			@Value("${clama.pagamento.webhook-segredo:}") String segredo) throws Exception {
 		return SegurancaConfig.aplicarPadrao(http, respostas)
-				.securityMatcher(PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, WebhookMercadoPagoController.CAMINHO))
+				.securityMatchers(m -> m.requestMatchers(PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, WebhookMercadoPagoController.CAMINHO),
+						PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, WebhookMercadoPagoController.CAMINHO + "/")))
 				.csrf(c -> c.disable())
 				.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.addFilterBefore(new AssinaturaMercadoPago(AssinaturaMercadoPago.exigirSegredo(segredo, env)), AuthorizationFilter.class)

@@ -40,7 +40,7 @@ public class AdminDePagamento {
 			UUID pedidoId, Instant recebidoEm, Instant atualizadoEm, Map<String, Object> payload) {}
 
 	public record Repasse(long id, UUID pedidoId, long instituicaoId, long valorBaseCentavos, int percentual, long valorCentavos,
-			String status, Instant criadoEm, Instant transferidoEm, Instant canceladoEm, String motivo) {}
+			String status, Instant criadoEm, Instant transferidoEm, Instant canceladoEm, String motivo, String comprovante) {}
 
 	/** {@code resultado}: o corpo {@code status} do webhook ({@code ok}, {@code ignored}, {@code already_paid}...). */
 	public record Reprocessado(String resultado, Evento evento) {}
@@ -151,23 +151,23 @@ public class AdminDePagamento {
 
 	private static final String COLUNAS_DE_REPASSE = """
 			select id, pedido_id, instituicao_id, valor_base_centavos, percentual, valor_centavos, status, criado_em,
-			transferido_em, cancelado_em, motivo from repasse""";
+			transferido_em, cancelado_em, motivo, comprovante from repasse""";
 
 	/**
 	 * REGISTRADO vira TRANSFERIDO. TRANSFERIDO de novo e no-op (sem nova auditoria); CANCELADO e 409; inexistente, 404.
 	 * O UPDATE so pega REGISTRADO, entao um estorno concorrente (que cancela) nunca e sobrescrito.
 	 */
-	public Repasse transferir(Long autorId, long id) {
+	public Repasse transferir(Long autorId, long id, String comprovante) {
 		return transacao.execute(s -> {
 			var agora = relogio.instant();
-			var mudou = jdbc.sql("update repasse set status = 'TRANSFERIDO', transferido_em = :em where id = :id and status = 'REGISTRADO'")
-					.param("em", Timestamp.from(agora)).param("id", id).update() == 1;
+			var mudou = jdbc.sql("update repasse set status = 'TRANSFERIDO', transferido_em = :em, comprovante = :comprovante where id = :id and status = 'REGISTRADO'")
+					.param("em", Timestamp.from(agora)).param("comprovante", comprovante).param("id", id).update() == 1;
 			var r = jdbc.sql(COLUNAS_DE_REPASSE + " where id = :id").param("id", id).query((rs, i) -> repasse(rs)).optional()
 					.orElseThrow(() -> new ErroDeNegocio(HttpStatus.NOT_FOUND, "repasse_nao_encontrado", "Repasse não encontrado.",
 							"Esse repasse não foi encontrado."));
 			if (mudou) {
 				auditoria.registrar(autorId, "repasse", String.valueOf(id), Acao.MUDANCA,
-						Map.of("status", Map.of("antes", "REGISTRADO", "depois", "TRANSFERIDO")));
+						Map.of("status", Map.of("antes", "REGISTRADO", "depois", "TRANSFERIDO"), "comprovante", true));
 			} else if ("CANCELADO".equals(r.status())) {
 				throw new ErroDeNegocio(HttpStatus.CONFLICT, "repasse_cancelado", "Repasse cancelado não se transfere.",
 						"Esse repasse foi cancelado (estorno) e não pode ser marcado como transferido.");
@@ -179,7 +179,7 @@ public class AdminDePagamento {
 	private static Repasse repasse(java.sql.ResultSet rs) throws java.sql.SQLException {
 		return new Repasse(rs.getLong("id"), rs.getObject("pedido_id", UUID.class), rs.getLong("instituicao_id"),
 				rs.getLong("valor_base_centavos"), rs.getInt("percentual"), rs.getLong("valor_centavos"), rs.getString("status"),
-				instante(rs, "criado_em"), instante(rs, "transferido_em"), instante(rs, "cancelado_em"), rs.getString("motivo"));
+				instante(rs, "criado_em"), instante(rs, "transferido_em"), instante(rs, "cancelado_em"), rs.getString("motivo"), rs.getString("comprovante"));
 	}
 
 	private static JdbcClient.StatementSpec bind(JdbcClient.StatementSpec spec, String nome, String valor) {

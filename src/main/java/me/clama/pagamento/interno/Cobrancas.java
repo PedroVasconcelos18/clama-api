@@ -2,14 +2,13 @@ package me.clama.pagamento.interno;
 
 import io.sentry.Sentry;
 import io.sentry.SentryLevel;
-import java.text.NumberFormat;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import me.clama.infra.formato.Dinheiro;
 import me.clama.infra.web.ErroDeNegocio;
 import me.clama.pagamento.PagamentoApi;
 import me.clama.pedido.PedidoApi;
@@ -104,16 +103,26 @@ public class Cobrancas implements PagamentoApi {
 		if (c == null || c.getCanceladaEm() != null) return;
 		try {
 			var status = mercadoPago.pagamento(c.getMpPagamentoId()).status();
-			if ("approved".equals(status)) {
-				throw new ErroDeNegocio(HttpStatus.CONFLICT, "pagamento_ja_aprovado", "Pagamento já aprovado no Mercado Pago.",
-						"O pagamento já caiu; reprocesse o evento.");
+			if ("approved".equals(status)) throw jaAprovado();
+			if (CANCELAVEIS.contains(status)) {
+				try {
+					mercadoPago.cancelar(c.getMpPagamentoId());
+				} catch (MercadoPago.Falha f) {
+					// o MP recusa o cancelamento de quem foi aprovado entre a leitura e o PUT: 409, nao 422
+					if (f.quatroXX() && "approved".equals(mercadoPago.pagamento(c.getMpPagamentoId()).status())) throw jaAprovado();
+					throw f;
+				}
 			}
-			if (CANCELAVEIS.contains(status)) mercadoPago.cancelar(c.getMpPagamentoId());
 		} catch (MercadoPago.Falha f) {
 			throw paraResposta(f, pedidoId);
 		}
 		c.cancelar(relogio.instant());
 		LOG.info("Pix cancelado (event=pix_cancelado, pedido_id={}, mp_pagamento_id={})", pedidoId, c.getMpPagamentoId());
+	}
+
+	private static ErroDeNegocio jaAprovado() {
+		return new ErroDeNegocio(HttpStatus.CONFLICT, "pagamento_ja_aprovado", "Pagamento já aprovado no Mercado Pago.",
+				"O pagamento já caiu; reprocesse o evento.");
 	}
 
 	/** Espera no maximo 15 s pela trava (lock_timeout do {@code PedidoRepository.travar}, provado no PixTest). */
@@ -141,7 +150,7 @@ public class Cobrancas implements PagamentoApi {
 					"Precisamos do seu CPF para gerar a cobrança. Volte ao formulário e complete o cadastro.");
 		}
 		if (p.valorCentavos() < props.valorMinimoCentavos()) { // a criacao ja confere; aqui e defesa (D7)
-			var minimo = reais(props.valorMinimoCentavos());
+			var minimo = Dinheiro.reais(props.valorMinimoCentavos());
 			throw new ErroDeNegocio(HttpStatus.UNPROCESSABLE_ENTITY, "valor_abaixo_do_minimo",
 					"Valor menor que o mínimo aceito (" + minimo + ").", "O valor mínimo aceito pelo processador de "
 							+ "pagamentos é " + minimo + ". Escolha um valor igual ou maior pra continuar.");
@@ -167,9 +176,4 @@ public class Cobrancas implements PagamentoApi {
 				"Não encontramos esse pedido. Verifique se o link está correto.");
 	}
 
-	/** "R$ 1.234,50". */
-	private static String reais(long centavos) {
-		return "R$ " + NumberFormat.getIntegerInstance(Locale.of("pt", "BR")).format(centavos / 100)
-				+ String.format(",%02d", centavos % 100);
-	}
 }

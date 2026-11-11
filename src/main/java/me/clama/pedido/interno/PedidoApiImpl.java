@@ -72,7 +72,7 @@ class PedidoApiImpl implements PedidoApi {
 	@Transactional(readOnly = true)
 	public Optional<PedidoResumo> resumo(UUID id) {
 		return pedidos.findById(id).map(p -> new PedidoResumo(p.getId(), p.getStatus(), p.getPlanoId(), p.getInstituicaoId(),
-				p.getValorCentavos(), p.isGratuito(), p.getCriadoEm(), p.getAtualizadoEm()));
+				p.getValorCentavos(), p.isGratuito(), p.getCriadoEm(), p.getAtualizadoEm(), p.getUltimoErro()));
 	}
 
 	@Override
@@ -110,8 +110,8 @@ class PedidoApiImpl implements PedidoApi {
 		eventos.publishEvent(new ReenvioSolicitado(id));
 	}
 
-	@Override
-	public List<String> corrigirDados(UUID id, CorrecaoDeDados correcao) {
+	/** Admin (D22), so do modulo ({@link AdminDePedidos}): corrige so dados, com o pedido travado; devolve os campos que mudaram. */
+	List<String> corrigirDados(UUID id, CorrecaoDeDados correcao) {
 		return travado(id).corrigirDados(correcao, hmac);
 	}
 
@@ -120,7 +120,7 @@ class PedidoApiImpl implements PedidoApi {
 	public DadosParaOracao dadosParaOracao(UUID id) {
 		var p = pedidos.findById(id).orElseThrow(PedidoNaoEncontradoException::new);
 		return new DadosParaOracao(p.getId(), p.getStatus(), p.getPlanoId(), p.isGratuito(), p.getNome(), p.getEmail(),
-				p.getIdade(), p.getSexo(), p.getPedidoOracao(), p.getOracao(), p.getTentativas());
+				p.getIdade(), p.getSexo(), p.getPedidoOracao(), p.getOracao(), p.getTentativas(), p.getUltimoErro());
 	}
 
 	@Override

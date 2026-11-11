@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 import me.clama.catalogo.CatalogoApi;
 import me.clama.infra.alerta.AlertaAoAdmin;
+import me.clama.infra.formato.Dinheiro;
 import me.clama.infra.email.EnvioAssincrono;
 import me.clama.pedido.PedidoApi;
 import me.clama.pedido.StatusPedido;
@@ -217,7 +218,7 @@ public class ProcessamentoDePagamento {
 		if (!marcar(eventoId, EventosDePagamento.PROCESSADO, desfecho, pedidoId)) return Decisao.de(Resultado.JA_PROCESSADO);
 		if (!Repasses.TRANSFERIDO.equals(desfecho)) return Decisao.de(Resultado.OK);
 		return new Decisao(Resultado.OK, "estorno_repasse_transferido", "O pagamento " + mpId + " teve " + status
-				+ ", mas o repasse de " + AlertaAoAdmin.reais(repasses.valorCentavos(pedidoId))
+				+ ", mas o repasse de " + Dinheiro.reais(repasses.valorCentavos(pedidoId))
 				+ " já foi transferido: acerto no próximo ciclo.");
 	}
 

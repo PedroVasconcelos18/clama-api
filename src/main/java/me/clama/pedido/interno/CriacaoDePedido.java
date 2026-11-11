@@ -1,14 +1,13 @@
 package me.clama.pedido.interno;
 
-import java.text.NumberFormat;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import me.clama.catalogo.CatalogoApi;
 import me.clama.catalogo.PlanoResumo;
 import me.clama.infra.cripto.HmacDeIdentificador;
 import me.clama.infra.web.ErroDeCampo;
+import me.clama.infra.formato.Dinheiro;
 import me.clama.infra.web.ErroDeNegocio;
 import me.clama.pedido.GeracaoSolicitada;
 import org.springframework.beans.factory.annotation.Value;
@@ -73,14 +72,14 @@ public class CriacaoDePedido {
 			erros.add(new ErroDeCampo("valorCentavos", "Informe o valor da oferta."));
 		} else if (n.valorCentavos() < valorMinimoCentavos) {
 			erros.add(new ErroDeCampo("valorCentavos",
-					"O valor mínimo é " + reais(valorMinimoCentavos) + " — qualquer oferta acima ajuda o Clama."));
+					"O valor mínimo é " + Dinheiro.reais(valorMinimoCentavos) + " — qualquer oferta acima ajuda o Clama."));
 		}
 		if (planoEscolhido != null) {
 			plano = catalogo.planoAtivo(planoEscolhido).orElse(null);
 			if (plano == null) {
 				erros.add(new ErroDeCampo("plano", "Esse plano não está disponível no momento."));
 			} else if (erros.isEmpty() && n.valorCentavos() < plano.valorCentavos()) {
-				erros.add(new ErroDeCampo("valorCentavos", "O valor mínimo para este plano é " + reais(plano.valorCentavos()) + "."));
+				erros.add(new ErroDeCampo("valorCentavos", "O valor mínimo para este plano é " + Dinheiro.reais(plano.valorCentavos()) + "."));
 			}
 		}
 		if (n.instituicao() != null && catalogo.instituicaoAtiva(n.instituicao()).isEmpty()) {
@@ -95,11 +94,6 @@ public class CriacaoDePedido {
 		var cpf = n.cpfCnpj().replaceAll("\\D", ""); // so digitos: o que o provedor de pagamento espera e o HMAC usa
 		return new Pedido.Dados(usuarioId, planoId, instituicaoId, valor, n.nome(), n.email(), cpf, n.telefone(), n.idade(),
 				n.sexo(), n.pedidoOracao(), relogio.instant(), ip, POLITICA_VERSAO);
-	}
-
-	/** "R$ 1.234,50". */
-	static String reais(long centavos) {
-		return "R$ " + NumberFormat.getIntegerInstance(Locale.of("pt", "BR")).format(centavos / 100) + String.format(",%02d", centavos % 100);
 	}
 
 	private static ErroDeNegocio dadosInvalidos(List<ErroDeCampo> erros) {

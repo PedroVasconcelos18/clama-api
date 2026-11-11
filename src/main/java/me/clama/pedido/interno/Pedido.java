@@ -148,6 +148,7 @@ public class Pedido {
 		if (texto == null || texto.isBlank()) throw new IllegalArgumentException("Oracao vazia.");
 		ir(ORACAO_GERADA, "registrar oracao", EnumSet.of(GERANDO_ORACAO), agora);
 		oracao = texto;
+		ultimoErro = null;
 	}
 
 	public void agendarNovaTentativa(String erro, Instant agora) {

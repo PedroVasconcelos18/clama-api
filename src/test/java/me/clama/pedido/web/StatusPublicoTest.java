@@ -1,15 +1,24 @@
 package me.clama.pedido.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.UUID;
 import me.clama.conta.web.Navegador;
+import me.clama.infra.cripto.Cifra;
 import me.clama.pedido.interno.Pedido;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 class StatusPublicoTest extends PedidoWebTeste {
+
+	@MockitoSpyBean Cifra cifra;
 
 	private Pedido enviado(Long plano) {
 		var p = pedido(null, plano, relogio.instant());
@@ -52,6 +61,21 @@ class StatusPublicoTest extends PedidoWebTeste {
 		var c = corpo(new Navegador(porta).get("/api/pedidos/" + p.getId()));
 		assertThat(c.get("status").asString()).isEqualTo("ENVIADA");
 		assertThat(c.get("oracaoGerada").asString()).isEqualTo("Senhor, guarda esta família.");
+	}
+
+	@Test
+	void soDecifraAOracaoQuandoEnviada() throws Exception {
+		var plano = plano("Simples", 3000);
+		var p = salvar(enviado(plano)); // ORACAO_GERADA
+		clearInvocations(cifra);
+		assertThat(new Navegador(porta).get("/api/pedidos/" + p.getId()).statusCode()).isEqualTo(200);
+		verify(cifra, never()).decifrar(anyString()); // nem nome, e-mail, CPF nem a oracao
+
+		p.marcarEnviado(relogio.instant());
+		salvar(p);
+		clearInvocations(cifra);
+		assertThat(corpo(new Navegador(porta).get("/api/pedidos/" + p.getId())).get("oracaoGerada").asString()).isNotBlank();
+		verify(cifra, times(1)).decifrar(anyString()); // so a oracao
 	}
 
 	@Test
@@ -98,6 +122,6 @@ class StatusPublicoTest extends PedidoWebTeste {
 	@Test
 	void soLeituraNaCadeiaPublica() throws Exception {
 		var res = anonimo().post("/api/pedidos/" + UUID.randomUUID(), "{}");
-		assertThat(res.statusCode()).isIn(401, 403, 404, 405);
+		assertThat(res.statusCode()).isEqualTo(401); // POST cai na cadeia padrao (autenticada): sem sessao, 401; so o GET e publico
 	}
 }

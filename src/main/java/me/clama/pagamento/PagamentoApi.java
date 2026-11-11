@@ -6,7 +6,7 @@ import java.util.UUID;
 public interface PagamentoApi {
 
 	/**
-	 * Cancela no Mercado Pago o Pix pendente do pedido e apaga a cobranca; sem cobranca, nada. Trava o pedido: chamar na
+	 * Cancela no Mercado Pago o Pix pendente do pedido e a marca como cancelada ({@code canceladaEm}; a linha fica); sem cobranca, nada. Trava o pedido: chamar na
 	 * mesma transacao de {@code PedidoApi.concederGratuidade}. Pagamento ja aprovado: 409 (o webhook ou o reprocessamento
 	 * confirmam o pedido; a gratuidade nao pode passar por cima de dinheiro recebido).
 	 */
