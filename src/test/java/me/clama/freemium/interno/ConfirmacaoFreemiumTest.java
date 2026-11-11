@@ -274,38 +274,46 @@ class ConfirmacaoFreemiumTest {
 
 	@Test
 	void duasConfirmacoesDoMesmoLinkDaoUmSucessoSo() throws Exception {
-		var p = pendente(email);
-		var r = emParalelo(List.of(() -> saga.confirmar(p.token()), () -> saga.confirmar(p.token())));
+		for (int rodada = 0; rodada < 15; rodada++) {
+			var p = pendente(email);
+			var r = emParalelo(List.of(() -> saga.confirmar(p.token()), () -> saga.confirmar(p.token())));
 
-		assertThat(r.stream().filter(UUID.class::isInstance)).hasSize(1);
-		assertThat(r.stream().filter(ErroDeNegocio.class::isInstance)).singleElement()
-				.satisfies(e -> assertThat(((ErroDeNegocio) e).codigo()).isEqualTo("link_invalido"));
-		assertThat(contar("usuario where email = '" + email + "'")).isOne();
-		assertThat(contar("freemium_bloqueio")).isOne();
-		assertThat(contar("scheduled_tasks where task_name = 'gerar-oracao'")).isOne();
-		assertThat(caixa.aguardarPara(email, 1)).hasSize(1);
+			assertThat(r.stream().filter(UUID.class::isInstance)).hasSize(1);
+			assertThat(r.stream().filter(ErroDeNegocio.class::isInstance)).singleElement()
+					.satisfies(e -> assertThat(((ErroDeNegocio) e).codigo()).isEqualTo("link_invalido"));
+			assertThat(contar("usuario where email = '" + email + "'")).isOne();
+			assertThat(contar("freemium_bloqueio")).isOne();
+			assertThat(contar("scheduled_tasks where task_name = 'gerar-oracao'")).isOne();
+			assertThat(caixa.aguardarPara(email, 1)).hasSize(1);
+			limpar(); // uma rodada por vez: o bloqueio da anterior nao pode barrar a seguinte
+			email = "frm-" + UUID.randomUUID() + "@exemplo.com";
+		}
 	}
 
 	@Test
 	void doisPedidosDaMesmaPessoaConfirmadosJuntosDaoUmaContaUmBloqueioEUm409() throws Exception {
-		var a = pendente(email);
-		var b = pendente(email);
-		var r = emParalelo(List.of(() -> saga.confirmar(a.token()), () -> saga.confirmar(b.token())));
+		for (int rodada = 0; rodada < 15; rodada++) {
+			var a = pendente(email);
+			var b = pendente(email);
+			var r = emParalelo(List.of(() -> saga.confirmar(a.token()), () -> saga.confirmar(b.token())));
 
-		assertThat(r.stream().filter(UUID.class::isInstance)).hasSize(1);
-		assertThat(r.stream().filter(ErroDeNegocio.class::isInstance)).singleElement()
-				.satisfies(e -> assertThat(((ErroDeNegocio) e).codigo()).isEqualTo("freemium_ja_usado"));
-		assertThat(contar("usuario where email = '" + email + "'")).isOne();
-		assertThat(contar("freemium_bloqueio")).isOne();
-		assertThat(contar("scheduled_tasks where task_name = 'gerar-oracao'")).isOne();
-		// quem perdeu nao mudou: segue pendente, sem dono, com o link valido
-		var perdedor = status(a.pedido()) == StatusPedido.PAGO ? b : a;
-		assertThat(status(perdedor.pedido())).isEqualTo(StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL);
-		assertThat(linkUsado(perdedor.token())).isFalse();
-		assertThat(contar("pedido where status = 'PAGO'")).isOne();
-		assertThat(caixa.aguardarPara(email, 1)).hasSize(1);
-		esperarEnvios();
-		assertThat(caixa.para(email)).hasSize(1);
+			assertThat(r.stream().filter(UUID.class::isInstance)).hasSize(1);
+			assertThat(r.stream().filter(ErroDeNegocio.class::isInstance)).singleElement()
+					.satisfies(e -> assertThat(((ErroDeNegocio) e).codigo()).isEqualTo("freemium_ja_usado"));
+			assertThat(contar("usuario where email = '" + email + "'")).isOne();
+			assertThat(contar("freemium_bloqueio")).isOne();
+			assertThat(contar("scheduled_tasks where task_name = 'gerar-oracao'")).isOne();
+			// quem perdeu nao mudou: segue pendente, sem dono, com o link valido
+			var perdedor = status(a.pedido()) == StatusPedido.PAGO ? b : a;
+			assertThat(status(perdedor.pedido())).isEqualTo(StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL);
+			assertThat(linkUsado(perdedor.token())).isFalse();
+			assertThat(contar("pedido where status = 'PAGO'")).isOne();
+			assertThat(caixa.aguardarPara(email, 1)).hasSize(1);
+			esperarEnvios();
+			assertThat(caixa.para(email)).hasSize(1);
+			limpar(); // uma rodada por vez: o bloqueio da anterior nao pode barrar a seguinte
+			email = "frm-" + UUID.randomUUID() + "@exemplo.com";
+		}
 	}
 
 	// --- conta existente ---

@@ -13,6 +13,43 @@
         },
         "type" : "object"
       },
+      "BloqueioAdmin" : {
+        "properties" : {
+          "cpfHmacCurto" : {
+            "type" : "string"
+          },
+          "criadoEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "emailHmacCurto" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "temIp" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "Busca" : {
+        "properties" : {
+          "cpfCnpj" : {
+            "maxLength" : 30,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "email" : {
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "CobrancaDoPedido" : {
         "properties" : {
           "canceladaEm" : {
@@ -578,6 +615,21 @@
           }
         },
         "required" : [ "number", "size", "totalElements", "totalPages" ],
+        "type" : "object"
+      },
+      "PagedModelBloqueioAdmin" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BloqueioAdmin"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageMetadata"
+          }
+        },
+        "required" : [ "content", "page" ],
         "type" : "object"
       },
       "PagedModelEventoMpAdmin" : {
@@ -1475,7 +1527,7 @@
     },
     "/api/admin/eventos-mp" : {
       "get" : {
-        "operationId" : "listar_5",
+        "operationId" : "listar_6",
         "parameters" : [ {
           "in" : "query",
           "name" : "status",
@@ -1584,6 +1636,107 @@
           }
         },
         "tags" : [ "eventos-admin-controller" ]
+      }
+    },
+    "/api/admin/freemium/bloqueios" : {
+      "get" : {
+        "operationId" : "listar_5",
+        "parameters" : [ {
+          "description" : "Zero-based page index (0..N)",
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "The size of the page to be returned",
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+          "in" : "query",
+          "name" : "sort",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PagedModelBloqueioAdmin"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "bloqueios-admin-controller" ]
+      }
+    },
+    "/api/admin/freemium/bloqueios/busca" : {
+      "post" : {
+        "operationId" : "buscar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Busca"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/BloqueioAdmin"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "bloqueios-admin-controller" ]
+      }
+    },
+    "/api/admin/freemium/bloqueios/{id}" : {
+      "delete" : {
+        "operationId" : "excluir_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "bloqueios-admin-controller" ]
       }
     },
     "/api/admin/instituicoes" : {

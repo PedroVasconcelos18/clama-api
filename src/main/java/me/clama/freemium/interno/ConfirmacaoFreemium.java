@@ -53,6 +53,7 @@ public class ConfirmacaoFreemium {
 
 	private Identificadores confirmar(UUID pedidoId) {
 		try {
+			// D4: conta criada entre o submit e a confirmacao e vinculada mesmo inativa (o portao do submit ja recusa conta existente)
 			return pedidos.confirmarEmail(pedidoId);
 		} catch (TransicaoInvalidaException | PedidoNaoEncontradoException e) { // fora do estado: o mesmo "nao e mais valido"
 			throw invalido();
