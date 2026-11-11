@@ -2,6 +2,9 @@ package me.clama.pedido.interno;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -23,6 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 class PedidoApiImpl implements PedidoApi {
+
+	private static final Set<StatusPedido> EM_ANDAMENTO = EnumSet.of(StatusPedido.PAGO, StatusPedido.GERANDO_ORACAO,
+			StatusPedido.ORACAO_GERADA, StatusPedido.AGUARDANDO_NOVA_TENTATIVA);
 
 	private final PedidoRepository pedidos;
 	private final ContaApi conta;
@@ -65,7 +71,7 @@ class PedidoApiImpl implements PedidoApi {
 	public boolean confirmarPagamento(UUID id) {
 		var p = travado(id);
 		if (p.getStatus() != StatusPedido.AGUARDANDO_PAGAMENTO) return false;
-		p.confirmarPagamento();
+		p.confirmarPagamento(relogio.instant());
 		if (p.getUsuarioId() == null) p.vincularUsuario(conta.provisionarOuVincular(p.getEmail(), p.getNome()).id());
 		eventos.publishEvent(new GeracaoSolicitada(id));
 		return true;
@@ -73,19 +79,19 @@ class PedidoApiImpl implements PedidoApi {
 
 	@Override
 	public void concederGratuidade(UUID id) {
-		mudar(id, Pedido::concederGratuidade);
+		mudar(id, p -> p.concederGratuidade(relogio.instant()));
 		eventos.publishEvent(new GeracaoSolicitada(id));
 	}
 
 	@Override
 	public void solicitarRegeneracao(UUID id) {
-		mudar(id, Pedido::solicitarRegeneracao);
+		mudar(id, p -> p.solicitarRegeneracao(relogio.instant()));
 		eventos.publishEvent(new GeracaoSolicitada(id));
 	}
 
 	@Override
 	public void solicitarReenvio(UUID id) {
-		mudar(id, Pedido::solicitarReenvio);
+		mudar(id, p -> p.solicitarReenvio(relogio.instant()));
 		eventos.publishEvent(new ReenvioSolicitado(id));
 	}
 
@@ -99,32 +105,40 @@ class PedidoApiImpl implements PedidoApi {
 
 	@Override
 	public void iniciarGeracao(UUID id) {
-		mudar(id, Pedido::iniciarGeracao);
+		mudar(id, p -> p.iniciarGeracao(relogio.instant()));
 	}
 
 	@Override
 	public void registrarOracao(UUID id, String texto) {
-		mudar(id, p -> p.registrarOracao(texto));
+		mudar(id, p -> p.registrarOracao(texto, relogio.instant()));
 	}
 
 	@Override
 	public void agendarNovaTentativa(UUID id, String erro) {
-		mudar(id, p -> p.agendarNovaTentativa(erro));
+		mudar(id, p -> p.agendarNovaTentativa(erro, relogio.instant()));
 	}
 
 	@Override
 	public void falhar(UUID id, String motivo) {
-		mudar(id, p -> p.falhar(motivo));
+		mudar(id, p -> p.falhar(motivo, relogio.instant()));
 	}
 
 	@Override
 	public void marcarEnviado(UUID id) {
-		mudar(id, Pedido::marcarEnviado);
+		mudar(id, p -> p.marcarEnviado(relogio.instant()));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public List<UUID> emAndamentoParados(Duration janela) {
-		return pedidos.parados(relogio.instant().minus(janela)).stream().map(Pedido::getId).toList();
+		return pedidos.parados(relogio.instant().minus(janela));
+	}
+
+	@Override
+	public boolean falharSeParado(UUID id, Instant antesDe, String motivo) {
+		var p = travado(id);
+		if (!EM_ANDAMENTO.contains(p.getStatus()) || !p.getAtualizadoEm().isBefore(antesDe)) return false;
+		p.falhar(motivo, relogio.instant());
+		return true;
 	}
 }

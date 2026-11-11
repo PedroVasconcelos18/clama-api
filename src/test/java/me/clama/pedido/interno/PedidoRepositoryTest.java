@@ -4,20 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.UUID;
-import me.clama.BancoDeTeste;
+import me.clama.TesteDeRepositorio;
 import me.clama.pedido.StatusPedido;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({ BancoDeTeste.class, me.clama.CriptoDeTeste.class })
+@TesteDeRepositorio
 class PedidoRepositoryTest {
 
 	@Autowired PedidoRepository pedidos;
@@ -56,15 +51,17 @@ class PedidoRepositoryTest {
 		assertThat(lido.getPedidoOracao()).isEqualTo("Pela minha familia");
 		// idade e sexo ficam em claro
 		assertThat(coluna(p.getId(), "sexo")).isEqualTo("F");
-		assertThat(coluna(p.getId(), "email_hmac")).isEqualTo("hm");
+		assertThat(coluna(p.getId(), "email_hmac")).isEqualTo(PedidoTest.HMAC.email("maria@exemplo.com"));
+		assertThat(coluna(p.getId(), "cpf_hmac")).isEqualTo(PedidoTest.HMAC.cpf("52998224725"));
+		assertThat(coluna(p.getId(), "consentimento_versao")).isEqualTo("2026-01");
 	}
 
 	@Test
 	void oracaoTambemCifrada() {
 		var p = PedidoTest.novo(plano(), null);
-		p.confirmarPagamento();
-		p.iniciarGeracao();
-		p.registrarOracao("Senhor, abencoa.");
+		p.confirmarPagamento(PedidoTest.AGORA);
+		p.iniciarGeracao(PedidoTest.AGORA);
+		p.registrarOracao("Senhor, abencoa.", PedidoTest.AGORA);
 		pedidos.saveAndFlush(p);
 		em.clear();
 		assertThat(coluna(p.getId(), "oracao")).startsWith("v1:").doesNotContain("Senhor");
@@ -77,7 +74,7 @@ class PedidoRepositoryTest {
 		var antes = jdbc.queryForMap("select nome, email, cpf_cnpj, telefone, pedido_oracao from pedido where id = ?", p.getId());
 		em.clear();
 		var lido = pedidos.findById(p.getId()).orElseThrow();
-		lido.confirmarPagamento();
+		lido.confirmarPagamento(PedidoTest.AGORA);
 		pedidos.saveAndFlush(lido);
 		var depois = jdbc.queryForMap("select nome, email, cpf_cnpj, telefone, pedido_oracao from pedido where id = ?", p.getId());
 		assertThat(depois).isEqualTo(antes);
@@ -108,8 +105,7 @@ class PedidoRepositoryTest {
 	@Test
 	void usuarioApagadoSoltaOVinculo() {
 		jdbc.update("insert into usuario (id, email, email_canonico, nome_completo, papel, ativo, criado_em) values (987654, 'x@x.com', 'x@x.com', 'X', 'CLIENTE', true, now())");
-		var p = Pedido.novo(new Pedido.Dados(987654L, plano(), null, 100, "A", "a@a.com", "h", null, null, null, null, null, "t",
-				java.time.Instant.now(), null));
+		var p = Pedido.novo(new Pedido.Dados(987654L, plano(), null, 100, "A", "a@a.com", null, null, null, null, "t", java.time.Instant.now(), null, "2026-01"), PedidoTest.HMAC, PedidoTest.AGORA);
 		pedidos.saveAndFlush(p);
 		jdbc.update("delete from usuario where id = 987654");
 		em.clear();
@@ -119,22 +115,45 @@ class PedidoRepositoryTest {
 	@Test
 	void buscaPorHmacDoEmail() {
 		var p = salvar();
-		assertThat(pedidos.findByEmailHmac("hm")).extracting(Pedido::getId).containsExactly(p.getId());
+		assertThat(pedidos.findByEmailHmac(PedidoTest.HMAC.email("maria@exemplo.com"))).extracting(Pedido::getId).containsExactly(p.getId());
 		assertThat(pedidos.findByEmailHmac("outro")).isEmpty();
 	}
 
 	@Test
 	void paradosListaSoOsEmAndamentoAntigos() {
 		var paga = PedidoTest.novo(plano(), null);
-		paga.confirmarPagamento();
+		paga.confirmarPagamento(PedidoTest.AGORA);
 		pedidos.saveAndFlush(paga);
 		var aguardando = salvar();
 		jdbc.update("update pedido set atualizado_em = now() - interval '1 hour'");
 		var recente = PedidoTest.novo(plano(), null);
-		recente.confirmarPagamento();
+		recente.confirmarPagamento(PedidoTest.AGORA);
 		pedidos.saveAndFlush(recente);
-		var ids = pedidos.parados(java.time.Instant.now().minusSeconds(1200)).stream().map(Pedido::getId).toList();
+		jdbc.update("update pedido set atualizado_em = now() where id = ?", recente.getId());
+		var ids = pedidos.parados(java.time.Instant.now().minusSeconds(1200));
 		assertThat(ids).containsExactly(paga.getId());
 		assertThat(aguardando.getStatus()).isEqualTo(StatusPedido.AGUARDANDO_PAGAMENTO);
+	}
+
+	@Test
+	void semCpfGravaCpfHmacNulo() {
+		var p = pedidos.saveAndFlush(Pedido.novo(new Pedido.Dados(null, plano(), null, 100, "A", "a@a.com", null, null, null, null, "t",
+				PedidoTest.AGORA, null, "2026-01"), PedidoTest.HMAC, PedidoTest.AGORA));
+		assertThat(coluna(p.getId(), "cpf_hmac")).isNull();
+	}
+
+	@Test
+	void trocarOEmailMudaOHmacGravado() {
+		var p = salvar();
+		var antes = coluna(p.getId(), "email_hmac");
+		p.alterarEmail("outra@exemplo.com", PedidoTest.HMAC);
+		pedidos.saveAndFlush(p);
+		assertThat(coluna(p.getId(), "email_hmac")).isNotEqualTo(antes).isEqualTo(PedidoTest.HMAC.email("outra@exemplo.com"));
+	}
+
+	@Test
+	void idadeNegativaViolaCheck() {
+		var p = salvar();
+		assertThatThrownBy(() -> jdbc.update("update pedido set idade = -1 where id = ?", p.getId())).isInstanceOf(DataIntegrityViolationException.class);
 	}
 }

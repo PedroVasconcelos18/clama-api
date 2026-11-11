@@ -3,19 +3,16 @@ package me.clama.catalogo.interno;
 import static me.clama.catalogo.Complexidade.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import me.clama.BancoDeTeste;
+import me.clama.TesteDeRepositorio;
 import me.clama.catalogo.Complexidade;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 
 /** INV:62 sobre tres planos comuns, um inativo e os dois tecnicos da migration (que nunca entram na inferencia). */
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({ BancoDeTeste.class, me.clama.CriptoDeTeste.class, InferenciaDePlano.class })
+@TesteDeRepositorio
+@Import({ InferenciaDePlano.class })
 class InferenciaDePlanoTest {
 
 	@Autowired InferenciaDePlano inferencia;

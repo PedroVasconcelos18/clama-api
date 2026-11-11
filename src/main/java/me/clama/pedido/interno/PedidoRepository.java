@@ -22,8 +22,8 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID> {
 	List<Pedido> findByEmailHmac(String emailHmac);
 
 	@Query("""
-			select p from Pedido p where p.status in (me.clama.pedido.StatusPedido.PAGO, me.clama.pedido.StatusPedido.GERANDO_ORACAO,
+			select p.id from Pedido p where p.status in (me.clama.pedido.StatusPedido.PAGO, me.clama.pedido.StatusPedido.GERANDO_ORACAO,
 			me.clama.pedido.StatusPedido.ORACAO_GERADA, me.clama.pedido.StatusPedido.AGUARDANDO_NOVA_TENTATIVA)
 			and p.atualizadoEm < :antesDe order by p.atualizadoEm""")
-	List<Pedido> parados(Instant antesDe);
+	List<UUID> parados(Instant antesDe);
 }

@@ -15,13 +15,15 @@ CREATE TABLE pedido (
 	cpf_cnpj text,
 	cpf_hmac varchar(64),
 	telefone text,
-	idade smallint,
+	idade smallint CHECK (idade IS NULL OR idade >= 0),
 	sexo varchar(20),
 	pedido_oracao text,
 	oracao text,
 	consentido_em timestamptz NOT NULL,
 	consentimento_ip varchar(45),
-	ultimo_erro text,
+	consentimento_versao varchar(20) NOT NULL,
+	-- codigo curto (credit_balance, pedido_preso, falha_envio...), nunca mensagem de excecao
+	ultimo_erro varchar(60),
 	tentativas int NOT NULL DEFAULT 0 CHECK (tentativas >= 0),
 	criado_em timestamptz NOT NULL,
 	atualizado_em timestamptz NOT NULL,
@@ -31,3 +33,4 @@ CREATE INDEX pedido_email_hmac_ix ON pedido (email_hmac);
 CREATE INDEX pedido_cpf_hmac_ix ON pedido (cpf_hmac) WHERE cpf_hmac IS NOT NULL;
 CREATE INDEX pedido_usuario_ix ON pedido (usuario_id) WHERE usuario_id IS NOT NULL;
 CREATE INDEX pedido_status_atualizado_ix ON pedido (status, atualizado_em);
+CREATE INDEX pedido_criado_ix ON pedido (criado_em);

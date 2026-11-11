@@ -4,6 +4,8 @@ import static me.clama.pedido.StatusPedido.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Instant;
+import me.clama.infra.cripto.HmacDeIdentificador;
 import java.util.EnumSet;
 import java.util.function.Consumer;
 import me.clama.pedido.StatusPedido;
@@ -16,10 +18,12 @@ class PedidoTest {
 		return novo(1L, 2L);
 	}
 
+	static final HmacDeIdentificador HMAC = new HmacDeIdentificador("ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=");
+	static final Instant AGORA = Instant.parse("2026-11-11T12:00:00Z");
+
 	static Pedido novo(Long planoId, Long instituicaoId) {
-		return Pedido.novo(new Pedido.Dados(null, planoId, instituicaoId, 2000, "Maria", "maria@exemplo.com", "hm", "52998224725", "hc",
-				"11999990000", (short) 30, "F", "Pela minha familia", java.time.Instant.parse("2026-11-11T12:00:00Z"),
-				"203.0.113.9"));
+		return Pedido.novo(new Pedido.Dados(null, planoId, instituicaoId, 2000, "Maria", "maria@exemplo.com", "52998224725",
+				"11999990000", (short) 30, "F", "Pela minha familia", AGORA, "203.0.113.9", "2026-01"), HMAC, AGORA);
 	}
 
 	/** Leva o pedido ao status por caminhos legitimos, para testar a transicao a partir dele. */
@@ -27,12 +31,12 @@ class PedidoTest {
 		var p = novo();
 		switch (alvo) {
 			case AGUARDANDO_PAGAMENTO -> {}
-			case PAGO -> p.confirmarPagamento();
-			case GERANDO_ORACAO -> { p.confirmarPagamento(); p.iniciarGeracao(); }
-			case ORACAO_GERADA -> { p.confirmarPagamento(); p.iniciarGeracao(); p.registrarOracao("Senhor..."); }
-			case ENVIADA -> { p.confirmarPagamento(); p.iniciarGeracao(); p.registrarOracao("Senhor..."); p.marcarEnviado(); }
-			case AGUARDANDO_NOVA_TENTATIVA -> { p.confirmarPagamento(); p.iniciarGeracao(); p.agendarNovaTentativa("x"); }
-			case ERRO -> { p.confirmarPagamento(); p.iniciarGeracao(); if (comOracao) p.registrarOracao("Senhor..."); p.falhar("x"); }
+			case PAGO -> p.confirmarPagamento(AGORA);
+			case GERANDO_ORACAO -> { p.confirmarPagamento(AGORA); p.iniciarGeracao(AGORA); }
+			case ORACAO_GERADA -> { p.confirmarPagamento(AGORA); p.iniciarGeracao(AGORA); p.registrarOracao("Senhor...", AGORA); }
+			case ENVIADA -> { p.confirmarPagamento(AGORA); p.iniciarGeracao(AGORA); p.registrarOracao("Senhor...", AGORA); p.marcarEnviado(AGORA); }
+			case AGUARDANDO_NOVA_TENTATIVA -> { p.confirmarPagamento(AGORA); p.iniciarGeracao(AGORA); p.agendarNovaTentativa("x", AGORA); }
+			case ERRO -> { p.confirmarPagamento(AGORA); p.iniciarGeracao(AGORA); if (comOracao) p.registrarOracao("Senhor...", AGORA); p.falhar("x", AGORA); }
 		}
 		return p;
 	}
@@ -58,8 +62,7 @@ class PedidoTest {
 
 	@Test
 	void gratuitoNasceProntoParaGerar() {
-		var p = Pedido.gratuito(new Pedido.Dados(7L, 1L, null, 0, "Ana", "ana@exemplo.com", "hm", null, null, null, null, null,
-				"Paz", java.time.Instant.now(), null));
+		var p = Pedido.gratuito(new Pedido.Dados(7L, 1L, null, 0, "Ana", "ana@exemplo.com", null, null, null, null, "Paz", AGORA, null, "2026-01"), HMAC, AGORA);
 		assertThat(p.getStatus()).isEqualTo(PAGO);
 		assertThat(p.isGratuito()).isTrue();
 		assertThat(p.getValorCentavos()).isZero();
@@ -68,106 +71,157 @@ class PedidoTest {
 	@Test
 	void confirmarPagamento() {
 		var p = novo();
-		p.confirmarPagamento();
+		p.confirmarPagamento(AGORA);
 		assertThat(p.getStatus()).isEqualTo(PAGO);
-		soNesses(EnumSet.of(AGUARDANDO_PAGAMENTO), Pedido::confirmarPagamento);
+		soNesses(EnumSet.of(AGUARDANDO_PAGAMENTO), ped -> ped.confirmarPagamento(AGORA));
 	}
 
 	@Test
 	void concederGratuidade() {
 		var p = novo();
-		p.concederGratuidade();
+		p.concederGratuidade(AGORA);
 		assertThat(p.getStatus()).isEqualTo(PAGO);
 		assertThat(p.isGratuito()).isTrue();
 		assertThat(p.getValorCentavos()).isZero();
-		soNesses(EnumSet.of(AGUARDANDO_PAGAMENTO), Pedido::concederGratuidade);
+		soNesses(EnumSet.of(AGUARDANDO_PAGAMENTO), ped -> ped.concederGratuidade(AGORA));
 	}
 
 	@Test
 	void iniciarGeracaoNuncaDeAguardandoPagamento() {
 		for (var s : new StatusPedido[] { PAGO, AGUARDANDO_NOVA_TENTATIVA, GERANDO_ORACAO }) {
 			var p = em(s, false);
-			p.iniciarGeracao();
+			p.iniciarGeracao(AGORA);
 			assertThat(p.getStatus()).isEqualTo(GERANDO_ORACAO);
 		}
-		soNesses(EnumSet.of(PAGO, AGUARDANDO_NOVA_TENTATIVA, GERANDO_ORACAO), Pedido::iniciarGeracao);
+		soNesses(EnumSet.of(PAGO, AGUARDANDO_NOVA_TENTATIVA, GERANDO_ORACAO), ped -> ped.iniciarGeracao(AGORA));
 	}
 
 	@Test
 	void registrarOracao() {
 		var p = em(GERANDO_ORACAO, false);
-		p.registrarOracao("Senhor...");
+		p.registrarOracao("Senhor...", AGORA);
 		assertThat(p.getStatus()).isEqualTo(ORACAO_GERADA);
 		assertThat(p.getOracao()).isEqualTo("Senhor...");
-		soNesses(EnumSet.of(GERANDO_ORACAO), p2 -> p2.registrarOracao("x"));
-		assertThatThrownBy(() -> em(GERANDO_ORACAO, false).registrarOracao(" ")).isInstanceOf(IllegalArgumentException.class);
+		soNesses(EnumSet.of(GERANDO_ORACAO), p2 -> p2.registrarOracao("x", AGORA));
+		assertThatThrownBy(() -> em(GERANDO_ORACAO, false).registrarOracao(" ", AGORA)).isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
 	void agendarNovaTentativaContaETemErro() {
 		var p = em(GERANDO_ORACAO, false);
-		p.agendarNovaTentativa("timeout");
+		p.agendarNovaTentativa("timeout", AGORA);
 		assertThat(p.getStatus()).isEqualTo(AGUARDANDO_NOVA_TENTATIVA);
 		assertThat(p.getTentativas()).isEqualTo(1);
 		assertThat(p.getUltimoErro()).isEqualTo("timeout");
-		soNesses(EnumSet.of(GERANDO_ORACAO), p2 -> p2.agendarNovaTentativa("x"));
+		soNesses(EnumSet.of(GERANDO_ORACAO), p2 -> p2.agendarNovaTentativa("x", AGORA));
 	}
 
 	@Test
 	void falhar() {
 		for (var s : new StatusPedido[] { PAGO, GERANDO_ORACAO, AGUARDANDO_NOVA_TENTATIVA, ORACAO_GERADA }) {
 			var p = em(s, false);
-			p.falhar("credit_balance");
+			p.falhar("credit_balance", AGORA);
 			assertThat(p.getStatus()).isEqualTo(ERRO);
 			assertThat(p.getUltimoErro()).isEqualTo("credit_balance");
 		}
-		soNesses(EnumSet.of(PAGO, GERANDO_ORACAO, AGUARDANDO_NOVA_TENTATIVA, ORACAO_GERADA), p -> p.falhar("x"));
+		soNesses(EnumSet.of(PAGO, GERANDO_ORACAO, AGUARDANDO_NOVA_TENTATIVA, ORACAO_GERADA), p -> p.falhar("x", AGORA));
 	}
 
 	@Test
 	void marcarEnviadoEIdempotenteNoReenvio() {
 		var p = em(ORACAO_GERADA, false);
-		p.marcarEnviado();
+		p.marcarEnviado(AGORA);
 		assertThat(p.getStatus()).isEqualTo(ENVIADA);
-		p.marcarEnviado();
+		p.marcarEnviado(AGORA);
 		assertThat(p.getStatus()).isEqualTo(ENVIADA);
-		soNesses(EnumSet.of(ORACAO_GERADA, ENVIADA), Pedido::marcarEnviado);
+		soNesses(EnumSet.of(ORACAO_GERADA, ENVIADA), ped -> ped.marcarEnviado(AGORA));
 	}
 
 	@Test
 	void solicitarReenvio() {
 		var enviada = em(ENVIADA, true);
-		enviada.solicitarReenvio();
+		enviada.solicitarReenvio(AGORA);
 		assertThat(enviada.getStatus()).isEqualTo(ENVIADA);
 		var gerada = em(ORACAO_GERADA, true);
-		gerada.solicitarReenvio();
+		gerada.solicitarReenvio(AGORA);
 		assertThat(gerada.getStatus()).isEqualTo(ORACAO_GERADA);
 		var erro = em(ERRO, true);
-		erro.solicitarReenvio();
+		erro.solicitarReenvio(AGORA);
 		assertThat(erro.getStatus()).isEqualTo(ORACAO_GERADA);
 		// ERRO sem oracao recusa no teste seguinte; os demais status recusam pelo status
-		soNesses(EnumSet.of(ENVIADA, ORACAO_GERADA, ERRO), Pedido::solicitarReenvio);
+		soNesses(EnumSet.of(ENVIADA, ORACAO_GERADA, ERRO), ped -> ped.solicitarReenvio(AGORA));
 	}
 
 	@Test
 	void solicitarReenvioDeErroSemOracaoRecusa() {
-		assertThatThrownBy(() -> em(ERRO, false).solicitarReenvio()).isInstanceOf(TransicaoInvalidaException.class);
+		assertThatThrownBy(() -> em(ERRO, false).solicitarReenvio(AGORA)).isInstanceOf(TransicaoInvalidaException.class);
 	}
 
 	@Test
 	void solicitarRegeneracaoSoDeErroSemOracao() {
 		var p = em(ERRO, false);
-		p.solicitarRegeneracao();
+		p.solicitarRegeneracao(AGORA);
 		assertThat(p.getStatus()).isEqualTo(PAGO);
 		assertThat(p.getTentativas()).isZero();
 		assertThat(p.getUltimoErro()).isNull();
-		assertThatThrownBy(() -> em(ERRO, true).solicitarRegeneracao()).isInstanceOf(TransicaoInvalidaException.class);
-		soNesses(EnumSet.of(ERRO), Pedido::solicitarRegeneracao);
+		assertThatThrownBy(() -> em(ERRO, true).solicitarRegeneracao(AGORA)).isInstanceOf(TransicaoInvalidaException.class);
+		soNesses(EnumSet.of(ERRO), ped -> ped.solicitarRegeneracao(AGORA));
 	}
 
 	@Test
 	void transicaoInvalidaVira409() {
-		assertThatThrownBy(() -> novo().iniciarGeracao()).isInstanceOfSatisfying(TransicaoInvalidaException.class,
+		assertThatThrownBy(() -> novo().iniciarGeracao(AGORA)).isInstanceOfSatisfying(TransicaoInvalidaException.class,
 				e -> assertThat(e.status().value()).isEqualTo(409));
 	}
+
+	@Test
+	void hmacsSaemDaEntidade() {
+		var p = novo();
+		assertThat(p.getEmailHmac()).isEqualTo(HMAC.email("maria@exemplo.com"));
+		assertThat(p.getCpfHmac()).isEqualTo(HMAC.cpf("52998224725"));
+	}
+
+	@Test
+	void semCpfCpfHmacFicaNulo() {
+		for (var cpf : new String[] { null, "", "  " }) {
+			var p = Pedido.novo(new Pedido.Dados(null, 1L, null, 100, "A", "a@a.com", cpf, null, null, null, "t", AGORA, null, "2026-01"), HMAC, AGORA);
+			assertThat(p.getCpfHmac()).isNull();
+		}
+	}
+
+	@Test
+	void alterarEmailRecalculaOHmac() {
+		var p = novo();
+		var antes = p.getEmailHmac();
+		p.alterarEmail("outra@exemplo.com", HMAC);
+		assertThat(p.getEmail()).isEqualTo("outra@exemplo.com");
+		assertThat(p.getEmailHmac()).isNotEqualTo(antes).isEqualTo(HMAC.email("outra@exemplo.com"));
+	}
+
+	@Test
+	void ultimoErroEhCodigoCurto() {
+		assertThatThrownBy(() -> em(GERANDO_ORACAO, false).falhar("x".repeat(61), AGORA)).isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> em(GERANDO_ORACAO, false).agendarNovaTentativa(" ", AGORA)).isInstanceOf(IllegalArgumentException.class);
+	}
+
+	@Test
+	void transicaoUsaORelogioRecebido() {
+		var p = novo();
+		var depois = AGORA.plusSeconds(90);
+		p.confirmarPagamento(depois);
+		assertThat(p.getAtualizadoEm()).isEqualTo(depois);
+		assertThat(p.getCriadoEm()).isEqualTo(AGORA);
+	}
+
+	@Test
+	void toStringNaoVazaPii() {
+		var d = new Pedido.Dados(null, 1L, null, 100, "Maria Secreta", "segredo@exemplo.com", "52998224725", "11999990000", null, null, "pedido intimo", AGORA, "203.0.113.9", "v");
+		assertThat(d.toString()).doesNotContain("Secreta", "segredo", "52998224725", "intimo", "203.0");
+		var cob = new me.clama.pedido.PedidoCobravel(java.util.UUID.randomUUID(), AGORA_STATUS, 1, "Maria Secreta", "segredo@exemplo.com", "52998224725");
+		assertThat(cob.toString()).doesNotContain("Secreta", "segredo", "52998224725");
+		var dados = new me.clama.pedido.DadosParaOracao(java.util.UUID.randomUUID(), AGORA_STATUS, 1L, false, "Maria Secreta", "segredo@exemplo.com", null, null, "pedido intimo", "oracao intima", 0);
+		assertThat(dados.toString()).doesNotContain("Secreta", "segredo", "intimo");
+	}
+
+	private static final StatusPedido AGORA_STATUS = PAGO;
 }

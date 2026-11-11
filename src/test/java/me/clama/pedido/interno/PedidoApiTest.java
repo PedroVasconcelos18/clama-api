@@ -44,8 +44,7 @@ class PedidoApiTest {
 	}
 
 	private Pedido novo(String email) {
-		return pedidos.saveAndFlush(Pedido.novo(new Pedido.Dados(null, planoId(), null, 2000, "Maria Souza", email, "h" + UUID.randomUUID(),
-				"52998224725", "c", null, null, null, "Pela familia", Instant.now(), "203.0.113.9")));
+		return pedidos.saveAndFlush(Pedido.novo(new Pedido.Dados(null, planoId(), null, 2000, "Maria Souza", email, "52998224725", null, null, null, "Pela familia", Instant.now(), "203.0.113.9", "2026-01"), PedidoTest.HMAC, Instant.now()));
 	}
 
 	private Long planoId() {
@@ -76,8 +75,7 @@ class PedidoApiTest {
 	@Test
 	void pedidoDeContaLogadaMantemOVinculo() {
 		var u = tx.execute(s -> usuarios.saveAndFlush(me.clama.conta.interno.Usuario.novo("doador-x-" + UUID.randomUUID() + "@exemplo.com", "Fulano", me.clama.conta.interno.Papel.CLIENTE, Instant.now())));
-		var p = pedidos.saveAndFlush(Pedido.novo(new Pedido.Dados(u.getId(), planoId(), null, 2000, "Fulano", "outro-" + UUID.randomUUID() + "@exemplo.com", "h" + UUID.randomUUID(),
-				null, null, null, null, null, "t", Instant.now(), null)));
+		var p = pedidos.saveAndFlush(Pedido.novo(new Pedido.Dados(u.getId(), planoId(), null, 2000, "Fulano", "outro-" + UUID.randomUUID() + "@exemplo.com", null, null, null, null, "t", Instant.now(), null, "2026-01"), PedidoTest.HMAC, Instant.now()));
 		api.confirmarPagamento(p.getId());
 		assertThat(pedidos.findById(p.getId()).orElseThrow().getUsuarioId()).isEqualTo(u.getId());
 		jdbc.update("delete from pedido");
@@ -164,5 +162,25 @@ class PedidoApiTest {
 		assertThat(api.emAndamentoParados(Duration.ofMinutes(20))).isEmpty();
 		jdbc.update("update pedido set atualizado_em = now() - interval '30 minutes'");
 		assertThat(api.emAndamentoParados(Duration.ofMinutes(20))).containsExactly(id);
+	}
+
+	@Test
+	void falharSeParadoSoFalhaOQueNaoAndou() {
+		var id = novo("doador-" + UUID.randomUUID() + "@exemplo.com").getId();
+		api.confirmarPagamento(id);
+		jdbc.update("update pedido set atualizado_em = now() - interval '30 minutes'");
+		var corte = Instant.now().minus(Duration.ofMinutes(20));
+		assertThat(api.emAndamentoParados(Duration.ofMinutes(20))).containsExactly(id);
+		// entre a listagem e a falha, o pedido andou
+		api.iniciarGeracao(id);
+		assertThat(api.falharSeParado(id, corte, "pedido_preso")).isFalse();
+		assertThat(api.resumo(id).orElseThrow().status()).isEqualTo(StatusPedido.GERANDO_ORACAO);
+		// parado de verdade: falha com o codigo
+		jdbc.update("update pedido set atualizado_em = now() - interval '30 minutes'");
+		assertThat(api.falharSeParado(id, corte, "pedido_preso")).isTrue();
+		assertThat(pedidos.findById(id).orElseThrow().getUltimoErro()).isEqualTo("pedido_preso");
+		// ja em ERRO: nao e mais elegivel
+		jdbc.update("update pedido set atualizado_em = now() - interval '30 minutes'");
+		assertThat(api.falharSeParado(id, corte, "pedido_preso")).isFalse();
 	}
 }

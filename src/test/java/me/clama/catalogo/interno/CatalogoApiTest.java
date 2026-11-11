@@ -7,21 +7,18 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
 
 import io.sentry.Sentry;
-import me.clama.BancoDeTeste;
+import me.clama.TesteDeRepositorio;
 import me.clama.catalogo.InstituicaoResumo;
 import me.clama.catalogo.TipoDePlano;
 import me.clama.infra.web.ErroDeNegocio;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({ BancoDeTeste.class, me.clama.CriptoDeTeste.class, CatalogoApiImpl.class, InferenciaDePlano.class })
+@TesteDeRepositorio
+@Import({ CatalogoApiImpl.class, InferenciaDePlano.class })
 class CatalogoApiTest {
 
 	@Autowired CatalogoApiImpl api;

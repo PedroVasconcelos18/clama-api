@@ -42,11 +42,18 @@ public interface PedidoApi {
 	/** Esgotou as retentativas do job de geracao: conta a tentativa e espera. */
 	void agendarNovaTentativa(UUID id, String erro);
 
+	/** {@code motivo}: codigo curto ({@code credit_balance}, {@code pedido_preso}, {@code falha_envio}), nunca mensagem de excecao. */
 	void falhar(UUID id, String motivo);
 
 	/** Envio concluido; repetir em ENVIADA (reenvio) nao muda o status. */
 	void marcarEnviado(UUID id);
 
-	/** Ids de pedidos PAGO, GERANDO_ORACAO, ORACAO_GERADA ou AGUARDANDO_NOVA_TENTATIVA sem mudar ha mais que a janela. */
+	/** Ids (sem ler PII) de pedidos PAGO, GERANDO_ORACAO, ORACAO_GERADA ou AGUARDANDO_NOVA_TENTATIVA sem mudar ha mais que a janela. */
 	List<UUID> emAndamentoParados(Duration janela);
+
+	/**
+	 * Falha o pedido so se, com a linha travada, ele ainda esta em andamento e sem mudar desde {@code antesDe}
+	 * (a varredura lista sem trava; nesse intervalo o pedido pode ter andado). {@code motivo} e um codigo curto.
+	 */
+	boolean falharSeParado(UUID id, java.time.Instant antesDe, String motivo);
 }
