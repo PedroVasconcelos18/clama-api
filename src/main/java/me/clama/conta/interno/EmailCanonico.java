@@ -1,20 +1,12 @@
 package me.clama.conta.interno;
 
-import java.util.Locale;
+import me.clama.infra.cripto.HmacDeIdentificador;
 
-/** Forma comparavel do e-mail: minusculas e, no Gmail, sem pontos e sem "+tag" (googlemail vira gmail). */
+/** Forma comparavel do e-mail (regra unica em infra: o HMAC do pedido usa a mesma). */
 public final class EmailCanonico {
 	private EmailCanonico() {}
 
 	public static String de(String email) {
-		String e = email.strip().toLowerCase(Locale.ROOT);
-		int at = e.indexOf('@');
-		if (at < 0) return e;
-		String local = e.substring(0, at);
-		String dominio = e.substring(at + 1);
-		if (!dominio.equals("gmail.com") && !dominio.equals("googlemail.com")) return e;
-		int mais = local.indexOf('+');
-		if (mais >= 0) local = local.substring(0, mais);
-		return local.replace(".", "") + "@gmail.com";
+		return HmacDeIdentificador.normalizarEmail(email);
 	}
 }

@@ -13,3 +13,11 @@ logging:
 springdoc:
   api-docs:
     enabled: true
+
+clama:
+  cripto:
+    # chaves so de desenvolvimento (publicas no repositorio); CLAMA_CRIPTO_CHAVE e CLAMA_HMAC_CHAVE, se definidas, valem mais
+    chave: ${CLAMA_CRIPTO_CHAVE:AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=}
+    chave-hmac: ${CLAMA_HMAC_CHAVE:ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=}
+  turnstile:
+    secret: ${TURNSTILE_SECRET_KEY:1x0000000000000000000000000000000AA} # chave de teste da Cloudflare: aprova qualquer token

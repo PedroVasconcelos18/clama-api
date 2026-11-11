@@ -90,3 +90,11 @@ clama:
   email:
     resend-api-key: ${RESEND_API_KEY:}
     remetente: ${DEFAULT_FROM_EMAIL:Clama <nao-responda@clama.me>}
+  cripto:
+    # 32 bytes em base64, sem default: sem a variavel o boot falha (so os perfis local e de teste trazem chave de dev).
+    # A chave do HMAC e outra, de proposito. Gerar: openssl rand -base64 32
+    chave: ${CLAMA_CRIPTO_CHAVE:}
+    chave-hmac: ${CLAMA_HMAC_CHAVE:}
+  turnstile:
+    url: https://challenges.cloudflare.com/turnstile/v0/siteverify
+    secret: ${TURNSTILE_SECRET_KEY:}

@@ -1,0 +1,5 @@
+# chaves fixas so de teste (o application.yml de producao nao tem default: sem variavel o boot falha)
+clama:
+  cripto:
+    chave: AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
+    chave-hmac: ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=
