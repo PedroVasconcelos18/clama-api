@@ -35,7 +35,23 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID>, org.sprin
 	List<me.clama.pedido.PedidoResumo> resumos(java.util.Collection<UUID> ids);
 
 	/** Decifra so nome e e-mail (o {@code CampoCifrado} age na leitura do atributo, sem hidratar CPF nem oracao). */
-	record NomeEEmail(UUID id, String nome, String email) {}
+	record NomeEEmail(UUID id, String nome, String email) {
+		@Override
+		public String toString() {
+			return "NomeEEmail[...]";
+		}
+	}
+
+	/** So o nome (a previa e o CSV da instituicao nao precisam do e-mail, entao ele nem e decifrado). */
+	record Nome(UUID id, String nome) {
+		@Override
+		public String toString() {
+			return "Nome[...]";
+		}
+	}
+
+	@Query("select new me.clama.pedido.interno.PedidoRepository$Nome(p.id, p.nome) from Pedido p where p.id in :ids")
+	List<Nome> nomes(java.util.Collection<UUID> ids);
 
 	@Query("select new me.clama.pedido.interno.PedidoRepository$NomeEEmail(p.id, p.nome, p.email) from Pedido p where p.id in :ids")
 	List<NomeEEmail> doadores(java.util.Collection<UUID> ids);

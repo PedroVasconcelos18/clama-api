@@ -110,10 +110,9 @@ public class RelatorioDeRepasse {
 	public Previa previa(long instituicaoId, Ciclo periodo) {
 		var nome = nomeDaInstituicao(instituicaoId);
 		var registros = registros(instituicaoId, periodo);
-		var doadores = pedidos.doadores(registros.stream().map(Registro::pedidoId).toList());
+		var nomes = pedidos.nomes(registros.stream().map(Registro::pedidoId).toList());
 		var linhas = registros.stream().map(r -> {
-			var d = doadores.get(r.pedidoId());
-			return new Linha(r.pedidoId(), abreviar(d == null ? null : d.nome()), referencia(r.pedidoId()), dia(r.criadoEm()), r.valorBase(),
+			return new Linha(r.pedidoId(), abreviar(nomes.get(r.pedidoId())), referencia(r.pedidoId()), dia(r.criadoEm()), r.valorBase(),
 					r.percentual(), r.valor(), r.status());
 		}).toList();
 		return new Previa(instituicaoId, nome, periodo.de(), periodo.ate(), linhas);

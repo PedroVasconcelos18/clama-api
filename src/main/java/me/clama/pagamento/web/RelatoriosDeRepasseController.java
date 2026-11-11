@@ -16,6 +16,13 @@ import me.clama.pagamento.interno.relatorio.AuditoriaDoLedger;
 import me.clama.pagamento.interno.relatorio.Ciclo;
 import me.clama.pagamento.interno.relatorio.PlanilhaCsv;
 import me.clama.pagamento.interno.relatorio.RelatorioDeRepasse;
+import me.clama.pagamento.interno.relatorio.RelatoriosMensais;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -43,9 +50,12 @@ class RelatoriosDeRepasseController {
 	private final RelatorioDeRepasse relatorio;
 	private final AuditoriaDoLedger auditoriaDoLedger;
 	private final AdminDePagamento admin;
+	private final RelatoriosMensais mensais;
 	private final Clock relogio;
 
-	RelatoriosDeRepasseController(RelatorioDeRepasse relatorio, AuditoriaDoLedger auditoriaDoLedger, AdminDePagamento admin, Clock relogio) {
+	RelatoriosDeRepasseController(RelatorioDeRepasse relatorio, AuditoriaDoLedger auditoriaDoLedger, AdminDePagamento admin,
+			RelatoriosMensais mensais, Clock relogio) {
+		this.mensais = mensais;
 		this.relatorio = relatorio;
 		this.auditoriaDoLedger = auditoriaDoLedger;
 		this.admin = admin;
@@ -112,6 +122,12 @@ class RelatoriosDeRepasseController {
 		var r = auditoriaDoLedger.auditar();
 		return new AuditoriaDoLedgerAdmin(r.achados().stream().map(a -> new AchadoDoLedger(a.gravidade().name(), a.tipo().codigo(), a.instituicao(),
 				a.pedidoId(), a.detalhe(), a.valorEmJogoCentavos())).toList(), r.criticos(), r.emJogoCentavos());
+	}
+
+	/** Os resumos que a tarefa do dia 28 guardou, mais novos primeiro; {@code totalAgoraCentavos} mostra se mudou depois (estorno). */
+	@GetMapping("/relatorios-mensais")
+	PagedModel<RelatoriosMensais.Resumo> relatoriosMensais(@ParameterObject @PageableDefault(size = 20) Pageable pagina) {
+		return new PagedModel<>(mensais.listar(PageRequest.of(pagina.getPageNumber(), pagina.getPageSize(), Sort.unsorted())));
 	}
 
 	private long instituicao(String valor) {

@@ -47,6 +47,9 @@ public interface PedidoApi {
 	/** Em lote: decifra so nome e e-mail (relatorio de repasse); ids inexistentes ficam de fora. Nunca logar o resultado. */
 	Map<UUID, Doador> doadores(Collection<UUID> ids);
 
+	/** Em lote: so o nome (o e-mail nem e decifrado); ids inexistentes ficam de fora. Nunca logar o resultado. */
+	Map<UUID, String> nomes(Collection<UUID> ids);
+
 	/** Trava a linha ate o fim da transacao do chamador (que precisa existir); lock preso por mais de 15 s estoura. */
 	PedidoCobravel travarParaCobranca(UUID id);
 

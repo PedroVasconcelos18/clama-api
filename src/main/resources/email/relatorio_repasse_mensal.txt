@@ -1,0 +1,13 @@
+Repasse do ciclo {{ciclo}}
+
+Instituições:
+{{instituicoes}}
+
+Faltou: {{faltou}}
+
+Ledger: {{ledger}}
+
+Estornos a acertar:
+{{estornos}}
+
+Baixe os relatórios e marque as transferências em: {{link}}

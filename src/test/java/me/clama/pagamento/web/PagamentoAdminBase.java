@@ -64,16 +64,20 @@ abstract class PagamentoAdminBase {
 	@Autowired LimiteDeTaxa limite;
 	@Autowired CaixaDeSaidaEmMemoria caixa;
 	@Autowired EnvioAssincrono envio;
+	@Autowired me.clama.EmailDeTeste.RelogioAvancavel relogio;
 
 	@BeforeEach
 	@AfterEach
 	void limpar() throws Exception {
 		for (int i = 0; i < 500 && envio.pendentes() > 0; i++) Thread.sleep(10);
 		limite.limpar();
+		relogio.zerar();
 		MP.resetAll();
 		caixa.limpar();
 		jdbc.update("delete from auditoria where entidade in ('pagamento_evento', 'repasse', 'repasse_lote', 'relatorio_interno')");
 		jdbc.update("delete from pagamento_evento");
+		jdbc.update("delete from relatorio_repasse");
+		jdbc.update("delete from tarefa_execucao where tarefa = 'relatorio-repasse-mensal'");
 		jdbc.update("delete from repasse");
 		jdbc.update("delete from cobranca");
 		jdbc.update(me.clama.BancoDeTeste.LIMPAR_FILA); // GeracaoSolicitada enfileira gerar-oracao e comita
@@ -81,6 +85,12 @@ abstract class PagamentoAdminBase {
 		jdbc.update("delete from usuario where email like '%@exemplo.com'");
 		jdbc.update("delete from plano where tipo = 'COMUM'");
 		jdbc.update("delete from instituicao");
+	}
+
+	/** O relogio do teste passa a marcar este instante (UTC, ISO); {@code limpar} volta ao normal. */
+	void relogioEm(String instanteUtc) {
+		relogio.zerar();
+		relogio.avancar(java.time.Duration.between(Instant.now(), Instant.parse(instanteUtc)));
 	}
 
 	Navegador entrar(Papel papel) throws Exception {

@@ -912,6 +912,21 @@
         "required" : [ "content", "page" ],
         "type" : "object"
       },
+      "PagedModelResumo" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Resumo"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageMetadata"
+          }
+        },
+        "required" : [ "content", "page" ],
+        "type" : "object"
+      },
       "PagedModelUsuarioAdminItem" : {
         "properties" : {
           "content" : {
@@ -1592,6 +1607,54 @@
         "properties" : {
           "status" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Resumo" : {
+        "properties" : {
+          "ate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "de" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "geradoEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "instituicao" : {
+            "type" : "string"
+          },
+          "instituicaoId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "pendenteCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "quantidade" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalAgoraCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalDoadoCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalRepasseCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -3212,6 +3275,56 @@
                 "schema" : {
                   "format" : "byte",
                   "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "relatorios-de-repasse-controller" ]
+      }
+    },
+    "/api/admin/repasses/relatorios-mensais" : {
+      "get" : {
+        "operationId" : "relatoriosMensais",
+        "parameters" : [ {
+          "description" : "Zero-based page index (0..N)",
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "The size of the page to be returned",
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+          "in" : "query",
+          "name" : "sort",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PagedModelResumo"
                 }
               }
             },

@@ -393,4 +393,29 @@ class PedidoApiTest {
 				.isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
 		assertThat(jdbc.queryForObject("select count(*) from pg_indexes where indexname = 'pedido_pendente_freemium_ix'", Integer.class)).isEqualTo(1);
 	}
+
+	/** Passa do limite de 32767 parametros do driver: sem fatiar em {@code LOTE}, a consulta inteira estouraria. */
+	@Test
+	void resumosNomesEDoadoresFatiamListasMaioresQueUmLote() {
+		var a = novo("doador-" + UUID.randomUUID() + "@exemplo.com").getId();
+		var b = novo("doador-" + UUID.randomUUID() + "@exemplo.com").getId();
+		var c = novo("doador-" + UUID.randomUUID() + "@exemplo.com").getId();
+		var ids = new java.util.ArrayList<UUID>();
+		for (int i = 0; i < 40_000; i++) ids.add(UUID.randomUUID());
+		assertThat(ids.size()).isGreaterThan(PedidoApiImpl.LOTE * 7);
+		ids.set(0, a);
+		ids.set(PedidoApiImpl.LOTE + 1, b); // fora do primeiro lote
+		ids.set(ids.size() - 1, c); // no ultimo, parcial
+
+		assertThat(api.resumos(ids)).containsOnlyKeys(a, b, c);
+		assertThat(api.nomes(ids)).containsOnlyKeys(a, b, c).containsEntry(b, "Maria Souza");
+		assertThat(api.doadores(ids)).containsOnlyKeys(a, b, c);
+		assertThat(api.resumos(java.util.List.of())).isEmpty();
+	}
+
+	@Test
+	void projecoesNaoVazamNomeNemEmailNoToString() {
+		assertThat(new PedidoRepository.NomeEEmail(UUID.randomUUID(), "Maria", "maria@exemplo.com").toString()).doesNotContain("Maria", "maria@");
+		assertThat(new PedidoRepository.Nome(UUID.randomUUID(), "Maria").toString()).doesNotContain("Maria");
+	}
 }

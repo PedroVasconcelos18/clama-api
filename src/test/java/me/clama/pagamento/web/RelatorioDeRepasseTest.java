@@ -141,6 +141,22 @@ class RelatorioDeRepasseTest extends PagamentoAdminBase {
 		assertThat(contar("select count(*) from auditoria where entidade = 'relatorio_interno'")).isZero();
 	}
 
+	/** {@code @Size} no parametro e imposto pela validacao de metodo do Spring (sem {@code @Validated}): estourar e 400, nao 500. */
+	@Test
+	void parametroGrandeDemaisE400NaoE500() throws Exception {
+		var lar = instituicao("Lar");
+		var adm = entrar(Papel.ADMIN);
+		for (var rota : List.of("relatorio", "relatorio.csv", "relatorio-interno.csv")) {
+			for (var param : List.of("mes=" + "2".repeat(8), "de=" + "2".repeat(11), "ate=" + "2".repeat(11))) {
+				var res = adm.get("/api/admin/repasses/" + rota + "?instituicaoId=" + lar + "&" + param);
+				assertThat(res.statusCode()).as(rota + " " + param).isEqualTo(400);
+				assertThat(json(res).get("codigo").asString()).as(rota + " " + param).isEqualTo("requisicao_invalida"); // do @Size, nao do parse
+			}
+			assertThat(adm.get("/api/admin/repasses/" + rota + "?instituicaoId=" + "9".repeat(21)).statusCode()).as(rota).isEqualTo(400);
+		}
+		assertThat(contar("select count(*) from auditoria where entidade = 'relatorio_interno'")).isZero();
+	}
+
 	@Test
 	void instituicaoAusenteE400EInexistenteE404() throws Exception {
 		var adm = entrar(Papel.ADMIN);

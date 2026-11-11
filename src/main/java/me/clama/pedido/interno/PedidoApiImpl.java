@@ -110,20 +110,35 @@ class PedidoApiImpl implements PedidoApi {
 		return pedidos.contarPendentesAntes(criadosAntesDe);
 	}
 
+	/** Ids por consulta: o driver aceita 32767 parametros, e a auditoria do ledger passa todo pedido pago sem repasse. */
+	static final int LOTE = 5_000;
+
+	private static <T> java.util.List<T> emLotes(java.util.Collection<UUID> ids, java.util.function.Function<java.util.List<UUID>, java.util.List<T>> consulta) {
+		var todos = new java.util.ArrayList<UUID>(ids);
+		var saida = new java.util.ArrayList<T>();
+		for (int i = 0; i < todos.size(); i += LOTE) saida.addAll(consulta.apply(todos.subList(i, Math.min(i + LOTE, todos.size()))));
+		return saida;
+	}
+
 	@Override
 	@Transactional(readOnly = true)
 	public java.util.Map<UUID, PedidoResumo> resumos(java.util.Collection<UUID> ids) {
-		if (ids.isEmpty()) return java.util.Map.of();
-		// ponytail: um IN so; o relatorio de um ciclo tem centenas de linhas. Fatiar se passar de ~30 mil.
-		return pedidos.resumos(ids).stream().collect(java.util.stream.Collectors.toMap(PedidoResumo::id, r -> r));
+		return emLotes(ids, pedidos::resumos).stream().collect(java.util.stream.Collectors.toMap(PedidoResumo::id, r -> r));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public java.util.Map<UUID, me.clama.pedido.Doador> doadores(java.util.Collection<UUID> ids) {
-		if (ids.isEmpty()) return java.util.Map.of();
-		return pedidos.doadores(ids).stream().collect(java.util.stream.Collectors.toMap(PedidoRepository.NomeEEmail::id,
+		return emLotes(ids, pedidos::doadores).stream().collect(java.util.stream.Collectors.toMap(PedidoRepository.NomeEEmail::id,
 				d -> new me.clama.pedido.Doador(d.nome(), d.email())));
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public java.util.Map<UUID, String> nomes(java.util.Collection<UUID> ids) {
+		var mapa = new java.util.HashMap<UUID, String>();
+		emLotes(ids, pedidos::nomes).forEach(n -> mapa.put(n.id(), n.nome()));
+		return mapa;
 	}
 
 	@Override

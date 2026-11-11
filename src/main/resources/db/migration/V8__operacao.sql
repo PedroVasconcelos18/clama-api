@@ -16,3 +16,19 @@ create table tarefa_execucao (
   check (fim >= inicio)
 );
 create index tarefa_execucao_ix on tarefa_execucao (tarefa, inicio desc);
+
+-- Resumo do relatorio de repasse gerado pela tarefa do dia 28 (ou regerado): so os totais. O CSV tem nome de doador e sai
+-- na hora, do ledger, a cada download (D5): guardado aqui seria PII fora da cifra.
+create table relatorio_repasse (
+  id bigserial primary key,
+  instituicao_id bigint not null references instituicao (id),
+  de date not null,
+  ate date not null,
+  gerado_em timestamptz not null,
+  quantidade int not null check (quantidade >= 0),
+  total_doado_centavos bigint not null,
+  total_repasse_centavos bigint not null,
+  pendente_centavos bigint not null,
+  check (ate >= de),
+  unique (instituicao_id, de, ate)
+);

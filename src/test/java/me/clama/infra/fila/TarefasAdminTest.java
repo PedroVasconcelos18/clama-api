@@ -182,6 +182,16 @@ class TarefasAdminTest {
 		assertThat(tarefa(admin, OK).get("ultima").get("resumo").asString()).isEqualTo("fez 3 coisas (simulacao)");
 	}
 
+	/** Tarefa com {@code dry-run=true} dispara agendada (manual=false) e simulada: se lanca, e falha de verdade. */
+	@Test
+	void tarefaConfiguradaEmDryRunQueLancaMostraFalhou() throws Exception {
+		agendar(OK, "now() + interval '1 hour'");
+		jdbc.update("insert into tarefa_execucao (tarefa, inicio, fim, simulacao, manual, ok, erro) values (?, now(), now(), true, false, false, 'java.lang.IllegalStateException')", OK);
+		var t = tarefa(entrar(Papel.ADMIN), OK);
+		assertThat(t.get("situacao").asString()).isEqualTo("falhou");
+		assertThat(t.get("ultima").get("manual").asBoolean()).isFalse();
+	}
+
 	@Test
 	void simulacaoBemSucedidaNaoEscondeUmaFalhaReal() throws Exception {
 		agendar(OK, "now() + interval '1 hour'");

@@ -57,9 +57,12 @@ public class Execucoes {
 				.query(Execucoes::linha).list();
 	}
 
-	/** A mais recente execucao real (nao simulada) de cada tarefa: e ela que diz se a tarefa "falhou". */
-	List<Execucao> ultimasReais() {
-		return jdbc.sql(SELECT.replace("select ", "select distinct on (tarefa) ") + " where not simulacao order by tarefa, inicio desc, id desc")
+	/**
+	 * A mais recente de cada tarefa, sem as simulacoes manuais do "Rodar agora": e ela que diz se a tarefa "falhou". Uma tarefa
+	 * configurada com dry-run roda "simulada" no agendado, e a falha dela conta.
+	 */
+	List<Execucao> ultimasQueContam() {
+		return jdbc.sql(SELECT.replace("select ", "select distinct on (tarefa) ") + " where not (manual and simulacao) order by tarefa, inicio desc, id desc")
 				.query(Execucoes::linha).list();
 	}
 
