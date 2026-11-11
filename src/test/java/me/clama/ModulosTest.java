@@ -91,6 +91,24 @@ class ModulosTest {
 	}
 
 	@Test
+	void pagamentoExpoeSoPagamentoApi() {
+		var pagamento = MODULOS.getModuleByName("pagamento").orElseThrow();
+		assertThat(pagamento.isExposed(me.clama.pagamento.PagamentoApi.class)).isTrue();
+		assertThat(pagamento.isExposed(me.clama.pagamento.interno.Cobrancas.class)).isFalse();
+	}
+
+	/** O sentido e pagamento -> pedido; o contrario faria ciclo (a regra acima so passa a valer com o modulo existindo). */
+	@Test
+	void pagamentoDependeDePedidoENaoOContrario() {
+		var pagamento = MODULOS.getModuleByName("pagamento").orElseThrow();
+		assertThat(pagamento.getDirectDependencies(MODULOS).stream().map(d -> d.getTargetModule().getIdentifier().toString()))
+				.contains("pedido");
+		var pedido = MODULOS.getModuleByName("pedido").orElseThrow();
+		assertThat(pedido.getDirectDependencies(MODULOS).stream().map(d -> d.getTargetModule().getIdentifier().toString()))
+				.doesNotContain("pagamento");
+	}
+
+	@Test
 	void documentacao() {
 		new Documenter(MODULOS).writeDocumentation();
 	}

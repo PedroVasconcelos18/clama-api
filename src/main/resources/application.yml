@@ -98,6 +98,10 @@ clama:
   pagamento:
     # piso do checkout (R$ 1,00); o pedido confere na criacao e o pagamento repete na cobranca
     valor-minimo-centavos: 100
+    # vazio nao derruba o boot: o Pix responde 503 e loga o motivo
+    mercadopago-token: ${MERCADOPAGO_ACCESS_TOKEN:}
+    # notification_url do Pix; so vai ao MP se for https (em dev local fica de fora, com aviso no log)
+    webhook-url: ${BACKEND_PUBLIC_URL:}/api/webhooks/mercadopago
   turnstile:
     url: https://challenges.cloudflare.com/turnstile/v0/siteverify
     secret: ${TURNSTILE_SECRET_KEY:}
