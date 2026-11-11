@@ -307,6 +307,18 @@ class AcoesDePedidoAdminTest {
 		}
 	}
 
+	@Test
+	void segundoReenvioComOPrimeiroNaFilaENoOp() throws Exception {
+		var adm = entrar(Papel.ADMIN);
+		var id = comOracao();
+		assertThat(adm.post(url(id, "reenvio"), "").statusCode()).isEqualTo(200);
+		var res = adm.post(url(id, "reenvio"), "");
+		assertThat(res.statusCode()).isEqualTo(200);
+		assertThat(Navegador.json(res).get("jaEmAndamento").asBoolean()).isTrue();
+		assertThat(jobs("reenviar-oracao", id)).isEqualTo(1);
+		assertThat(auditorias(id, "reenvio")).isEqualTo(1);
+	}
+
 	// --- regeneracao ---
 
 	@Test

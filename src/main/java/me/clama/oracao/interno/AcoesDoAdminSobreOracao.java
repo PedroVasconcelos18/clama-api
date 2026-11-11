@@ -33,16 +33,18 @@ public class AcoesDoAdminSobreOracao {
 	private final Fila fila;
 	private final JobGerarOracao gerar;
 	private final JobEnviarOracao enviar;
+	private final JobReenviarOracao reenviar;
 	private final Auditoria auditoria;
 	private final TransactionTemplate transacao;
 
 	AcoesDoAdminSobreOracao(PedidoApi pedidos, PagamentoApi pagamento, Fila fila, JobGerarOracao gerar, JobEnviarOracao enviar,
-			Auditoria auditoria, TransactionTemplate transacao) {
+			JobReenviarOracao reenviar, Auditoria auditoria, TransactionTemplate transacao) {
 		this.pedidos = pedidos;
 		this.pagamento = pagamento;
 		this.fila = fila;
 		this.gerar = gerar;
 		this.enviar = enviar;
+		this.reenviar = reenviar;
 		this.auditoria = auditoria;
 		this.transacao = transacao;
 	}
@@ -64,7 +66,7 @@ public class AcoesDoAdminSobreOracao {
 		});
 	}
 
-	/** Sempre envia de fato (chave nova). Com a geracao ou o envio na fila, no-op: esse job ja entrega a oracao. */
+	/** Sempre envia de fato (chave nova). Com a geracao, o envio ou outro reenvio na fila, no-op: esse job ja entrega a oracao. */
 	public Resultado reenviar(Long autorId, UUID id) {
 		return transacao.execute(s -> {
 			var d = pedidos.dadosParaOracao(id);
@@ -72,7 +74,8 @@ public class AcoesDoAdminSobreOracao {
 					|| d.status() == StatusPedido.ERRO)) {
 				throw conflito("reenvio_indisponivel", "Esse pedido ainda não tem uma oração pronta para reenviar.");
 			}
-			if (fila.existePendente(gerar.getName(), gerar.instancia(id)) || fila.existePendente(enviar.getName(), enviar.instancia(id))) {
+			if (fila.existePendente(gerar.getName(), gerar.instancia(id)) || fila.existePendente(enviar.getName(), enviar.instancia(id))
+					|| fila.existePendente(reenviar.getName(), reenviar.instancia(id))) {
 				return new Resultado(resumo(id), true);
 			}
 			pedidos.solicitarReenvio(id);
