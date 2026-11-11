@@ -12,6 +12,30 @@ import org.junit.jupiter.api.Test;
 @org.junit.jupiter.api.extension.ExtendWith(org.springframework.boot.test.system.OutputCaptureExtension.class)
 class BanimentosAdminTest extends WidgetTeste {
 
+	@org.springframework.test.context.bean.override.mockito.MockitoSpyBean me.clama.conta.ContaApi conta;
+
+	/** Carregado da revisao da T3: a conta some entre a checagem e o insert; era FK violada (500), agora 404 pastoral. */
+	@Test
+	void contaApagadaEntreAChecagemEOInsertE404() throws Exception {
+		var admin = logado("Admin Um", Papel.ADMIN);
+		var alvo = logado();
+		org.mockito.Mockito.doAnswer(inv -> {
+			var resumos = inv.callRealMethod();
+			// outra thread = outra conexao: a leitura do ContaApi corre numa transacao somente-leitura
+			java.util.concurrent.CompletableFuture.runAsync(() -> jdbc.update("delete from usuario where id = ?", alvo.id())).join();
+			return resumos;
+		}).when(conta).resumos(org.mockito.ArgumentMatchers.anyCollection());
+		try {
+			var res = admin.nav().post("/api/admin/blog/banimentos", corpo(alvo.id(), "motivo"));
+			assertThat(res.statusCode()).isEqualTo(404);
+			assertThat(res.body()).contains("Esse usuário não foi encontrado.");
+			assertThat(quantos("blog_banimento")).isZero();
+			assertThat(auditorias(alvo.id(), "ADICAO")).isZero();
+		} finally {
+			org.mockito.Mockito.reset(conta);
+		}
+	}
+
 	private static String corpo(Long id, String motivo) {
 		return "{\"usuarioId\":" + id + ",\"motivo\":\"" + motivo + "\"}";
 	}

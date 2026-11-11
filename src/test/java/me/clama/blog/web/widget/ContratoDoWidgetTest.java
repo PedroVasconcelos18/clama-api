@@ -98,7 +98,10 @@ class ContratoDoWidgetTest extends WidgetTeste {
 		var item = json(lista).get("results").get(0);
 		assertThat(campos(item)).containsExactlyInAnyOrder("id", "customer_nome", "conteudo", "created_at");
 		assertThat(item.get("id")).isEqualTo(json(criado).get("id"));
-		assertThat(lista.body()).doesNotContain(l.email()).doesNotContain("usuario"); // comparar com o id falhava quando as sequencias coincidiam
+		assertThat(lista.body()).doesNotContain(l.email());
+		// so o "id" pode ser igual ao id do usuario (as sequencias coincidem as vezes): nenhum outro valor do item o carrega
+		item.properties().stream().filter(e -> !e.getKey().equals("id"))
+				.forEach(e -> assertThat(e.getValue().asString()).isNotEqualTo(String.valueOf(l.id())));
 	}
 
 	@Test

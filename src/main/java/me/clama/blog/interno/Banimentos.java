@@ -13,6 +13,7 @@ import me.clama.conta.UsuarioResumo;
 import me.clama.infra.auditoria.Acao;
 import me.clama.infra.auditoria.Auditoria;
 import me.clama.infra.web.ErroDeNegocio;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -77,16 +78,27 @@ public class Banimentos {
 		if (alvo.admin()) {
 			throw new ErroDeNegocio(HttpStatus.CONFLICT, "nao_pode_banir_admin", "Admin nao pode ser banido", NAO_PODE_BANIR_ADMIN);
 		}
-		var criado = Boolean.TRUE.equals(transacao.execute(s -> {
-			var inseriu = jdbc.sql("""
-					insert into blog_banimento (usuario_id, motivo, banido_por_id, banido_em)
-					values (:u, :motivo, :autor, :em) on conflict (usuario_id) do nothing""")
-					.param("u", usuarioId).param("motivo", texto).param("autor", autorId)
-					.param("em", OffsetDateTime.ofInstant(relogio.instant(), ZoneOffset.UTC)).update() == 1;
-			if (inseriu) auditoria.registrar(autorId, "banimento", String.valueOf(usuarioId), Acao.ADICAO, Map.of("motivo", texto));
-			return inseriu;
-		}));
-		return new Resultado(listar(usuarioId, Pageable.ofSize(1)).getContent().get(0), criado);
+		boolean criado;
+		try {
+			criado = Boolean.TRUE.equals(transacao.execute(s -> {
+				var inseriu = jdbc.sql("""
+						insert into blog_banimento (usuario_id, motivo, banido_por_id, banido_em)
+						values (:u, :motivo, :autor, :em) on conflict (usuario_id) do nothing""")
+						.param("u", usuarioId).param("motivo", texto).param("autor", autorId)
+						.param("em", OffsetDateTime.ofInstant(relogio.instant(), ZoneOffset.UTC)).update() == 1;
+				if (inseriu) auditoria.registrar(autorId, "banimento", String.valueOf(usuarioId), Acao.ADICAO, Map.of("motivo", texto));
+				return inseriu;
+			}));
+		} catch (DataIntegrityViolationException e) { // a conta sumiu entre a checagem e o insert (FK)
+			throw usuarioSumiu();
+		}
+		var ban = listar(usuarioId, Pageable.ofSize(1)).getContent();
+		if (ban.isEmpty()) throw usuarioSumiu(); // revogado ou conta apagada entre o insert e a leitura
+		return new Resultado(ban.get(0), criado);
+	}
+
+	private static ErroDeNegocio usuarioSumiu() {
+		return new ErroDeNegocio(HttpStatus.NOT_FOUND, "usuario_nao_encontrado", "Usuario nao encontrado", USUARIO_INEXISTENTE);
 	}
 
 	public void revogar(long autorId, long usuarioId) {

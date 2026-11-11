@@ -14,6 +14,12 @@ class ComentariosAdminTest extends WidgetTeste {
 				values (?, ?, ?, ?, 'nao-decifra', ?::timestamptz) returning id""", Long.class, postId, usuarioId, texto, suspeito, criadoEm);
 	}
 
+	private static java.util.List<String> campos(tools.jackson.databind.JsonNode n) {
+		var nomes = new java.util.ArrayList<String>();
+		n.propertyNames().forEach(nomes::add);
+		return nomes;
+	}
+
 	@Test
 	void listaPaginadaMaisNovosPrimeiroSemIp() throws Exception {
 		semear(7, "fe", true);
@@ -36,7 +42,9 @@ class ComentariosAdminTest extends WidgetTeste {
 		assertThat(item.get("usuarioId").asLong()).isEqualTo(autora.id());
 		assertThat(item.get("usuarioEmail").asString()).isEqualTo(autora.email());
 		assertThat(item.get("usuarioNome").asString()).isEqualTo("Ana S.");
-		assertThat(res.body().toLowerCase()).doesNotContain("ip").doesNotContain("nao-decifra");
+		assertThat(res.body()).doesNotContain("nao-decifra");
+		assertThat(campos(item)).containsExactlyInAnyOrder("id", "criadoEm", "conteudo", "suspeito", "postSlug", "postTitulo", "postUrl",
+				"usuarioId", "usuarioEmail", "usuarioNome");
 		assertThat(json(admin.nav().get("/api/admin/blog/comentarios?size=1&page=1")).get("content").get(0).get("conteudo").asString())
 				.isEqualTo("primeiro");
 	}
