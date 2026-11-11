@@ -347,14 +347,14 @@ class DocumentosAdminTest {
 		var a = criar(adm, "A");
 		var b = criar(adm, "B");
 		var c = criar(adm, "C");
-		CLAUDE.stubFor(post("/v1/files").inScenario("l").whenScenarioStateIs(com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED)
-				.willReturn(okJson(META.formatted("file_l1", "text/plain")).withFixedDelay(1500)).willSetStateTo("2"));
-		CLAUDE.stubFor(post("/v1/files").inScenario("l").whenScenarioStateIs("2")
+		CLAUDE.stubFor(post("/v1/files").withRequestBody(containing("MARCA-UM"))
+				.willReturn(okJson(META.formatted("file_l1", "text/plain")).withFixedDelay(1500)));
+		CLAUDE.stubFor(post("/v1/files").withRequestBody(containing("MARCA-DOIS"))
 				.willReturn(okJson(META.formatted("file_l2", "text/plain")).withFixedDelay(1500)));
 		var pool = java.util.concurrent.Executors.newFixedThreadPool(2);
 		try {
-			var f1 = pool.submit(() -> entrar(Papel.ADMIN).putCru(RAIZ + "/" + a + "/arquivo", "text/plain", HttpRequest.BodyPublishers.ofString("um")));
-			var f2 = pool.submit(() -> entrar(Papel.ADMIN).putCru(RAIZ + "/" + b + "/arquivo", "text/plain", HttpRequest.BodyPublishers.ofString("dois")));
+			var f1 = pool.submit(() -> entrar(Papel.ADMIN).putCru(RAIZ + "/" + a + "/arquivo", "text/plain", HttpRequest.BodyPublishers.ofString("MARCA-UM")));
+			var f2 = pool.submit(() -> entrar(Papel.ADMIN).putCru(RAIZ + "/" + b + "/arquivo", "text/plain", HttpRequest.BodyPublishers.ofString("MARCA-DOIS")));
 			org.awaitility.Awaitility.await().atMost(java.time.Duration.ofSeconds(5)).until(() -> CLAUDE.findAll(postRequestedFor(urlEqualTo("/v1/files"))).size() == 2);
 
 			confere(adm.putCru(RAIZ + "/" + c + "/arquivo", "text/plain", HttpRequest.BodyPublishers.ofString("tres")), 503, "documento_upload_ocupado");
@@ -363,7 +363,6 @@ class DocumentosAdminTest {
 		} finally {
 			pool.shutdownNow();
 		}
-		CLAUDE.resetScenarios();
 		CLAUDE.stubFor(post("/v1/files").willReturn(okJson(META.formatted("file_c", "text/plain"))));
 		assertThat(adm.putCru(RAIZ + "/" + c + "/arquivo", "text/plain", HttpRequest.BodyPublishers.ofString("tres")).statusCode()).isEqualTo(200);
 	}
@@ -373,9 +372,10 @@ class DocumentosAdminTest {
 	void dois_uploadsConcorrentesNoMesmoDocumentoDeixamUmSo() throws Exception {
 		var adm = entrar(Papel.ADMIN);
 		var id = criar(adm, "Corrida");
-		CLAUDE.stubFor(post("/v1/files").inScenario("c").whenScenarioStateIs(com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED)
-				.willReturn(okJson(META.formatted("file_1", "text/plain")).withFixedDelay(800)).willSetStateTo("2"));
-		CLAUDE.stubFor(post("/v1/files").inScenario("c").whenScenarioStateIs("2")
+		// o file_id depende do conteudo enviado, nao da ordem de chegada
+		CLAUDE.stubFor(post("/v1/files").withRequestBody(containing("MARCA-UM"))
+				.willReturn(okJson(META.formatted("file_1", "text/plain")).withFixedDelay(800)));
+		CLAUDE.stubFor(post("/v1/files").withRequestBody(containing("MARCA-DOIS"))
 				.willReturn(okJson(META.formatted("file_2", "text/plain")).withFixedDelay(800)));
 		CLAUDE.stubFor(delete(urlPathMatching("/v1/files/file_[12]")).willReturn(okJson("{\"id\": \"x\", \"type\": \"file_deleted\"}")));
 		var pool = java.util.concurrent.Executors.newFixedThreadPool(2);
@@ -383,8 +383,8 @@ class DocumentosAdminTest {
 		try {
 			var n1 = entrar(Papel.ADMIN);
 			var n2 = entrar(Papel.ADMIN);
-			var f1 = pool.submit(() -> n1.putCru(RAIZ + "/" + id + "/arquivo", "text/plain", HttpRequest.BodyPublishers.ofString("um")).statusCode());
-			var f2 = pool.submit(() -> n2.putCru(RAIZ + "/" + id + "/arquivo", "text/plain", HttpRequest.BodyPublishers.ofString("dois")).statusCode());
+			var f1 = pool.submit(() -> n1.putCru(RAIZ + "/" + id + "/arquivo", "text/plain", HttpRequest.BodyPublishers.ofString("MARCA-UM")).statusCode());
+			var f2 = pool.submit(() -> n2.putCru(RAIZ + "/" + id + "/arquivo", "text/plain", HttpRequest.BodyPublishers.ofString("MARCA-DOIS")).statusCode());
 			status.add(f1.get());
 			status.add(f2.get());
 		} finally {
