@@ -5,6 +5,7 @@ import io.sentry.SentryLevel;
 import java.text.NumberFormat;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import java.util.Set;
@@ -82,6 +83,18 @@ public class Cobrancas implements PagamentoApi {
 		return cobrancas.existsByPedidoIdAndMpPagamentoId(pedidoId, mpPagamentoId);
 	}
 
+	/** Para o webhook: este pagamento e o que pagou o pedido? (Reentrega e estorno; outro pagamento aprovado e orfao.) */
+	@Transactional(readOnly = true)
+	public boolean pagouOPedido(UUID pedidoId, long mpPagamentoId) {
+		return cobrancas.existsByPedidoIdAndMpPagamentoIdAndPagaEmIsNotNull(pedidoId, mpPagamentoId);
+	}
+
+	/** Para o webhook, na transacao com o pedido travado: a cobranca deste pagamento pagou o pedido. */
+	@Transactional
+	public void registrarPagamento(long mpPagamentoId, Instant agora) {
+		cobrancas.findByMpPagamentoId(mpPagamentoId).orElseThrow().pagar(agora);
+	}
+
 	/** Marca a cobranca mais recente como cancelada (a linha fica: historico e n nunca recomecam). */
 	@Override
 	@Transactional
@@ -90,7 +103,7 @@ public class Cobrancas implements PagamentoApi {
 		var c = cobrancas.findFirstByPedidoIdOrderByNDesc(pedidoId).orElse(null);
 		if (c == null || c.getCanceladaEm() != null) return;
 		try {
-			var status = mercadoPago.status(c.getMpPagamentoId());
+			var status = mercadoPago.pagamento(c.getMpPagamentoId()).status();
 			if ("approved".equals(status)) {
 				throw new ErroDeNegocio(HttpStatus.CONFLICT, "pagamento_ja_aprovado", "Pagamento já aprovado no Mercado Pago.",
 						"O pagamento já caiu; reprocesse o evento.");

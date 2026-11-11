@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><title>Alerta do Clama</title></head>
+<body style="font-family:Arial, sans-serif; font-size:14px; color:#222;">
+  <h2 style="margin:0 0 12px 0;">Alerta do Clama: {{motivo}}</h2>
+  <p>{{detalhe}}</p>
+  <table cellpadding="4" style="border-collapse:collapse;">
+    <tr><td><b>Pedido</b></td><td>{{pedido_id}}</td></tr>
+    <tr><td><b>Status</b></td><td>{{status}}</td></tr>
+    <tr><td><b>Plano</b></td><td>{{plano}}</td></tr>
+    <tr><td><b>Valor</b></td><td>{{valor}}</td></tr>
+  </table>
+  <p><a href="{{link}}">Abrir no admin</a></p>
+</body>
+</html>

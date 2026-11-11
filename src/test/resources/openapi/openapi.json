@@ -547,6 +547,14 @@
         "required" : [ "novaSenha", "token" ],
         "type" : "object"
       },
+      "RespostaDoWebhook" : {
+        "properties" : {
+          "status" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "StatusPublico" : {
         "properties" : {
           "criadoEm" : {
@@ -1514,6 +1522,24 @@
           }
         },
         "tags" : [ "catalogo-publico-controller" ]
+      }
+    },
+    "/api/webhooks/mercadopago" : {
+      "post" : {
+        "operationId" : "receber",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RespostaDoWebhook"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "webhook-mercado-pago-controller" ]
       }
     }
   }

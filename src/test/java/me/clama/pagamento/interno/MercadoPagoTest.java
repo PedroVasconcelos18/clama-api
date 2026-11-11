@@ -215,13 +215,13 @@ class MercadoPagoTest {
 				stubFor(post("/v1/payments").willReturn(caso));
 				stubFor(get("/v1/payments/123").willReturn(caso));
 				erros.add(catchThrowableOfType(MercadoPago.Falha.class, () -> mp(wm, token, "").criarPix(pedido(), CHAVE, EXPIRA)));
-				erros.add(catchThrowableOfType(MercadoPago.Falha.class, () -> mp(wm, token, "").status(123)));
+				erros.add(catchThrowableOfType(MercadoPago.Falha.class, () -> mp(wm, token, "").pagamento(123)));
 			}
 		} finally {
 			raiz.detachAppender(logs);
 		}
 
-		erros.removeIf(java.util.Objects::isNull); // status() com {"id": 1} e sucesso
+		erros.removeIf(java.util.Objects::isNull); // pagamento() com {"id": 1} e sucesso
 		assertThat(erros).hasSize(9);
 		assertThat(logs.list).isNotEmpty().allSatisfy(ev -> {
 			assertThat(ev.getFormattedMessage()).doesNotContain(token);
@@ -235,9 +235,16 @@ class MercadoPagoTest {
 	}
 
 	@Test
-	void statusLeOPagamento(WireMockRuntimeInfo wm) {
-		stubFor(get("/v1/payments/123").willReturn(okJson("{\"id\": 123, \"status\": \"approved\"}")));
-		assertThat(mp(wm).status(123)).isEqualTo("approved");
+	void pagamentoLeStatusReferenciaValorEMoeda(WireMockRuntimeInfo wm) {
+		stubFor(get("/v1/payments/123").willReturn(okJson("""
+				{"id": 123, "status": "approved", "external_reference": "ref-1", "transaction_amount": 30.01, "currency_id": "BRL"}""")));
+		var p = mp(wm).pagamento(123);
+		assertThat(p.status()).isEqualTo("approved");
+		assertThat(p.referencia()).isEqualTo("ref-1");
+		assertThat(p.valor()).isEqualByComparingTo("30.01");
+		assertThat(p.moeda()).isEqualTo("BRL");
+		stubFor(get("/v1/payments/124").willReturn(okJson("{\"id\": 124}")));
+		assertThat(mp(wm).pagamento(124)).isEqualTo(new MercadoPago.Pagamento(null, null, null, null));
 		verify(getRequestedFor(urlEqualTo("/v1/payments/123")).withHeader("Authorization", equalTo("Bearer test")));
 	}
 

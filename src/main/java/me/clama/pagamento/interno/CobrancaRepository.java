@@ -10,4 +10,8 @@ interface CobrancaRepository extends JpaRepository<Cobranca, Long> {
 	Optional<Cobranca> findFirstByPedidoIdOrderByNDesc(UUID pedidoId);
 
 	boolean existsByPedidoIdAndMpPagamentoId(UUID pedidoId, long mpPagamentoId);
+
+	boolean existsByPedidoIdAndMpPagamentoIdAndPagaEmIsNotNull(UUID pedidoId, long mpPagamentoId);
+
+	Optional<Cobranca> findByMpPagamentoId(long mpPagamentoId);
 }

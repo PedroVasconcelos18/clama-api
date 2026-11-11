@@ -24,6 +24,7 @@ public class Cobranca {
 	private Instant expiraEm;
 	private Instant criadaEm;
 	private Instant canceladaEm;
+	private Instant pagaEm;
 
 	protected Cobranca() {}
 
@@ -45,6 +46,10 @@ public class Cobranca {
 
 	void cancelar(Instant agora) {
 		canceladaEm = agora;
+	}
+
+	void pagar(Instant agora) {
+		pagaEm = agora;
 	}
 
 	/** Chave de idempotencia da n-esima cobranca: a primeira e a do sistema antigo (INV:93). */

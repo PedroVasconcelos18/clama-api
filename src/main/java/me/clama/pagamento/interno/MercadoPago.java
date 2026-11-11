@@ -164,9 +164,15 @@ class MercadoPago {
 		return new Pix(pagamento.getId(), dados.getQrCode(), dados.getQrCodeBase64(), vence);
 	}
 
-	/** Status bruto do MP ({@code pending}, {@code approved}...); nulo se a resposta nao traz. */
-	String status(long id) {
-		return chamar("payment_get", () -> cliente.get(id, opcoes(Map.of()))).getStatus();
+	/**
+	 * O pagamento como o MP o ve agora: status bruto ({@code pending}, {@code approved}...), {@code external_reference},
+	 * {@code transaction_amount} (em reais, {@code BigDecimal}) e {@code currency_id}. Campos ausentes vem nulos.
+	 */
+	record Pagamento(String status, String referencia, BigDecimal valor, String moeda) {}
+
+	Pagamento pagamento(long id) {
+		var p = chamar("payment_get", () -> cliente.get(id, opcoes(Map.of())));
+		return new Pagamento(p.getStatus(), p.getExternalReference(), p.getTransactionAmount(), p.getCurrencyId());
 	}
 
 	void cancelar(long id) {

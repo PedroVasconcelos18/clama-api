@@ -3,3 +3,5 @@ clama:
   cripto:
     chave: AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
     chave-hmac: ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=
+  pagamento:
+    webhook-segredo: segredo-do-webhook-de-teste

@@ -1,0 +1,10 @@
+Alerta do Clama: {{motivo}}
+
+{{detalhe}}
+
+Pedido: {{pedido_id}}
+Status: {{status}}
+Plano: {{plano}}
+Valor: {{valor}}
+
+Abrir no admin: {{link}}

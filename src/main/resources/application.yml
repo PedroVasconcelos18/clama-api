@@ -102,6 +102,14 @@ clama:
     mercadopago-token: ${MERCADOPAGO_ACCESS_TOKEN:}
     # notification_url do Pix; so vai ao MP se for https (em dev local fica de fora, com aviso no log)
     webhook-url: ${BACKEND_PUBLIC_URL:}/api/webhooks/mercadopago
+    # HMAC do x-signature; vazio fora de local/teste impede o boot (todo webhook seria recusado)
+    webhook-segredo: ${MERCADOPAGO_WEBHOOK_SECRET:}
+  repasse:
+    percentual: 20 # fotografado em cada repasse registrado
+  alerta:
+    # alertas ao admin sem PII (D11): pagamento divergente/orfao, estorno de repasse transferido, falhas da oracao (4b)
+    email-admin: ${CLAMA_ADMIN_ALERTA_EMAIL:contato@clama.me}
+    frontend-url: ${FRONTEND_URL:http://localhost:5173}
   turnstile:
     url: https://challenges.cloudflare.com/turnstile/v0/siteverify
     secret: ${TURNSTILE_SECRET_KEY:}

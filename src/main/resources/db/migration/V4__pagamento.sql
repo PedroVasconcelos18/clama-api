@@ -12,6 +12,8 @@ CREATE TABLE cobranca (
 	expira_em timestamptz NOT NULL,
 	criada_em timestamptz NOT NULL,
 	cancelada_em timestamptz,
+	-- a cobranca que pagou o pedido (no maximo uma por pedido): separa reentrega de pagamento orfao e diz de quem e o estorno
+	paga_em timestamptz,
 	UNIQUE (pedido_id, n)
 );
 
@@ -50,4 +52,5 @@ CREATE TABLE repasse (
 	CHECK ((status = 'TRANSFERIDO') = (transferido_em IS NOT NULL)),
 	CHECK ((status = 'CANCELADO') = (cancelado_em IS NOT NULL))
 );
+CREATE UNIQUE INDEX cobranca_paga_ux ON cobranca (pedido_id) WHERE paga_em IS NOT NULL;
 CREATE INDEX repasse_instituicao_status_ix ON repasse (instituicao_id, status);
