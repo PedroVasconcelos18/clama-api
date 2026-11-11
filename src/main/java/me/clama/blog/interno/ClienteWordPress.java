@@ -91,6 +91,8 @@ public class ClienteWordPress {
 		if (cliente == null) throw new Indisponivel("WordPress nao configurado");
 		ResponseEntity<String> resposta;
 		try {
+			// ponytail: o corpo vem inteiro em memoria, sem teto de tamanho; a URL base e config confiavel (o WordPress do
+			// proprio Clama). Se isso mudar, troque por leitura em fluxo cortada em ~2 MB por pagina.
 			resposta = chamada.get();
 		} catch (RuntimeException e) {
 			// a mensagem da excecao leva a URL (com o host): so o tipo e o status saem

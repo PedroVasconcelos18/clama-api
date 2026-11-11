@@ -34,6 +34,9 @@ public class Espelho {
 	/**
 	 * O post que aceita interacao.
 	 *
+	 * <p><b>Nunca chame dentro de uma transacao:</b> sem espelho isto faz um GET ao WordPress (ate o timeout de 10 s) e a
+	 * transacao ficaria com a conexao do banco presa esse tempo todo. Resolva antes de abrir a transacao de gravacao.
+	 *
 	 * @throws ErroDeNegocio 404 {@code post_nao_encontrado}: o WordPress nao tem o slug publicamente; 409
 	 *         {@code post_nao_aceita_interacao}: o espelho existe e nao esta publicado; 503 {@code wordpress_indisponivel}:
 	 *         nao deu para perguntar (nada e gravado)

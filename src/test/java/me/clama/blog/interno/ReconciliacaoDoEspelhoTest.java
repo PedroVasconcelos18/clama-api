@@ -164,6 +164,5 @@ class ReconciliacaoDoEspelhoTest {
 		pagina(1, 1, post(1, "a", false), post(9, "novo", false));
 		tarefa.executar(true);
 		abortaSemGravar();
-		assertThat(List.of(1L, 2L)).hasSize(2);
 	}
 }

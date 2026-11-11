@@ -165,9 +165,8 @@ class ModulosTest {
 	@Test
 	void blogDependeDeContaENinguemDependeDele() {
 		var blog = MODULOS.getModuleByName("blog").orElseThrow();
-		// a dependencia de conta so passa a existir no codigo com o widget (T2): ate la o teste prova que nada alem de conta e infra e permitido
 		assertThat(blog.getDirectDependencies(MODULOS).stream().map(d -> d.getTargetModule().getIdentifier().toString()).distinct())
-				.isSubsetOf("conta", "infra");
+				.contains("conta").isSubsetOf("conta", "infra");
 		MODULOS.stream().filter(m -> !m.getIdentifier().toString().equals("blog")).forEach(m ->
 				assertThat(m.getDirectDependencies(MODULOS).stream().map(d -> d.getTargetModule().getIdentifier().toString()))
 						.as(m.getIdentifier().toString()).doesNotContain("blog"));
