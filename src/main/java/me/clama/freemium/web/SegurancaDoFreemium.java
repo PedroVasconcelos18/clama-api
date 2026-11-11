@@ -10,7 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
-/** O submit e anonimo mas com CSRF: o front pega o cookie XSRF antes, como na doacao. */
+/** O submit e a confirmacao sao anonimos mas com CSRF: o front pega o cookie XSRF antes, como na doacao. */
 @Configuration
 class SegurancaDoFreemium {
 
@@ -18,7 +18,8 @@ class SegurancaDoFreemium {
 	@Order(34)
 	SecurityFilterChain cadeiaDoFreemium(HttpSecurity http, RespostasDeSeguranca respostas) throws Exception {
 		return SegurancaConfig.aplicarPadrao(http, respostas)
-				.securityMatcher(PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/freemium/pedidos"))
+				.securityMatchers(m -> m.requestMatchers(PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/freemium/pedidos"),
+						PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/freemium/confirmacao")))
 				.authorizeHttpRequests(a -> a.anyRequest().permitAll())
 				.build();
 	}

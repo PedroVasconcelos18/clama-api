@@ -213,10 +213,16 @@ class SubmitFreemiumTest {
 	@Test
 	void camposInvalidosGanhamDoLimiteEDoCaptcha() throws Exception {
 		turnstileAprova(false);
-		var res = enviar(anonimo(), com(corpo(email(), CPF), "nome", "A"));
-		assertThat(res.statusCode()).isEqualTo(400);
-		assertThat(json(res).get("codigo").asString()).isEqualTo("dados_invalidos");
+		var nav = anonimo();
+		for (int i = 0; i < 5; i++) {
+			var res = enviar(nav, com(corpo(email(), CPF), "nome", "A"));
+			assertThat(res.statusCode()).isEqualTo(400);
+			assertThat(json(res).get("codigo").asString()).isEqualTo("dados_invalidos");
+		}
 		TURNSTILE.verify(0, postRequestedFor(urlEqualTo("/siteverify")));
+		// 5 invalidos nao gastaram o limite de 5/h: o 6o, valido, passa
+		turnstileAprova(true);
+		assertThat(enviar(nav, corpo(email(), CPF)).statusCode()).isEqualTo(201);
 	}
 
 	@Test
@@ -373,6 +379,14 @@ class SubmitFreemiumTest {
 		assertThat(bloqueios.contarPorIp(hmac.ip(IP_DE_TESTE), java.time.Instant.now().minus(Duration.ofHours(1)))).isOne();
 		assertThat(bloqueios.contarPorIp(hmac.ip(IP_DE_TESTE), java.time.Instant.now().minus(Duration.ofMinutes(30)))).isZero();
 		assertThat(bloqueios.contarPorIp(hmac.ip("198.51.100.1"), java.time.Instant.now().minus(Duration.ofHours(1)))).isZero();
+	}
+
+	@Test
+	void bloqueioCriadoExatamenteNoInicioDaJanelaConta() {
+		var desde = java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS); // o banco guarda micros
+		bloquearIp(IP_DE_TESTE, desde);
+		assertThat(bloqueios.contarPorIp(hmac.ip(IP_DE_TESTE), desde)).as("criado_em == desde conta").isOne();
+		assertThat(bloqueios.contarPorIp(hmac.ip(IP_DE_TESTE), desde.plus(Duration.ofNanos(1000)))).as("1 us depois nao").isZero();
 	}
 
 	@Test

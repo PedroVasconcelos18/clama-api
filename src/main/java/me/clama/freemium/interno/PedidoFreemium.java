@@ -67,7 +67,7 @@ public class PedidoFreemium {
 		if (ipHmac != null && bloqueios.contarPorIp(ipHmac, agora.minus(props.janelaIp())) >= props.limiarIp()) { // 8
 			throw jaUsado();
 		}
-		catalogo.planoGratuito(); // 9: 503 freemium_indisponivel se faltar
+		catalogo.planoGratuito(); // 9: 503 freemium_indisponivel se faltar; explicito para falhar antes de criar o pedido e o job
 		var id = pedidos.criarFreemium(n, ip); // 10
 		fila.enfileirar(job, job.instancia(id), id, agora);
 		return id;
