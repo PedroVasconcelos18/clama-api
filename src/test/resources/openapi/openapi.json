@@ -61,7 +61,7 @@
           },
           "nome" : {
             "maxLength" : 120,
-            "minLength" : 2,
+            "minLength" : 0,
             "type" : "string"
           },
           "pedidoOracao" : {
@@ -632,6 +632,9 @@
         "properties" : {
           "criadoEm" : {
             "format" : "date-time",
+            "type" : "string"
+          },
+          "email" : {
             "type" : "string"
           },
           "gratuito" : {

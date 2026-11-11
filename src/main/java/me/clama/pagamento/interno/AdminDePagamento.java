@@ -101,8 +101,8 @@ public class AdminDePagamento {
 		diff.put("resultado", r.name());
 		transacao.executeWithoutResult(s -> auditoria.registrar(autorId, "pagamento_evento", String.valueOf(id), Acao.MUDANCA, diff));
 		if (r == ProcessamentoDePagamento.Resultado.FALHA_TEMPORARIA) {
-			throw new ErroDeNegocio(HttpStatus.BAD_GATEWAY, "mp_indisponivel", "O Mercado Pago não respondeu.",
-					"O Mercado Pago está instável agora. Tente reprocessar em instantes.");
+			throw new ErroDeNegocio(HttpStatus.BAD_GATEWAY, "mp_indisponivel", "Reprocessamento sem resposta.",
+					"Não deu para reprocessar agora. Tente de novo em instantes.");
 		}
 		return new Reprocessado(r.status, depois);
 	}

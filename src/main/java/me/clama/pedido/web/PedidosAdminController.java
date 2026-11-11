@@ -10,12 +10,12 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.UUID;
 import me.clama.catalogo.CatalogoApi;
+import me.clama.infra.web.FiltrosDeAdmin;
 import me.clama.pedido.CorrecaoDeDados;
 import me.clama.pedido.HistoricoDePagamento;
 import me.clama.pedido.PedidoNaoEncontradoException;
 import me.clama.pedido.interno.AdminDePedidos;
 import me.clama.pedido.interno.AdminDePedidos.Filtros;
-import me.clama.pedido.interno.Pedido;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 class PedidosAdminController {
 
 	/** Nulo = deixa como esta. */
-	record CorrecaoDoPedido(@Size(min = 2, max = 120) String nome, @Email @Size(max = 254) String email,
+	record CorrecaoDoPedido(@Size(max = 120) String nome, @Email @Size(max = 254) String email,
 			@Size(max = 20) String telefone, @Min(1) @Max(120) Short idade,
 			@Size(max = 20) @Pattern(regexp = "feminino|masculino|nao_informado") String sexo,
 			@Size(max = 2000) String pedidoOracao) {}
@@ -64,11 +64,11 @@ class PedidosAdminController {
 			@ParameterObject @PageableDefault(size = 20) Pageable pagina) {
 		var fixa = PageRequest.of(pagina.getPageNumber(), pagina.getPageSize(), Sort.by(Sort.Direction.DESC, "criadoEm", "id"));
 		var pag = servico.listar(new Filtros(status, de, ate, gratuito, usuarioId, q), fixa);
-		var planos = catalogo.planos(pag.getContent().stream().map(Pedido::getPlanoId).distinct().toList());
+		var planos = catalogo.planos(pag.getContent().stream().map(AdminDePedidos.Item::planoId).distinct().toList());
 		return new PagedModel<>(pag.map(p -> {
-			var plano = planos.get(p.getPlanoId());
-			return new PedidoAdminItem(p.getId(), p.getStatus(), p.getValorCentavos(), plano == null ? null : plano.nome(),
-					p.getCriadoEm(), p.isGratuito(), p.getNome());
+			var plano = planos.get(p.planoId());
+			return new PedidoAdminItem(p.id(), p.status(), p.valorCentavos(), plano == null ? null : plano.nome(), p.criadoEm(),
+					p.gratuito(), p.nome(), p.email());
 		}));
 	}
 
@@ -80,8 +80,12 @@ class PedidosAdminController {
 	@PatchMapping("/{id}")
 	PedidoAdminDetalhe corrigir(@PathVariable String id, @Valid @RequestBody CorrecaoDoPedido c, Authentication auth) {
 		var uuid = uuid(id);
+		var nome = c.nome() == null ? null : c.nome().strip();
+		if (nome != null && nome.length() < 2) {
+			throw FiltrosDeAdmin.invalido("nome", "O nome precisa ter pelo menos 2 letras.");
+		}
 		servico.corrigir(Long.valueOf(auth.getName()), uuid,
-				new CorrecaoDeDados(c.nome() == null ? null : c.nome().strip(), c.email() == null ? null : c.email().strip(),
+				new CorrecaoDeDados(nome, c.email() == null ? null : c.email().strip(),
 						c.telefone(), c.idade(), c.sexo(), c.pedidoOracao()));
 		return detalhe(uuid);
 	}

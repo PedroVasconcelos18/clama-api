@@ -10,7 +10,13 @@ import java.util.Set;
 import java.util.UUID;
 import me.clama.conta.interno.Papel;
 import me.clama.conta.web.Navegador;
+import me.clama.infra.cripto.Cifra;
 import me.clama.pedido.interno.Pedido;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +30,8 @@ class PedidosAdminTest extends PedidoWebTeste {
 	void limparAuditoria() {
 		jdbc.update("delete from auditoria where entidade in ('pedido')");
 	}
+
+	@MockitoSpyBean Cifra cifra;
 
 	Navegador admin() throws Exception {
 		var email = "ped-adm-" + UUID.randomUUID() + "@exemplo.com";
@@ -64,7 +72,7 @@ class PedidosAdminTest extends PedidoWebTeste {
 	// --- lista ---
 
 	@Test
-	void listaPaginadaComoPagedModelEItemSemPiiAlemDoNome() throws Exception {
+	void listaPaginadaComoPagedModelEItemSemPiiAlemDeNomeEEmail() throws Exception {
 		var plano = plano("Simples", 3000);
 		var antigo = pedido(null, plano, null, "Maria Souza", "maria@exemplo.com", "52998224725", Instant.parse("2026-03-10T12:00:00Z"));
 		var novo = pedido(null, plano, null, "João Lima", "joao@exemplo.com", "11144477735", Instant.parse("2026-03-11T12:00:00Z"));
@@ -75,11 +83,38 @@ class PedidosAdminTest extends PedidoWebTeste {
 		assertThat(json.get("page").get("totalElements").asInt()).isEqualTo(2);
 		assertThat(ids(res)).containsExactly(novo.getId().toString(), antigo.getId().toString());
 		var item = json.get("content").get(0);
-		assertThat(chaves(item)).containsExactlyInAnyOrder("id", "status", "valorCentavos", "plano", "criadoEm", "gratuito", "nome");
+		assertThat(chaves(item)).containsExactlyInAnyOrder("id", "status", "valorCentavos", "plano", "criadoEm", "gratuito", "nome", "email");
+		assertThat(item.get("email").asString()).isEqualTo("joao@exemplo.com");
 		assertThat(item.get("nome").asString()).isEqualTo("João Lima");
 		assertThat(item.get("plano").asString()).isEqualTo("Simples");
 		assertThat(item.get("criadoEm").asString()).isEqualTo("2026-03-11T12:00:00Z");
-		assertThat(res.body()).doesNotContain("joao@exemplo.com").doesNotContain("11144477735");
+		assertThat(res.body()).doesNotContain("11144477735").doesNotContain("11999990000").doesNotContain("Pela minha");
+	}
+
+	@Test
+	void listaSoDecifraNomeEEmailDeCadaLinha() throws Exception {
+		var plano = plano("Simples", 3000);
+		pedido(null, plano, null, "Maria Souza", "maria@exemplo.com", "52998224725", relogio.instant());
+		pedido(null, plano, null, "João Lima", "joao@exemplo.com", "11144477735", relogio.instant().minusSeconds(5));
+		var adm = admin();
+		clearInvocations(cifra);
+		assertThat(adm.get("/api/admin/pedidos").statusCode()).isEqualTo(200);
+		verify(cifra, times(4)).decifrar(anyString()); // 2 pedidos x (nome, email); CPF, telefone, pedido e oracao ficam cifrados
+	}
+
+	@Test
+	void buscaPorIdPrefixoParcialCompletoEOutroPedido() throws Exception {
+		var plano = plano("Simples", 3000);
+		var a = pedido(null, plano, null, "Maria", "maria@exemplo.com", "52998224725", relogio.instant());
+		var b = pedido(null, plano, null, "Joao", "joao@exemplo.com", "11144477735", relogio.instant().minusSeconds(5));
+		var adm = admin();
+		var ida = a.getId().toString();
+		assertThat(ids(adm.get("/api/admin/pedidos?q=" + ida.substring(0, 8)))).containsExactly(ida);
+		assertThat(ids(adm.get("/api/admin/pedidos?q=" + ida.substring(0, 13)))).as("prefixo com hifen").containsExactly(ida);
+		assertThat(ids(adm.get("/api/admin/pedidos?q=" + ida.replace("-", "").substring(0, 15)))).as("sem hifens").containsExactly(ida);
+		assertThat(ids(adm.get("/api/admin/pedidos?q=" + ida))).as("uuid completo").containsExactly(ida);
+		assertThat(ids(adm.get("/api/admin/pedidos?q=" + ida.replace("-", "")))).containsExactly(ida);
+		assertThat(ids(adm.get("/api/admin/pedidos?q=" + b.getId().toString().substring(0, 8)))).doesNotContain(ida);
 	}
 
 	@Test
@@ -247,7 +282,7 @@ class PedidosAdminTest extends PedidoWebTeste {
 	void patchInvalidoE404() throws Exception {
 		var p = pedido(null, plano("Simples", 3000), null, "Maria Souza", "maria@exemplo.com", "52998224725", relogio.instant());
 		var adm = admin();
-		for (var corpo : List.of("{\"sexo\":\"outro\"}", "{\"idade\":0}", "{\"email\":\"nao-e-email\"}", "{\"nome\":\"A\"}")) {
+		for (var corpo : List.of("{\"sexo\":\"outro\"}", "{\"idade\":0}", "{\"email\":\"nao-e-email\"}", "{\"nome\":\"A\"}", "{\"nome\":\"   \"}", "{\"nome\":\" A \"}")) {
 			var res = adm.patch("/api/admin/pedidos/" + p.getId(), corpo);
 			assertThat(res.statusCode()).as(corpo).isEqualTo(400);
 			assertThat(corpo(res).get("codigo").asString()).isEqualTo("dados_invalidos");
