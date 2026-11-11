@@ -1,7 +1,11 @@
 package me.clama.catalogo.interno;
 
 import io.sentry.Sentry;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.Optional;
 import me.clama.catalogo.CatalogoApi;
 import me.clama.catalogo.InstituicaoResumo;
@@ -60,6 +64,18 @@ class CatalogoApiImpl implements CatalogoApi {
 	@Override
 	public List<InstituicaoResumo> instituicoesAtivas() {
 		return instituicoes.findByAtivoTrueOrderByOrdemAscNomeAscIdAsc().stream().map(Instituicao::resumo).toList();
+	}
+
+	@Override
+	public Map<Long, PlanoResumo> planos(Collection<Long> ids) {
+		return planos.findAllById(ids).stream().map(Plano::resumo)
+				.collect(Collectors.toMap(PlanoResumo::id, Function.identity()));
+	}
+
+	@Override
+	public Map<Long, InstituicaoResumo> instituicoes(Collection<Long> ids) {
+		return instituicoes.findAllById(ids).stream().map(Instituicao::resumo)
+				.collect(Collectors.toMap(InstituicaoResumo::id, Function.identity()));
 	}
 
 	private static ErroDeNegocio semPlano() {

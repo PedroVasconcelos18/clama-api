@@ -36,6 +36,7 @@ public class Plano {
 
 	/** Plano de vitrine; os tecnicos nascem na migration. */
 	public static Plano comum(String nome, String descricao, long valorCentavos, Complexidade complexidade, int ordem) {
+		if (valorCentavos < 1) throw new IllegalArgumentException("Plano comum exige valor de pelo menos 1 centavo.");
 		var p = new Plano();
 		p.nome = nome;
 		p.descricao = descricao == null ? "" : descricao;
@@ -64,6 +65,7 @@ public class Plano {
 	}
 
 	public void alterarComplexidade(Complexidade complexidade) {
+		exigirComum("complexidade");
 		this.complexidade = complexidade;
 	}
 

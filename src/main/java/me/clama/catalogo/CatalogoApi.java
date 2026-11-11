@@ -1,6 +1,8 @@
 package me.clama.catalogo;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /** Interface do modulo para os outros (pedido, oracao, freemium, relatorios): so leitura. */
@@ -26,4 +28,10 @@ public interface CatalogoApi {
 
 	/** Todas as ativas, em ordem de exibicao. */
 	List<InstituicaoResumo> instituicoesAtivas();
+
+	/** Planos por id, inclusive inativos e tecnicos (pedido antigo aponta para eles); ids inexistentes ficam de fora. */
+	Map<Long, PlanoResumo> planos(Collection<Long> ids);
+
+	/** Instituicoes por id, inclusive inativas; ids inexistentes ficam de fora. */
+	Map<Long, InstituicaoResumo> instituicoes(Collection<Long> ids);
 }

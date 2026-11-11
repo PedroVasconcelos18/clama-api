@@ -1,5 +1,6 @@
 package me.clama.catalogo.interno;
 
+import static me.clama.catalogo.Complexidade.COM_VERSICULO;
 import static me.clama.catalogo.Complexidade.SIMPLES;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -43,5 +44,12 @@ class PlanoTest {
 		assertThrows(PlanoTecnicoException.class, () -> p.alterarValor(5));
 		assertThrows(PlanoTecnicoException.class, () -> p.reordenar(5));
 		assertThrows(PlanoTecnicoException.class, () -> p.alterarTipo(TipoDePlano.COMUM));
+		assertThrows(PlanoTecnicoException.class, () -> p.alterarComplexidade(COM_VERSICULO));
+	}
+
+	@Test
+	void comumExigeValorMinimoDeUmCentavo() {
+		assertThrows(IllegalArgumentException.class, () -> Plano.comum("A", "", 0, SIMPLES, 1));
+		assertEquals(1, Plano.comum("A", "", 1, SIMPLES, 1).getValorCentavos());
 	}
 }

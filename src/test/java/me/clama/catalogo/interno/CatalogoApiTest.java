@@ -96,4 +96,22 @@ class CatalogoApiTest {
 		assertThat(api.instituicaoAtiva(a.getId())).contains(new InstituicaoResumo(a.getId(), "A"));
 		assertThat(api.instituicaoAtiva(fora.getId())).isEmpty();
 	}
+
+	@Test
+	void leiturasPorIdIncluemInativoETecnicoEIgnoramInexistente() {
+		var inativo = Plano.comum("Inativo", "", 3000, SIMPLES, 2);
+		inativo.desativar();
+		planos.saveAndFlush(inativo);
+		var tecnicoId = planos.findByTipoAndAtivoTrue(TipoDePlano.GRATUITO).orElseThrow().getId();
+		var r = api.planos(java.util.List.of(inativo.getId(), tecnicoId, -1L));
+		assertThat(r).containsOnlyKeys(inativo.getId(), tecnicoId);
+		assertThat(r.get(tecnicoId).tipo()).isEqualTo(TipoDePlano.GRATUITO);
+		assertThat(api.planos(java.util.List.of())).isEmpty();
+
+		var fora = Instituicao.nova("Fora", 0);
+		fora.desativar();
+		instituicoes.saveAndFlush(fora);
+		assertThat(api.instituicoes(java.util.List.of(fora.getId(), -1L))).containsOnlyKeys(fora.getId());
+		assertThat(api.instituicoes(java.util.List.of())).isEmpty();
+	}
 }
