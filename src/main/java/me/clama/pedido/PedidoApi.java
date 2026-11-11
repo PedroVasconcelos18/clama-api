@@ -2,7 +2,9 @@ package me.clama.pedido;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -38,6 +40,12 @@ public interface PedidoApi {
 	int contarConfirmacoesVencidas(Instant criadosAntesDe);
 
 	Optional<PedidoResumo> resumo(UUID id);
+
+	/** Em lote e sem PII (nem decifra nada): ids inexistentes ficam de fora. */
+	Map<UUID, PedidoResumo> resumos(Collection<UUID> ids);
+
+	/** Em lote: decifra so nome e e-mail (relatorio de repasse); ids inexistentes ficam de fora. Nunca logar o resultado. */
+	Map<UUID, Doador> doadores(Collection<UUID> ids);
 
 	/** Trava a linha ate o fim da transacao do chamador (que precisa existir); lock preso por mais de 15 s estoura. */
 	PedidoCobravel travarParaCobranca(UUID id);

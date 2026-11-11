@@ -1,0 +1,9 @@
+﻿"AUDITORIA INTERNA de repasse — Lar; Esperança"
+Período: 28/10/2026 a 27/11/2026
+USO INTERNO — contém dado pessoal. Não entregar à instituição.
+
+Doador (nome completo);E-mail;ID do pedido;ID do pagamento no gateway;Status do pedido;Data do pedido;Data da confirmação;Valor no ledger (R$);Valor atual do pedido (R$);Percentual;Repasse (R$);Status do repasse;Transferido em;Comprovante;Divergência
+Maria Silva Santos;maria@exemplo.com;a3f2c0de-0000-4000-8000-000000008b1c;1325814423;ENVIADA;28/10/2026;28/10/2026;50,00;50,00;20%;10,00;TRANSFERIDO;02/11/2026;"PIX-E123; lote";
+(sem nome);;00010000-0000-4000-8000-00000000ffff;(sem id no gateway);PAGO;05/11/2026;05/11/2026;30,00;0,00;20%;6,00;REGISTRADO;;;pedido hoje vale 0 centavos, ledger registrou 3000
+
+TOTAL (2 doações);;;;;;;80,00;;;16,00;;;;

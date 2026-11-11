@@ -54,6 +54,7 @@ class TarefaRecorrenteTest {
 	@Autowired JdbcTemplate jdbc;
 	@Autowired DataSource ds;
 	@Autowired Execucoes execucoes;
+	@Autowired org.springframework.transaction.PlatformTransactionManager txManager;
 
 	@BeforeEach
 	@AfterEach
@@ -124,6 +125,36 @@ class TarefaRecorrenteTest {
 		assertThatThrownBy(() -> t.executeRecurringly(null, null)).isSameAs(t.lancar);
 		assertThat(linhas()).singleElement().satisfies(l -> assertThat(l).containsEntry("ok", false)
 				.containsEntry("resumo", "2 de 3 instituições, faltou 1").containsEntry("erro", TarefaRecorrente.FalhaParcial.class.getName()));
+	}
+
+	@Test
+	void avisoVaiAoSentryEmWarningEErroEmError() {
+		var aviso = new TarefaRecorrente.FalhaParcial("abortada", new IllegalStateException("wp fora")).comoAviso();
+		var parcial = new TarefaRecorrente.FalhaParcial("faltou 1");
+		for (var caso : List.of(aviso, parcial)) {
+			var t = comRegistro();
+			t.lancar = caso;
+			try (var sentry = org.mockito.Mockito.mockStatic(io.sentry.Sentry.class)) {
+				assertThatThrownBy(() -> t.executeRecurringly(null, null)).isSameAs(caso);
+				var captor = org.mockito.ArgumentCaptor.forClass(io.sentry.ScopeCallback.class);
+				sentry.verify(() -> io.sentry.Sentry.captureException(org.mockito.ArgumentMatchers.eq(caso), captor.capture()));
+				var escopo = org.mockito.Mockito.mock(io.sentry.IScope.class);
+				captor.getValue().run(escopo);
+				org.mockito.Mockito.verify(escopo).setLevel(caso == aviso ? io.sentry.SentryLevel.WARNING : io.sentry.SentryLevel.ERROR);
+			}
+		}
+		assertThat(aviso.getCause()).isInstanceOf(IllegalStateException.class);
+		assertThat(linhas()).hasSize(2).allSatisfy(l -> assertThat(l).containsEntry("ok", false)); // o aviso continua ok=false
+	}
+
+	@Test
+	void historiaSobreviveAoRollbackDeQuemChamou() {
+		var t = comRegistro();
+		new org.springframework.transaction.support.TransactionTemplate(txManager).executeWithoutResult(s -> {
+			t.executeRecurringly(null, null);
+			s.setRollbackOnly();
+		});
+		assertThat(linhas()).singleElement().satisfies(l -> assertThat(l).containsEntry("ok", true));
 	}
 
 	@Test

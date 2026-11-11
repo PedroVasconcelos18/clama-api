@@ -112,6 +112,22 @@ class PedidoApiImpl implements PedidoApi {
 
 	@Override
 	@Transactional(readOnly = true)
+	public java.util.Map<UUID, PedidoResumo> resumos(java.util.Collection<UUID> ids) {
+		if (ids.isEmpty()) return java.util.Map.of();
+		// ponytail: um IN so; o relatorio de um ciclo tem centenas de linhas. Fatiar se passar de ~30 mil.
+		return pedidos.resumos(ids).stream().collect(java.util.stream.Collectors.toMap(PedidoResumo::id, r -> r));
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public java.util.Map<UUID, me.clama.pedido.Doador> doadores(java.util.Collection<UUID> ids) {
+		if (ids.isEmpty()) return java.util.Map.of();
+		return pedidos.doadores(ids).stream().collect(java.util.stream.Collectors.toMap(PedidoRepository.NomeEEmail::id,
+				d -> new me.clama.pedido.Doador(d.nome(), d.email())));
+	}
+
+	@Override
+	@Transactional(readOnly = true)
 	public Optional<PedidoResumo> resumo(UUID id) {
 		return pedidos.findById(id).map(p -> new PedidoResumo(p.getId(), p.getStatus(), p.getPlanoId(), p.getInstituicaoId(),
 				p.getValorCentavos(), p.isGratuito(), p.getCriadoEm(), p.getAtualizadoEm(), p.getUltimoErro()));

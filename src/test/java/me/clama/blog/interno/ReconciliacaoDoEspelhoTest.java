@@ -169,7 +169,7 @@ class ReconciliacaoDoEspelhoTest {
 		semiar(2, "b", true);
 		WP.stubFor(get(urlPathEqualTo(CAMINHO)).willReturn(serviceUnavailable()));
 		assertThatThrownBy(() -> tarefa.executar(false)).isInstanceOf(TarefaRecorrente.FalhaParcial.class)
-				.hasMessage("abortada, nada foi gravado");
+				.hasMessage("abortada, nada foi gravado").hasCauseInstanceOf(ClienteWordPress.Indisponivel.class);
 		abortaSemGravar();
 	}
 

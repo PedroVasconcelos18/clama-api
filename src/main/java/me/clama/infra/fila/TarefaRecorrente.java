@@ -6,6 +6,7 @@ import com.github.kagkarlsson.scheduler.task.helper.RecurringTask;
 import com.github.kagkarlsson.scheduler.task.schedule.Schedule;
 import com.github.kagkarlsson.scheduler.task.schedule.Schedules;
 import io.sentry.Sentry;
+import io.sentry.SentryLevel;
 import java.time.Instant;
 import java.time.ZoneId;
 import org.slf4j.Logger;
@@ -30,8 +31,26 @@ public abstract class TarefaRecorrente extends RecurringTask<Void> implements En
 
 	/** O trabalho terminou, mas parte falhou: a execucao grava {@code ok=false} com {@code resumo} (sem PII), nunca so o erro. */
 	public static class FalhaParcial extends RuntimeException {
+
+		private SentryLevel nivel = SentryLevel.ERROR;
+
 		public FalhaParcial(String resumo) {
 			super(resumo);
+		}
+
+		/** {@code causa} fica no log e no Sentry; o resumo da execucao so leva {@code resumo}. */
+		public FalhaParcial(String resumo, Throwable causa) {
+			super(resumo, causa);
+		}
+
+		/** Falha esperada (a origem esta fora do ar, nada foi gravado): o Sentry recebe WARNING, nao ERROR. A execucao segue {@code ok=false}. */
+		public FalhaParcial comoAviso() {
+			nivel = SentryLevel.WARNING;
+			return this;
+		}
+
+		SentryLevel nivel() {
+			return nivel;
 		}
 	}
 
@@ -92,8 +111,13 @@ public abstract class TarefaRecorrente extends RecurringTask<Void> implements En
 			var resumo = executar(dryRun);
 			registrar(inicio, dryRun, manual, autorId, true, resumo, null);
 		} catch (RuntimeException e) {
-			LOG.error("Tarefa recorrente {} falhou", getName(), e);
-			Sentry.captureException(e);
+			var nivel = e instanceof FalhaParcial f ? f.nivel() : SentryLevel.ERROR;
+			if (nivel == SentryLevel.WARNING) {
+				LOG.warn("Tarefa recorrente {} falhou", getName(), e);
+			} else {
+				LOG.error("Tarefa recorrente {} falhou", getName(), e);
+			}
+			Sentry.captureException(e, scope -> scope.setLevel(nivel));
 			registrar(inicio, dryRun, manual, autorId, false, e instanceof FalhaParcial ? e.getMessage() : null, e.getClass().getName());
 			if (!manual) throw e;
 		}

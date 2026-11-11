@@ -77,17 +77,21 @@ class TarefasAdminController {
 						rs.getBoolean("picked"), rs.getInt("consecutive_failures"))))
 				.list().stream().collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 		var ultimas = execucoes.ultimas().stream().collect(java.util.stream.Collectors.toMap(Execucao::tarefa, e -> e));
+		var reais = execucoes.ultimasReais().stream().collect(java.util.stream.Collectors.toMap(Execucao::tarefa, e -> e));
 		var agora = relogio.instant();
 		return tarefas.stream().map(t -> {
 			var a = agendadas.get(t.getName());
 			var u = ultimas.get(t.getName());
 			return new Tarefa(t.getName(), t.cron(), t.simulacaoConfigurada(), a == null ? null : a.proxima(), a != null && a.rodando(),
-					a == null ? 0 : a.falhas(), situacao(a, u, agora), u == null ? null
+					a == null ? 0 : a.falhas(), situacao(a, reais.get(t.getName()), agora), u == null ? null
 							: new UltimaExecucao(u.inicio(), u.fim(), u.ok(), u.simulacao(), u.manual(), u.resumo(), u.erro()));
 		}).toList();
 	}
 
-	/** Sem linha = nao agendada; horario vencido e ninguem pegou = atrasada; senao a ultima execucao decide. */
+	/**
+	 * Sem linha = nao agendada; horario vencido e ninguem pegou = atrasada; senao a ultima execucao REAL decide: uma
+	 * simulacao bem-sucedida do "Rodar agora" nao esconde uma falha de verdade ({@code ultima} na resposta mostra as duas).
+	 */
 	private static String situacao(Agendada a, Execucao ultima, Instant agora) {
 		if (a == null) return "nao_agendada";
 		if (!a.rodando() && a.proxima().isBefore(agora.minus(TOLERANCIA))) return "atrasada";

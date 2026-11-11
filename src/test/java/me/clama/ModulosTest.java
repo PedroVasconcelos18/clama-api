@@ -77,7 +77,7 @@ class ModulosTest {
 		var pedido = MODULOS.getModuleByName("pedido").orElseThrow();
 		for (var c : new Class<?>[] { PedidoApi.class, PedidoResumo.class, PedidoCobravel.class, DadosParaOracao.class,
 				StatusPedido.class, GeracaoSolicitada.class, ReenvioSolicitado.class, me.clama.pedido.NovoPedido.class,
-				me.clama.pedido.Identificadores.class })
+				me.clama.pedido.Identificadores.class, me.clama.pedido.Doador.class })
 			assertThat(pedido.isExposed(c)).as(c.getSimpleName()).isTrue();
 		assertThat(pedido.isExposed(me.clama.pedido.interno.Pedido.class)).isFalse();
 		assertThat(pedido.isExposed(me.clama.pedido.interno.PedidoRepository.class)).isFalse();
@@ -174,6 +174,20 @@ class ModulosTest {
 		ArchRuleDefinition.noClasses().that().resideInAPackage("me.clama.infra..").should().dependOnClassesThat()
 				.resideInAPackage("me.clama.blog..").check(classes);
 		assertThat(MODULOS.getModuleByName("conta").orElseThrow().isExposed(UsuarioResumo.class)).isTrue();
+	}
+
+	/** As tabelas de pedido sao privadas: o pagamento (relatorio, auditoria do ledger) so le o pedido por PedidoApi.resumos/doadores. */
+	@Test
+	void pagamentoNaoLeATabelaDePedidoNemUsaOInternoDele() throws Exception {
+		var classes = new ClassFileImporter().withImportOption(new ImportOption.DoNotIncludeTests()).importPackages("me.clama");
+		ArchRuleDefinition.noClasses().that().resideInAPackage("me.clama.pagamento..").should().dependOnClassesThat()
+				.resideInAPackage("me.clama.pedido.interno..").check(classes);
+		var sql = java.util.regex.Pattern.compile("(?i)\\b(from|join|into|update|delete\\s+from)\\s+pedido\\b");
+		try (var arquivos = java.nio.file.Files.walk(java.nio.file.Path.of("src/main/java/me/clama/pagamento"))) {
+			for (var f : arquivos.filter(p -> p.toString().endsWith(".java")).toList()) {
+				assertThat(sql.matcher(java.nio.file.Files.readString(f)).find()).as(f.toString()).isFalse();
+			}
+		}
 	}
 
 	@Test

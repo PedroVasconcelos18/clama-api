@@ -10,6 +10,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /** Historico de execucoes das tarefas recorrentes (D9): grava no fim de cada disparo e guarda 90 dias por tarefa. */
 @Component
@@ -28,7 +30,8 @@ public class Execucoes {
 	}
 
 	/** Grava e, na sequencia, apaga as da mesma tarefa com mais de 90 dias (o indice {@code (tarefa, inicio)} torna isso barato). */
-	void gravar(String tarefa, Instant inicio, Instant fim, boolean simulacao, boolean manual, Long autorId, boolean ok, String resumo,
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public void gravar(String tarefa, Instant inicio, Instant fim, boolean simulacao, boolean manual, Long autorId, boolean ok, String resumo,
 			String erro) {
 		jdbc.sql("""
 				insert into tarefa_execucao (tarefa, inicio, fim, simulacao, manual, autor_id, ok, resumo, erro)
@@ -51,6 +54,12 @@ public class Execucoes {
 	/** A mais recente de cada tarefa. */
 	List<Execucao> ultimas() {
 		return jdbc.sql(SELECT.replace("select ", "select distinct on (tarefa) ") + " order by tarefa, inicio desc, id desc")
+				.query(Execucoes::linha).list();
+	}
+
+	/** A mais recente execucao real (nao simulada) de cada tarefa: e ela que diz se a tarefa "falhou". */
+	List<Execucao> ultimasReais() {
+		return jdbc.sql(SELECT.replace("select ", "select distinct on (tarefa) ") + " where not simulacao order by tarefa, inicio desc, id desc")
 				.query(Execucoes::linha).list();
 	}
 

@@ -5,6 +5,7 @@ import static me.clama.pagamento.interno.HistoricoDoPedido.instante;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -173,6 +174,46 @@ public class AdminDePagamento {
 						"Esse repasse foi cancelado (estorno) e não pode ser marcado como transferido.");
 			}
 			return r;
+		});
+	}
+
+	/** O que o lote quitou: quantos repasses e a soma deles. */
+	public record Quitacao(int quantidade, long totalCentavos) {}
+
+	/**
+	 * Quitacao em lote (D8): os {@code REGISTRADO} da instituicao cujo repasse e do periodo (dias de Sao Paulo, inclusivos).
+	 * {@code quantidade} e a da previa: se agora forem outras, 409 {@code recorte_mudou} e nada muda. As linhas sao travadas
+	 * em ordem de id ({@code FOR UPDATE}): um lote concorrente espera, relê o status ja {@code TRANSFERIDO} e acha zero, entao
+	 * cai no 409 em vez de quitar duas vezes. {@code CANCELADO} e {@code TRANSFERIDO} nao entram. Audita cada repasse (como
+	 * o individual) e o lote.
+	 */
+	public Quitacao transferirLote(Long autorId, long instituicaoId, LocalDate de, LocalDate ate, String comprovante, int quantidade) {
+		if (comprovante == null || comprovante.isBlank() || comprovante.length() > 120) {
+			throw FiltrosDeAdmin.invalido("comprovante", "Informe o comprovante, com até 120 caracteres.");
+		}
+		FiltrosDeAdmin.ordemDoPeriodo(de, ate);
+		return transacao.execute(s -> {
+			var agora = relogio.instant();
+			var ids = jdbc.sql("""
+					select id from repasse where instituicao_id = :inst and status = 'REGISTRADO' and criado_em >= :de and criado_em < :ate
+					order by id for update""").param("inst", instituicaoId).param("de", Timestamp.from(FiltrosDeAdmin.inicio(de)))
+					.param("ate", Timestamp.from(FiltrosDeAdmin.fimExclusivo(ate))).query(Long.class).list();
+			if (ids.size() != quantidade) {
+				throw new ErroDeNegocio(HttpStatus.CONFLICT, "recorte_mudou", "Os repasses do período mudaram desde a prévia.",
+						"Os repasses desse período mudaram desde a prévia. Confira de novo antes de marcar.");
+			}
+			if (ids.isEmpty()) return new Quitacao(0, 0);
+			var total = jdbc.sql("select coalesce(sum(valor_centavos), 0) from repasse where id in (:ids)").param("ids", ids).query(Long.class).single();
+			var mudou = jdbc.sql("update repasse set status = 'TRANSFERIDO', transferido_em = :em, comprovante = :comprovante where id in (:ids) and status = 'REGISTRADO'")
+					.param("em", Timestamp.from(agora)).param("comprovante", comprovante).param("ids", ids).update();
+			if (mudou != ids.size()) throw new IllegalStateException("lote de repasses mudou sob trava");
+			for (var id : ids) {
+				auditoria.registrar(autorId, "repasse", String.valueOf(id), Acao.MUDANCA,
+						Map.of("status", Map.of("antes", "REGISTRADO", "depois", "TRANSFERIDO"), "comprovante", true));
+			}
+			auditoria.registrar(autorId, "repasse_lote", String.valueOf(instituicaoId), Acao.MUDANCA,
+					Map.of("de", de.toString(), "ate", ate.toString(), "quantidade", ids.size(), "totalCentavos", total, "comprovante", true));
+			return new Quitacao(ids.size(), total);
 		});
 	}
 

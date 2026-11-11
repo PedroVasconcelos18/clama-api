@@ -133,7 +133,7 @@ class AlertaDeComentariosTest {
 	@Test
 	void zeroComentarioNaoEnvia() {
 		comentario(7, "de ontem", false, Duration.ofHours(30));
-		tarefa.executar(false);
+		assertThat(tarefa.executar(false)).isEqualTo("nenhum comentário nas últimas 24 h, nada enviado");
 		assertThat(caixa.enviados()).isEmpty();
 	}
 

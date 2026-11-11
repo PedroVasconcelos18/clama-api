@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @EnableConfigurationProperties(RepasseProps.class)
-class Repasses {
+public class Repasses {
 
 	static final String CANCELADO = "repasse_cancelado";
 	static final String TRANSFERIDO = "repasse_transferido";
@@ -27,7 +27,7 @@ class Repasses {
 	}
 
 	/** Percentual do valor, arredondado para baixo (20% de 3001 = 600). */
-	static long valor(long baseCentavos, int percentual) {
+	public static long valor(long baseCentavos, int percentual) {
 		return Math.floorDiv(Math.multiplyExact(baseCentavos, percentual), 100);
 	}
 

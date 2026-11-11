@@ -156,13 +156,19 @@ class TarefasAdminTest {
 	@Test
 	void rodarAgoraSemCorpoESimulacaoEOCliqueDuploRecebe409() throws Exception {
 		var admin = entrar(Papel.ADMIN);
+		var fila = "select count(*) from scheduled_tasks where task_instance = 'rodar-tarefa/" + OK + "'";
+		var auditorias = "select count(*) from auditoria where entidade = 'tarefa'";
 		assertThat(admin.post("/api/admin/tarefas/" + OK + "/execucoes", "{}").statusCode()).isEqualTo(202);
-		assertThat(jdbc.queryForObject("select count(*) from scheduled_tasks where task_instance = 'rodar-tarefa/" + OK + "'", Integer.class))
-				.isEqualTo(1);
+		assertThat(jdbc.queryForObject(auditorias, Integer.class)).isZero(); // sem corpo = simulacao: nao audita
+		jdbc.update(BancoDeTeste.LIMPAR_FILA);
+
+		assertThat(admin.post("/api/admin/tarefas/" + OK + "/execucoes", "{\"simulacao\": false}").statusCode()).isEqualTo(202);
+		assertThat(jdbc.queryForObject(auditorias, Integer.class)).isEqualTo(1);
 		var segundo = admin.post("/api/admin/tarefas/" + OK + "/execucoes", "{\"simulacao\": false}");
 		assertThat(segundo.statusCode()).isEqualTo(409);
 		assertThat(Navegador.json(segundo).get("codigo").asString()).isEqualTo("tarefa_na_fila");
-		assertThat(jdbc.queryForObject("select count(*) from auditoria where entidade = 'tarefa'", Integer.class)).isZero(); // o 409 desfez tudo
+		assertThat(jdbc.queryForObject(fila, Integer.class)).isEqualTo(1);
+		assertThat(jdbc.queryForObject(auditorias, Integer.class)).isEqualTo(1); // o clique duplo nao audita de novo
 
 		job.executar(new JobRodarTarefa.Disparo(OK, true, 7L), 0);
 		var historico = Navegador.json(admin.get("/api/admin/tarefas/" + OK + "/execucoes"));
@@ -174,6 +180,19 @@ class TarefasAdminTest {
 		assertThat(e.get("autorId").asInt()).isEqualTo(7);
 		assertThat(e.get("resumo").asString()).isEqualTo("fez 3 coisas (simulacao)");
 		assertThat(tarefa(admin, OK).get("ultima").get("resumo").asString()).isEqualTo("fez 3 coisas (simulacao)");
+	}
+
+	@Test
+	void simulacaoBemSucedidaNaoEscondeUmaFalhaReal() throws Exception {
+		agendar(OK, "now() + interval '1 hour'");
+		jdbc.update("insert into tarefa_execucao (tarefa, inicio, fim, simulacao, manual, ok, erro) values (?, now() - interval '2 hours', now() - interval '2 hours', false, false, false, 'java.lang.IllegalStateException')", OK);
+		jdbc.update("insert into tarefa_execucao (tarefa, inicio, fim, simulacao, manual, ok, resumo) values (?, now() - interval '1 hour', now() - interval '1 hour', true, true, true, 'simulou')", OK);
+		var t = tarefa(entrar(Papel.ADMIN), OK);
+		assertThat(t.get("situacao").asString()).isEqualTo("falhou");
+		assertThat(t.get("ultima").get("simulacao").asBoolean()).isTrue();
+		assertThat(t.get("ultima").get("ok").asBoolean()).isTrue();
+		jdbc.update("insert into tarefa_execucao (tarefa, inicio, fim, simulacao, manual, ok) values (?, now(), now(), false, false, true)", OK);
+		assertThat(tarefa(entrar(Papel.ADMIN), OK).get("situacao").asString()).isEqualTo("ok"); // uma real depois conserta
 	}
 
 	@Test

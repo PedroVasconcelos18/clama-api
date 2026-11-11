@@ -45,8 +45,8 @@ class ReconciliacaoDoEspelho extends TarefaRecorrente {
 			lista = lerTudo();
 		} catch (ClienteWordPress.Indisponivel | IllegalStateException e) {
 			LOG.warn("reconciliar-espelho abortada, nada foi gravado: {}", e.getMessage());
-			// o detalhe fica no log; o resumo da execucao nao leva a mensagem da excecao. TarefaRecorrente avisa o Sentry
-			throw new FalhaParcial("abortada, nada foi gravado");
+			// o detalhe fica no log e na causa; o resumo da execucao nao leva a mensagem da excecao. TarefaRecorrente avisa o Sentry em WARNING
+			throw new FalhaParcial("abortada, nada foi gravado", e).comoAviso();
 		}
 		var existentes = new java.util.HashMap<Long, Post>();
 		posts.findAll().forEach(p -> existentes.put(p.getWpId(), p));

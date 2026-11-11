@@ -1,6 +1,31 @@
 {
   "components" : {
     "schemas" : {
+      "AchadoDoLedger" : {
+        "properties" : {
+          "detalhe" : {
+            "type" : "string"
+          },
+          "gravidade" : {
+            "type" : "string"
+          },
+          "instituicao" : {
+            "type" : "string"
+          },
+          "pedidoId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "tipo" : {
+            "type" : "string"
+          },
+          "valorEmJogoCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "AlteracaoDeUsuario" : {
         "properties" : {
           "ativo" : {
@@ -9,6 +34,25 @@
           "papel" : {
             "enum" : [ "CLIENTE", "ADMIN", "SUPERUSUARIO" ],
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AuditoriaDoLedgerAdmin" : {
+        "properties" : {
+          "achados" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AchadoDoLedger"
+            },
+            "type" : "array"
+          },
+          "criticos" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "emJogoCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -479,6 +523,36 @@
           },
           "usuarioNome" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "LinhaDoRelatorio" : {
+        "properties" : {
+          "data" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "doador" : {
+            "type" : "string"
+          },
+          "percentual" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "referencia" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "valorDoadoCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "valorRepasseCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -1252,6 +1326,48 @@
         },
         "type" : "object"
       },
+      "PreviaDoRelatorio" : {
+        "properties" : {
+          "ate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "de" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "instituicao" : {
+            "type" : "string"
+          },
+          "linhas" : {
+            "items" : {
+              "$ref" : "#/components/schemas/LinhaDoRelatorio"
+            },
+            "type" : "array"
+          },
+          "pendentes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "quantidade" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalDoadoCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalPendenteCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totalRepasseCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "ProblemDetail" : {
         "properties" : {
           "codigo" : {
@@ -1319,6 +1435,49 @@
           }
         },
         "required" : [ "comProfeciaEVersiculos", "comVersiculo", "gratuito", "simples", "sistema" ],
+        "type" : "object"
+      },
+      "QuitacaoEmLote" : {
+        "properties" : {
+          "ate" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "comprovante" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "de" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "instituicaoId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "quantidade" : {
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "ate", "comprovante", "de", "instituicaoId", "quantidade" ],
+        "type" : "object"
+      },
+      "Quitados" : {
+        "properties" : {
+          "quantidade" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
         "type" : "object"
       },
       "RedefinicaoDeSenhaPedido" : {
@@ -2875,6 +3034,219 @@
           }
         },
         "tags" : [ "repasses-admin-controller" ]
+      }
+    },
+    "/api/admin/repasses/auditoria" : {
+      "get" : {
+        "operationId" : "auditarLedger",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuditoriaDoLedgerAdmin"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "relatorios-de-repasse-controller" ]
+      }
+    },
+    "/api/admin/repasses/relatorio" : {
+      "get" : {
+        "operationId" : "previaDoRelatorio",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "instituicaoId",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 20,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "mes",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 7,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "de",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "ate",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PreviaDoRelatorio"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "relatorios-de-repasse-controller" ]
+      }
+    },
+    "/api/admin/repasses/relatorio-interno.csv" : {
+      "get" : {
+        "operationId" : "csvInterno",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "instituicaoId",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 20,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "mes",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 7,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "de",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "ate",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "format" : "byte",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "relatorios-de-repasse-controller" ]
+      }
+    },
+    "/api/admin/repasses/relatorio.csv" : {
+      "get" : {
+        "operationId" : "csvDaInstituicao",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "instituicaoId",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 20,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "mes",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 7,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "de",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "ate",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "format" : "byte",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "relatorios-de-repasse-controller" ]
+      }
+    },
+    "/api/admin/repasses/transferencias" : {
+      "post" : {
+        "operationId" : "quitarEmLote",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/QuitacaoEmLote"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Quitados"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "relatorios-de-repasse-controller" ]
       }
     },
     "/api/admin/repasses/{id}/transferencia" : {

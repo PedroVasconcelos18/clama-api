@@ -31,6 +31,15 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID>, org.sprin
 	@Query("select p.oracao from Pedido p where p.id = :id")
 	Optional<String> oracaoDe(UUID id);
 
+	@Query("select new me.clama.pedido.PedidoResumo(p.id, p.status, p.planoId, p.instituicaoId, p.valorCentavos, p.gratuito, p.criadoEm, p.atualizadoEm, p.ultimoErro) from Pedido p where p.id in :ids")
+	List<me.clama.pedido.PedidoResumo> resumos(java.util.Collection<UUID> ids);
+
+	/** Decifra so nome e e-mail (o {@code CampoCifrado} age na leitura do atributo, sem hidratar CPF nem oracao). */
+	record NomeEEmail(UUID id, String nome, String email) {}
+
+	@Query("select new me.clama.pedido.interno.PedidoRepository$NomeEEmail(p.id, p.nome, p.email) from Pedido p where p.id in :ids")
+	List<NomeEEmail> doadores(java.util.Collection<UUID> ids);
+
 	List<Pedido> findByEmailHmac(String emailHmac);
 
 	/** Pedidos do usuario no intervalo (inclusivo), mais recentes primeiro. */

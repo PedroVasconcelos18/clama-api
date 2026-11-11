@@ -72,7 +72,7 @@ abstract class PagamentoAdminBase {
 		limite.limpar();
 		MP.resetAll();
 		caixa.limpar();
-		jdbc.update("delete from auditoria where entidade in ('pagamento_evento', 'repasse')");
+		jdbc.update("delete from auditoria where entidade in ('pagamento_evento', 'repasse', 'repasse_lote', 'relatorio_interno')");
 		jdbc.update("delete from pagamento_evento");
 		jdbc.update("delete from repasse");
 		jdbc.update("delete from cobranca");
@@ -96,11 +96,16 @@ abstract class PagamentoAdminBase {
 	}
 
 	UUID pedido(long valor, Long instituicao) {
+		return pedido("Maria Souza", valor, instituicao);
+	}
+
+	/** Pedido com nome, e-mail, CPF, telefone e texto de oracao conhecidos: o que nunca pode sair no CSV da instituicao. */
+	UUID pedido(String nome, long valor, Long instituicao) {
 		var plano = jdbc.queryForObject("""
 				insert into plano (nome, valor_centavos, complexidade, tipo, ordem) values (?, 2000, 'SIMPLES', 'COMUM', 1)
 				returning id""", Long.class, "Plano " + UUID.randomUUID());
 		var agora = Instant.now();
-		var d = new Pedido.Dados(null, plano, instituicao, valor, "Maria Souza", "maria@exemplo.com", "52998224725", null, null, null,
+		var d = new Pedido.Dados(null, plano, instituicao, valor, nome, "maria@exemplo.com", "52998224725", "11987654321", null, null,
 				"Pela família", agora, null, "1");
 		return pedidos.saveAndFlush(Pedido.novo(d, hmac, agora)).getId();
 	}
@@ -109,6 +114,19 @@ abstract class PagamentoAdminBase {
 		jdbc.update("""
 				insert into cobranca (pedido_id, n, mp_pagamento_id, pix_copia_e_cola, expira_em, criada_em)
 				values (?, ?, ?, 'qr', now() + interval '1 day', now())""", pedido, n, mpId);
+	}
+
+	/** A cobranca que pagou o pedido (no maximo uma): e o "id do pagamento no gateway" do CSV interno. */
+	void paga(UUID pedido, long mpId) {
+		cobranca(pedido, 1, mpId);
+		jdbc.update("update cobranca set paga_em = now() where pedido_id = ?", pedido);
+	}
+
+	/** Repasse do pedido (base 3000, 20%, 600) com o instante de criacao dado (UTC). */
+	long repasseEm(UUID pedido, Long instituicao, String status, String criadoEmUtc) {
+		var id = repasse(pedido, instituicao, status);
+		jdbc.update("update repasse set criado_em = ?::timestamptz where id = ?", criadoEmUtc, id);
+		return id;
 	}
 
 	long evento(String idExterno, String status, String motivo) {
