@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.QueryHints;
 
@@ -34,6 +35,19 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID>, org.sprin
 
 	/** Pedidos do usuario no intervalo (inclusivo), mais recentes primeiro. */
 	List<Pedido> findByUsuarioIdAndCriadoEmBetweenOrderByCriadoEmDesc(Long usuarioId, Instant de, Instant ate);
+
+	@Query("select count(p) > 0 from Pedido p where p.status = me.clama.pedido.StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL and p.criadoEm >= :desde and (p.emailHmac = :emailHmac or p.cpfHmac = :cpfHmac)")
+	boolean existePendente(String emailHmac, String cpfHmac, Instant desde);
+
+	@Query("select count(p) > 0 from Pedido p where p.cpfHmac = :cpfHmac and p.usuarioId is not null")
+	boolean cpfTemDono(String cpfHmac);
+
+	@Query("select count(p) from Pedido p where p.status = me.clama.pedido.StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL and p.criadoEm < :antesDe")
+	int contarPendentesAntes(Instant antesDe);
+
+	@Modifying(flushAutomatically = true, clearAutomatically = true)
+	@Query("update Pedido p set p.status = me.clama.pedido.StatusPedido.CONFIRMACAO_EXPIRADA, p.atualizadoEm = :agora where p.status = me.clama.pedido.StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL and p.criadoEm < :antesDe")
+	int expirarPendentesAntes(Instant antesDe, Instant agora);
 
 	@Query("""
 			select p.id from Pedido p where p.status in (me.clama.pedido.StatusPedido.PAGO, me.clama.pedido.StatusPedido.GERANDO_ORACAO,

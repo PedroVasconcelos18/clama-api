@@ -36,9 +36,16 @@ class PedidoTest {
 			case ORACAO_GERADA -> { p.confirmarPagamento(AGORA); p.iniciarGeracao(AGORA); p.registrarOracao("Senhor...", AGORA); }
 			case ENVIADA -> { p.confirmarPagamento(AGORA); p.iniciarGeracao(AGORA); p.registrarOracao("Senhor...", AGORA); p.marcarEnviado(AGORA); }
 			case AGUARDANDO_NOVA_TENTATIVA -> { p.confirmarPagamento(AGORA); p.iniciarGeracao(AGORA); p.agendarNovaTentativa("x", AGORA); }
+			case AGUARDANDO_CONFIRMACAO_EMAIL -> p = freemium();
+			case CONFIRMACAO_EXPIRADA -> { p = freemium(); p.expirarConfirmacao(AGORA); }
 			case ERRO -> { p.confirmarPagamento(AGORA); p.iniciarGeracao(AGORA); if (comOracao) p.registrarOracao("Senhor...", AGORA); p.falhar("x", AGORA); }
 		}
 		return p;
+	}
+
+	static Pedido freemium() {
+		return Pedido.freemium(new Pedido.Dados(null, 1L, null, 0, "Ana", "ana@exemplo.com", "52998224725", null, null, null,
+				"Paz", AGORA, "203.0.113.9", "1"), HMAC, AGORA);
 	}
 
 	/** Roda a acao em todo status fora de {@code permitidos}: todos devem recusar sem mexer no pedido. */
@@ -66,6 +73,41 @@ class PedidoTest {
 		assertThat(p.getStatus()).isEqualTo(PAGO);
 		assertThat(p.isGratuito()).isTrue();
 		assertThat(p.getValorCentavos()).isZero();
+	}
+
+	@Test
+	void freemiumNasceAguardandoConfirmacaoGratuitoSemDono() {
+		var p = freemium();
+		assertThat(p.getStatus()).isEqualTo(AGUARDANDO_CONFIRMACAO_EMAIL);
+		assertThat(p.isGratuito()).isTrue();
+		assertThat(p.getValorCentavos()).isZero();
+		assertThat(p.getUsuarioId()).isNull();
+		assertThat(p.getEmailHmac()).isEqualTo(HMAC.email("ana@exemplo.com"));
+		assertThat(p.getCpfHmac()).isEqualTo(HMAC.cpf("52998224725"));
+		assertThatThrownBy(() -> Pedido.freemium(new Pedido.Dados(null, 1L, null, 5, "Ana", "a@e.com", null, null, null, null,
+				"Paz", AGORA, null, "1"), HMAC, AGORA)).isInstanceOf(IllegalArgumentException.class);
+	}
+
+	@Test
+	void confirmarEmailVaiAPagoESoDoPendente() {
+		var p = freemium();
+		p.confirmarEmail(AGORA);
+		assertThat(p.getStatus()).isEqualTo(PAGO);
+		assertThat(p.isGratuito()).isTrue();
+		soNesses(EnumSet.of(AGUARDANDO_CONFIRMACAO_EMAIL), ped -> ped.confirmarEmail(AGORA));
+	}
+
+	@Test
+	void expirarConfirmacaoEhTerminalESoDoPendente() {
+		var p = freemium();
+		p.expirarConfirmacao(AGORA);
+		assertThat(p.getStatus()).isEqualTo(CONFIRMACAO_EXPIRADA);
+		soNesses(EnumSet.of(AGUARDANDO_CONFIRMACAO_EMAIL), ped -> ped.expirarConfirmacao(AGORA));
+		// terminal: nem confirmar, nem gerar, nem regenerar, nem conceder
+		assertThatThrownBy(() -> p.confirmarEmail(AGORA)).isInstanceOf(TransicaoInvalidaException.class);
+		assertThatThrownBy(() -> p.iniciarGeracao(AGORA)).isInstanceOf(TransicaoInvalidaException.class);
+		assertThatThrownBy(() -> p.solicitarRegeneracao(AGORA)).isInstanceOf(TransicaoInvalidaException.class);
+		assertThatThrownBy(() -> p.concederGratuidade(AGORA)).isInstanceOf(TransicaoInvalidaException.class);
 	}
 
 	@Test

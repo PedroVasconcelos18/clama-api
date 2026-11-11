@@ -1,6 +1,7 @@
 package me.clama.pedido;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -11,6 +12,30 @@ import java.util.UUID;
  * {@link TransicaoInvalidaException} (409); id inexistente: {@link PedidoNaoEncontradoException} (404).
  */
 public interface PedidoApi {
+
+	/**
+	 * Freemium: plano gratuito (503 {@code freemium_indisponivel} se faltar), valor 0, AGUARDANDO_CONFIRMACAO_EMAIL,
+	 * consentimento com o {@code ip}. Sem conta e sem evento: a oracao so e pedida em {@link #confirmarEmail}.
+	 */
+	UUID criarFreemium(NovoPedido corpo, String ip);
+
+	/** Ha pedido freemium aguardando confirmacao, criado desde {@code criadoDesde}, com esse e-mail ou CPF (HMAC; {@code null} nao casa). */
+	boolean existePendenteDeConfirmacao(String emailHmac, String cpfHmac, Instant criadoDesde);
+
+	/** Algum pedido com esse CPF ja tem dono (conta vinculada). */
+	boolean cpfTemConta(String cpfHmac);
+
+	/**
+	 * AGUARDANDO_CONFIRMACAO_EMAIL para PAGO, cria ou vincula a conta (so aqui nasce a conta do freemium) e publica
+	 * {@link GeracaoSolicitada}. Fora do estado: {@link TransicaoInvalidaException}. Exige transacao do chamador.
+	 */
+	Identificadores confirmarEmail(UUID id);
+
+	/** Reconciliacao: pendentes criados antes de {@code criadosAntesDe} vao a CONFIRMACAO_EXPIRADA; devolve quantos. */
+	int expirarConfirmacoes(Instant criadosAntesDe);
+
+	/** Quantos {@link #expirarConfirmacoes} expiraria (para o dry-run). */
+	int contarConfirmacoesVencidas(Instant criadosAntesDe);
 
 	Optional<PedidoResumo> resumo(UUID id);
 
@@ -55,5 +80,5 @@ public interface PedidoApi {
 	 * Falha o pedido so se, com a linha travada, ele ainda esta em andamento e sem mudar desde {@code antesDe}
 	 * (a varredura lista sem trava; nesse intervalo o pedido pode ter andado). {@code motivo} e um codigo curto.
 	 */
-	boolean falharSeParado(UUID id, java.time.Instant antesDe, String motivo);
+	boolean falharSeParado(UUID id, Instant antesDe, String motivo);
 }

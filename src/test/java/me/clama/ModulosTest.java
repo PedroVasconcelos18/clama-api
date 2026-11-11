@@ -76,7 +76,8 @@ class ModulosTest {
 	void pedidoExpoeSoApiEventosERecords() {
 		var pedido = MODULOS.getModuleByName("pedido").orElseThrow();
 		for (var c : new Class<?>[] { PedidoApi.class, PedidoResumo.class, PedidoCobravel.class, DadosParaOracao.class,
-				StatusPedido.class, GeracaoSolicitada.class, ReenvioSolicitado.class })
+				StatusPedido.class, GeracaoSolicitada.class, ReenvioSolicitado.class, me.clama.pedido.NovoPedido.class,
+				me.clama.pedido.Identificadores.class })
 			assertThat(pedido.isExposed(c)).as(c.getSimpleName()).isTrue();
 		assertThat(pedido.isExposed(me.clama.pedido.interno.Pedido.class)).isFalse();
 		assertThat(pedido.isExposed(me.clama.pedido.interno.PedidoRepository.class)).isFalse();

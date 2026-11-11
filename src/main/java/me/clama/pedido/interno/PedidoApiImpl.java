@@ -16,6 +16,8 @@ import me.clama.infra.cripto.HmacDeIdentificador;
 import me.clama.pedido.CorrecaoDeDados;
 import me.clama.pedido.DadosParaOracao;
 import me.clama.pedido.GeracaoSolicitada;
+import me.clama.pedido.Identificadores;
+import me.clama.pedido.NovoPedido;
 import me.clama.pedido.PedidoApi;
 import me.clama.pedido.PedidoCobravel;
 import me.clama.pedido.PedidoNaoEncontradoException;
@@ -35,6 +37,7 @@ class PedidoApiImpl implements PedidoApi {
 			StatusPedido.ORACAO_GERADA, StatusPedido.AGUARDANDO_NOVA_TENTATIVA);
 
 	private final PedidoRepository pedidos;
+	private final CriacaoDePedido criacao;
 	private final ContaApi conta;
 	private final ApplicationEventPublisher eventos;
 	private final Clock relogio;
@@ -42,10 +45,11 @@ class PedidoApiImpl implements PedidoApi {
 	@PersistenceContext
 	private EntityManager em;
 
-	PedidoApiImpl(PedidoRepository pedidos, ContaApi conta, ApplicationEventPublisher eventos, Clock relogio,
+	PedidoApiImpl(PedidoRepository pedidos, CriacaoDePedido criacao, ContaApi conta, ApplicationEventPublisher eventos, Clock relogio,
 			HmacDeIdentificador hmac) {
 		this.hmac = hmac;
 		this.pedidos = pedidos;
+		this.criacao = criacao;
 		this.conta = conta;
 		this.eventos = eventos;
 		this.relogio = relogio;
@@ -66,6 +70,44 @@ class PedidoApiImpl implements PedidoApi {
 		var p = travado(id);
 		transicao.accept(p);
 		return p;
+	}
+
+	@Override
+	public UUID criarFreemium(NovoPedido corpo, String ip) {
+		return criacao.criarFreemium(corpo, ip).getId();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public boolean existePendenteDeConfirmacao(String emailHmac, String cpfHmac, Instant criadoDesde) {
+		return pedidos.existePendente(emailHmac, cpfHmac, criadoDesde);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public boolean cpfTemConta(String cpfHmac) {
+		return cpfHmac != null && pedidos.cpfTemDono(cpfHmac);
+	}
+
+	@Override
+	@Transactional(propagation = Propagation.MANDATORY)
+	public Identificadores confirmarEmail(UUID id) {
+		var p = travado(id);
+		p.confirmarEmail(relogio.instant());
+		p.vincularUsuario(conta.provisionarOuVincular(p.getEmail(), p.getNome()).id());
+		eventos.publishEvent(new GeracaoSolicitada(id));
+		return new Identificadores(p.getEmailHmac(), p.getCpfHmac(), hmac.ip(p.getConsentimentoIp()));
+	}
+
+	@Override
+	public int expirarConfirmacoes(Instant criadosAntesDe) {
+		return pedidos.expirarPendentesAntes(criadosAntesDe, relogio.instant());
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public int contarConfirmacoesVencidas(Instant criadosAntesDe) {
+		return pedidos.contarPendentesAntes(criadosAntesDe);
 	}
 
 	@Override

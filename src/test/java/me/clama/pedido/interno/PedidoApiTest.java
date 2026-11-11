@@ -221,4 +221,146 @@ class PedidoApiTest {
 		jdbc.update("update pedido set atualizado_em = now() - interval '30 minutes'");
 		assertThat(api.falharSeParado(id, corte, "pedido_preso")).isFalse();
 	}
+
+	// ---- freemium ----
+
+	private static me.clama.pedido.NovoPedido corpoFreemium(String email, String cpf) {
+		return new me.clama.pedido.NovoPedido("Ana Freemium", email, cpf, null, null, null, "Paz", null, null, null, true, null);
+	}
+
+	private UUID freemium(String email) {
+		return api.criarFreemium(corpoFreemium(email, "529.982.247-25"), "203.0.113.9");
+	}
+
+	@Test
+	void criarFreemiumNasceAguardandoSemContaSemEventoEComIpNoConsentimento() {
+		var email = "doador-" + UUID.randomUUID() + "@exemplo.com";
+		var id = freemium(email);
+		var p = pedidos.findById(id).orElseThrow();
+		assertThat(p.getStatus()).isEqualTo(StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL);
+		assertThat(p.isGratuito()).isTrue();
+		assertThat(p.getValorCentavos()).isZero();
+		assertThat(p.getUsuarioId()).isNull();
+		assertThat(p.getCpfCnpj()).isEqualTo("52998224725");
+		assertThat(p.getConsentimentoIp()).isEqualTo("203.0.113.9");
+		assertThat(p.getPlanoId()).isEqualTo(jdbc.queryForObject("select id from plano where tipo = 'GRATUITO'", Long.class));
+		assertThat(usuarios.findByEmail(email)).isEmpty();
+		assertThat(eventos.stream(GeracaoSolicitada.class)).isEmpty();
+		assertThat(jdbc.queryForObject("select count(*) from scheduled_tasks", Integer.class)).isZero();
+	}
+
+	@Test
+	void confirmarEmailCriaContaPublicaGeracaoEDevolveIdentificadores() {
+		var email = "doador-" + UUID.randomUUID() + "@exemplo.com";
+		var id = freemium(email);
+		var ids = tx.execute(s -> api.confirmarEmail(id));
+		var p = pedidos.findById(id).orElseThrow();
+		assertThat(p.getStatus()).isEqualTo(StatusPedido.PAGO);
+		assertThat(p.getUsuarioId()).isNotNull();
+		assertThat(usuarios.findByEmail(email)).isPresent();
+		assertThat(eventos.stream(GeracaoSolicitada.class)).extracting(GeracaoSolicitada::pedidoId).containsExactly(id);
+		assertThat(ids.emailHmac()).isEqualTo(PedidoTest.HMAC.email(email));
+		assertThat(ids.cpfHmac()).isEqualTo(PedidoTest.HMAC.cpf("52998224725"));
+		assertThat(ids.ip()).isEqualTo(PedidoTest.HMAC.ip("203.0.113.9")).hasSize(64);
+	}
+
+	@Test
+	void confirmarEmailVinculaContaQueJaExistePeloCanonico() {
+		var base = "doador-" + UUID.randomUUID().toString().replace("-", "");
+		var existente = tx.execute(s -> usuarios.saveAndFlush(me.clama.conta.interno.Usuario.novo(base + "@gmail.com", "Dona", me.clama.conta.interno.Papel.CLIENTE, Instant.now())));
+		var id = freemium(base.substring(0, 10) + "." + base.substring(10) + "+oi@gmail.com");
+		tx.executeWithoutResult(s -> api.confirmarEmail(id));
+		assertThat(pedidos.findById(id).orElseThrow().getUsuarioId()).isEqualTo(existente.getId());
+		assertThat(jdbc.queryForObject("select count(*) from usuario where email_canonico like ?", Integer.class, base + "%")).isEqualTo(1);
+	}
+
+	@Test
+	void confirmarEmailForaDoEstadoEhTransicaoInvalidaSemEvento() {
+		var id = freemium("doador-" + UUID.randomUUID() + "@exemplo.com");
+		tx.executeWithoutResult(s -> api.confirmarEmail(id));
+		eventos.clear();
+		assertThatThrownBy(() -> tx.executeWithoutResult(s -> api.confirmarEmail(id))).isInstanceOf(TransicaoInvalidaException.class);
+		assertThat(eventos.stream(GeracaoSolicitada.class)).isEmpty();
+		var pago = novo("doador-" + UUID.randomUUID() + "@exemplo.com").getId();
+		assertThatThrownBy(() -> tx.executeWithoutResult(s -> api.confirmarEmail(pago))).isInstanceOf(TransicaoInvalidaException.class);
+		assertThat(pedidos.findById(pago).orElseThrow().getUsuarioId()).isNull();
+	}
+
+	@Test
+	void pendenteDentroEForaDaJanelaPorEmailOuCpf() {
+		var email = "doador-" + UUID.randomUUID() + "@exemplo.com";
+		var id = freemium(email);
+		var h = PedidoTest.HMAC;
+		var ha24 = Instant.now().minus(Duration.ofHours(24));
+		assertThat(api.existePendenteDeConfirmacao(h.email(email), h.cpf("1"), ha24)).isTrue(); // so o e-mail casa
+		assertThat(api.existePendenteDeConfirmacao(h.email("outro@exemplo.com"), h.cpf("529.982.247-25"), ha24)).isTrue(); // so o CPF
+		assertThat(api.existePendenteDeConfirmacao(h.email("outro@exemplo.com"), null, ha24)).isFalse();
+		assertThat(api.existePendenteDeConfirmacao(h.email(email), h.cpf("529.982.247-25"), Instant.now().plus(Duration.ofMinutes(1)))).isFalse(); // criado antes da janela
+		jdbc.update("update pedido set criado_em = now() - interval '25 hours' where id = ?", id);
+		assertThat(api.existePendenteDeConfirmacao(h.email(email), h.cpf("529.982.247-25"), ha24)).isFalse();
+		jdbc.update("update pedido set criado_em = now(), status = 'CONFIRMACAO_EXPIRADA' where id = ?", id);
+		assertThat(api.existePendenteDeConfirmacao(h.email(email), h.cpf("529.982.247-25"), ha24)).as("so pendente conta").isFalse();
+	}
+
+	@Test
+	void cpfTemContaSoComDono() {
+		var cpf = PedidoTest.HMAC.cpf("529.982.247-25");
+		var id = freemium("doador-" + UUID.randomUUID() + "@exemplo.com");
+		assertThat(api.cpfTemConta(cpf)).as("pendente nao tem dono").isFalse();
+		tx.executeWithoutResult(s -> api.confirmarEmail(id));
+		assertThat(api.cpfTemConta(cpf)).isTrue();
+		assertThat(api.cpfTemConta(PedidoTest.HMAC.cpf("111.444.777-35"))).isFalse();
+		assertThat(api.cpfTemConta(null)).isFalse();
+	}
+
+	@Test
+	void expirarConfirmacoesSoTocaPendenteAntigo() {
+		var velho = freemium("doador-" + UUID.randomUUID() + "@exemplo.com");
+		var recente = freemium("doador-" + UUID.randomUUID() + "@exemplo.com");
+		var confirmado = freemium("doador-" + UUID.randomUUID() + "@exemplo.com");
+		var pago = novo("doador-" + UUID.randomUUID() + "@exemplo.com").getId();
+		tx.executeWithoutResult(s -> api.confirmarEmail(confirmado));
+		jdbc.update("update pedido set criado_em = now() - interval '49 hours' where id in (?, ?, ?)", velho, confirmado, pago);
+		var corte = Instant.now().minus(Duration.ofHours(48));
+		assertThat(api.contarConfirmacoesVencidas(corte)).isEqualTo(1);
+		assertThat(api.expirarConfirmacoes(corte)).isEqualTo(1);
+		assertThat(api.contarConfirmacoesVencidas(corte)).isZero();
+		assertThat(api.resumo(velho).orElseThrow().status()).isEqualTo(StatusPedido.CONFIRMACAO_EXPIRADA);
+		assertThat(api.resumo(recente).orElseThrow().status()).isEqualTo(StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL);
+		assertThat(api.resumo(confirmado).orElseThrow().status()).isEqualTo(StatusPedido.PAGO);
+		assertThat(api.resumo(pago).orElseThrow().status()).isEqualTo(StatusPedido.AGUARDANDO_PAGAMENTO);
+		assertThat(api.expirarConfirmacoes(corte)).as("idempotente").isZero();
+	}
+
+	/** Review Focus 4: pedido nao confirmado nunca gera oracao, nem pela geracao, nem pelo admin, nem pela varredura. */
+	@Test
+	void pedidoNaoConfirmadoNuncaGeraOracao() {
+		var pendente = freemium("doador-" + UUID.randomUUID() + "@exemplo.com");
+		var expirado = freemium("doador-" + UUID.randomUUID() + "@exemplo.com");
+		jdbc.update("update pedido set status = 'CONFIRMACAO_EXPIRADA' where id = ?", expirado);
+		for (var id : new UUID[] { pendente, expirado }) {
+			assertThatThrownBy(() -> api.iniciarGeracao(id)).isInstanceOf(TransicaoInvalidaException.class);
+			assertThatThrownBy(() -> api.concederGratuidade(id)).isInstanceOf(TransicaoInvalidaException.class);
+			assertThatThrownBy(() -> api.solicitarRegeneracao(id)).isInstanceOf(TransicaoInvalidaException.class);
+			assertThatThrownBy(() -> api.falhar(id, "x")).isInstanceOf(TransicaoInvalidaException.class); // sem ERRO, sem alerta
+		}
+		jdbc.update("update pedido set atualizado_em = now() - interval '30 days'");
+		assertThat(api.emAndamentoParados(Duration.ofMinutes(20))).isEmpty();
+		var corte = Instant.now().minus(Duration.ofMinutes(20));
+		assertThat(api.falharSeParado(pendente, corte, "pedido_preso")).isFalse();
+		assertThat(api.falharSeParado(expirado, corte, "pedido_preso")).isFalse();
+		assertThat(api.resumo(pendente).orElseThrow().status()).isEqualTo(StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL);
+		assertThat(api.resumo(expirado).orElseThrow().status()).isEqualTo(StatusPedido.CONFIRMACAO_EXPIRADA);
+		assertThat(eventos.stream(GeracaoSolicitada.class)).isEmpty();
+	}
+
+	@Test
+	void migrationAceitaOsDoisStatusNovosERecusaOutro() {
+		var id = freemium("doador-" + UUID.randomUUID() + "@exemplo.com");
+		jdbc.update("update pedido set status = 'CONFIRMACAO_EXPIRADA' where id = ?", id);
+		jdbc.update("update pedido set status = 'AGUARDANDO_CONFIRMACAO_EMAIL' where id = ?", id);
+		assertThatThrownBy(() -> jdbc.update("update pedido set status = 'QUALQUER' where id = ?", id))
+				.isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+		assertThat(jdbc.queryForObject("select count(*) from pg_indexes where indexname = 'pedido_pendente_freemium_ix'", Integer.class)).isEqualTo(1);
+	}
 }

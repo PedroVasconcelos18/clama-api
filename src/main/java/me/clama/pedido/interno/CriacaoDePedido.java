@@ -10,6 +10,7 @@ import me.clama.infra.web.ErroDeCampo;
 import me.clama.infra.formato.Dinheiro;
 import me.clama.infra.web.ErroDeNegocio;
 import me.clama.pedido.GeracaoSolicitada;
+import me.clama.pedido.NovoPedido;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
@@ -63,6 +64,13 @@ public class CriacaoDePedido {
 		var p = pedidos.saveAndFlush(Pedido.gratuito(dados(usuarioId, plano.id(), null, 0, n, ip), hmac, agora));
 		eventos.publishEvent(new GeracaoSolicitada(p.getId()));
 		return p;
+	}
+
+	/** Freemium: plano gratuito (503 se faltar), AGUARDANDO_CONFIRMACAO_EMAIL; sem conta e sem evento. */
+	@Transactional
+	public Pedido criarFreemium(NovoPedido n, String ip) {
+		var plano = catalogo.planoGratuito();
+		return pedidos.saveAndFlush(Pedido.freemium(dados(null, plano.id(), null, 0, n, ip), hmac, relogio.instant()));
 	}
 
 	private Pedido pago(Long usuarioId, NovoPedido n, Long planoEscolhido, String ip) {

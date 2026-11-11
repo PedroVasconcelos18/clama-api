@@ -48,6 +48,15 @@ class DoacaoTest extends PedidoWebTeste {
 	}
 
 	@Test
+	void deviceHashQueOFrontAntigoAindaMandaEAceitoEIgnorado() throws Exception {
+		turnstileAprova(true);
+		plano("Simples", 3000);
+		// mesmo um valor que antes estourava o @Size(128) passa: o campo nao existe mais no corpo
+		var res = anonimo().post("/api/doacoes", json(com(doacao(), "deviceHash", "d".repeat(500))));
+		assertThat(res.statusCode()).isEqualTo(201);
+	}
+
+	@Test
 	void mantemCsrfMasNaoExigeLogin() throws Exception {
 		turnstileAprova(true);
 		plano("Simples", 3000);
@@ -98,9 +107,8 @@ class DoacaoTest extends PedidoWebTeste {
 		var res = anonimo().post("/api/doacoes", json(com(doacao(), "turnstileToken", null)));
 		assertThat(res.statusCode()).isEqualTo(400);
 		assertThat(erroDe(res, "turnstileToken")).isEqualTo(CAPTCHA);
-		var longo = anonimo().post("/api/doacoes", json(com(doacao(), "turnstileToken", "t".repeat(2049), "deviceHash", "d".repeat(129))));
+		var longo = anonimo().post("/api/doacoes", json(com(doacao(), "turnstileToken", "t".repeat(2049))));
 		assertThat(erroDe(longo, "turnstileToken")).isNotNull();
-		assertThat(erroDe(longo, "deviceHash")).isNotNull();
 	}
 
 	@Test

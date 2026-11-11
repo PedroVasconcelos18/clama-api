@@ -1,4 +1,4 @@
-package me.clama.pedido.interno;
+package me.clama.pedido;
 
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
@@ -11,10 +11,11 @@ import jakarta.validation.constraints.Size;
 import me.clama.infra.validacao.CpfOuCnpj;
 
 /**
- * Corpo de {@code POST /api/pedidos}, {@code /api/pedidos/gratuito} e {@code /api/doacoes}: cada rota le so o que lhe
+ * Corpo de {@code POST /api/pedidos}, {@code /api/pedidos/gratuito}, {@code /api/doacoes} e o submit do freemium: cada rota le so o que lhe
  * cabe e ignora o resto. {@code plano}, {@code instituicao} e {@code valorCentavos} so valem no pedido pago;
  * {@code plano} nao vale na doacao (sempre inferido); {@code turnstileToken} so na doacao; o pedido gratuito usa so os
- * dados pessoais. {@code deviceHash} e aceito e descartado (nao e guardado).
+ * dados pessoais. Um {@code deviceHash} que o front antigo ainda mande e ignorado (o Jackson descarta propriedade
+ * desconhecida).
  */
 public record NovoPedido(
 		@NotBlank(message = "Por favor, digite seu nome.")
@@ -35,7 +36,6 @@ public record NovoPedido(
 		@Min(value = 0, message = "Informe um valor válido.") @Max(value = Integer.MAX_VALUE, message = "Informe um valor válido.") Long valorCentavos,
 		@NotNull(message = "Para enviar seu pedido, é preciso concordar com a política de privacidade.")
 		@AssertTrue(message = "Para enviar seu pedido, é preciso concordar com a política de privacidade.") Boolean consentAceito,
-		@Size(max = 128, message = "O identificador do dispositivo pode ter no máximo 128 caracteres.") String deviceHash,
 		@Size(max = 2048, message = "Verificação anti-robô falhou. Atualize a página e tente de novo.") String turnstileToken) {
 
 	/** Tira as pontas dos textos: as regras de tamanho valem para o que a pessoa de fato escreveu. */

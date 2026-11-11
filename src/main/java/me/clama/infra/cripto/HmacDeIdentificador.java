@@ -31,6 +31,11 @@ public final class HmacDeIdentificador {
 		return hash(soDigitos(telefone));
 	}
 
+	/** HMAC do IP (sem espacos nas pontas, minusculo: IPv6 vem em hex); nulo ou vazio = sem IP, devolve nulo. */
+	public String ip(String ip) {
+		return ip == null || ip.isBlank() ? null : hash(ip.strip().toLowerCase(Locale.ROOT));
+	}
+
 	/** HMAC do valor ja normalizado. */
 	String hash(String normalizado) {
 		try {

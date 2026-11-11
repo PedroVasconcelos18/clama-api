@@ -24,6 +24,12 @@ public class ContaApi {
 		this.relogio = relogio;
 	}
 
+	/** Ha conta com esse e-mail (comparado pelo canonico: Gmail sem pontos e sem "+tag"). */
+	@Transactional(readOnly = true)
+	public boolean existe(String email) {
+		return usuarios.findByEmailCanonico(EmailCanonico.de(email)).isPresent();
+	}
+
 	/**
 	 * Conta existente pelo e-mail canonico: so devolve. Senao cria um CLIENTE sem senha e, depois do commit de quem
 	 * chamou, manda o link de definir senha. Criacao simultanea do mesmo e-mail: o {@code ON CONFLICT DO NOTHING}

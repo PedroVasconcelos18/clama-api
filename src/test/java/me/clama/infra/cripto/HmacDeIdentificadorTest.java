@@ -34,6 +34,15 @@ class HmacDeIdentificadorTest {
 	}
 
 	@Test
+	void ipEstavelSemEspacoECaixaENuloSemIp() {
+		assertThat(h.ip("203.0.113.9")).isEqualTo(h.ip(" 203.0.113.9 ")).isEqualTo(h.hash("203.0.113.9")).hasSize(64);
+		assertThat(h.ip("2001:DB8::1")).isEqualTo(h.ip("2001:db8::1"));
+		assertThat(h.ip("203.0.113.9")).isNotEqualTo(h.ip("203.0.113.10"));
+		assertThat(h.ip(null)).isNull();
+		assertThat(h.ip("  ")).isNull();
+	}
+
+	@Test
 	void chaveObrigatoria32Bytes() {
 		assertThatThrownBy(() -> new HmacDeIdentificador("")).isInstanceOf(IllegalStateException.class);
 		assertThatThrownBy(() -> new HmacDeIdentificador(Base64.getEncoder().encodeToString(new byte[8])))

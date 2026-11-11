@@ -124,6 +124,15 @@ public class Pedido {
 		return p;
 	}
 
+	/** Freemium: nasce AGUARDANDO_CONFIRMACAO_EMAIL, gratuito e de valor 0, sem dono e sem evento. */
+	public static Pedido freemium(Dados d, HmacDeIdentificador hmac, Instant agora) {
+		if (d.valorCentavos() != 0) throw new IllegalArgumentException("Pedido freemium tem valor 0.");
+		var p = novo(d, hmac, agora);
+		p.status = AGUARDANDO_CONFIRMACAO_EMAIL;
+		p.gratuito = true;
+		return p;
+	}
+
 	private void ir(StatusPedido para, String acao, Set<StatusPedido> de, Instant agora) {
 		if (!de.contains(status)) throw new TransicaoInvalidaException(status, acao);
 		status = para;
@@ -138,6 +147,16 @@ public class Pedido {
 		ir(PAGO, "conceder gratuidade", EnumSet.of(AGUARDANDO_PAGAMENTO), agora);
 		gratuito = true;
 		valorCentavos = 0;
+	}
+
+	/** Freemium: e-mail confirmado; vai a PAGO ("pronto para gerar", como o gratuito logado). */
+	public void confirmarEmail(Instant agora) {
+		ir(PAGO, "confirmar e-mail", EnumSet.of(AGUARDANDO_CONFIRMACAO_EMAIL), agora);
+	}
+
+	/** Freemium: o link nunca foi usado; terminal. */
+	public void expirarConfirmacao(Instant agora) {
+		ir(CONFIRMACAO_EXPIRADA, "expirar confirmacao", EnumSet.of(AGUARDANDO_CONFIRMACAO_EMAIL), agora);
 	}
 
 	public void iniciarGeracao(Instant agora) {

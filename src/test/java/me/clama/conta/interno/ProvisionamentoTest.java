@@ -79,6 +79,17 @@ class ProvisionamentoTest {
 	}
 
 	@Test
+	void existeComparaPeloEmailCanonicoENaoCria() {
+		var local = "existe" + System.nanoTime();
+		assertThat(api.existe(local + "@gmail.com")).isFalse();
+		usuarios.save(Usuario.novo(local + "@gmail.com", "Alguem", Papel.CLIENTE, java.time.Instant.now()));
+		assertThat(api.existe(local + "@gmail.com")).isTrue();
+		assertThat(api.existe(local.substring(0, 3) + "." + local.substring(3) + "+x@GoogleMail.com")).isTrue();
+		assertThat(api.existe("outro-" + local + "@gmail.com")).isFalse();
+		assertThat(usuarios.findByEmailCanonico("outro-" + local + "@gmail.com")).isEmpty();
+	}
+
+	@Test
 	void rollbackNaoEnvia() throws Exception {
 		var email = email();
 		assertThatThrownBy(() -> transacao.executeWithoutResult(s -> {
