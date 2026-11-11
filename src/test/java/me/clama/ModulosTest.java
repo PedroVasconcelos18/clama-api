@@ -7,6 +7,11 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import me.clama.catalogo.CatalogoApi;
+import me.clama.catalogo.Complexidade;
+import me.clama.catalogo.InstituicaoResumo;
+import me.clama.catalogo.PlanoResumo;
+import me.clama.catalogo.TipoDePlano;
 import me.clama.conta.ContaApi;
 import me.clama.conta.UsuarioResumo;
 import me.clama.conta.interno.LoginServico;
@@ -48,6 +53,16 @@ class ModulosTest {
 		assertThat(conta.isExposed(UsuarioResumo.class)).isTrue();
 		assertThat(conta.isExposed(UsuarioRepository.class)).isFalse();
 		assertThat(conta.isExposed(LoginServico.class)).isFalse();
+	}
+
+	@Test
+	void catalogoExpoeSoApiEResumos() {
+		var catalogo = MODULOS.getModuleByName("catalogo").orElseThrow();
+		for (var c : new Class<?>[] { CatalogoApi.class, PlanoResumo.class, InstituicaoResumo.class, Complexidade.class,
+				TipoDePlano.class })
+			assertThat(catalogo.isExposed(c)).as(c.getSimpleName()).isTrue();
+		assertThat(catalogo.isExposed(me.clama.catalogo.interno.PlanoRepository.class)).isFalse();
+		assertThat(catalogo.isExposed(me.clama.catalogo.interno.Plano.class)).isFalse();
 	}
 
 	@Test

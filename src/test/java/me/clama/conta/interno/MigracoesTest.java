@@ -24,4 +24,14 @@ class MigracoesTest {
 				Integer.class);
 		assertEquals(5, n);
 	}
+
+	@Test
+	void planosTecnicosExistemERepetirAMigrationNaoDuplica() throws Exception {
+		assertEquals(2, jdbc.queryForObject("select count(*) from plano where tipo <> 'COMUM'", Integer.class));
+		var sql = new String(getClass().getResourceAsStream("/db/migration/V2__catalogo.sql").readAllBytes(),
+				java.nio.charset.StandardCharsets.UTF_8);
+		jdbc.execute(sql.substring(sql.indexOf("INSERT INTO plano")));
+		assertEquals(2, jdbc.queryForObject("select count(*) from plano where tipo <> 'COMUM'", Integer.class));
+		assertEquals(1000, jdbc.queryForObject("select min(ordem) from plano where tipo <> 'COMUM'", Integer.class));
+	}
 }
