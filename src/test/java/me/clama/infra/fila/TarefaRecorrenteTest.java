@@ -1,6 +1,7 @@
 package me.clama.infra.fila;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.github.kagkarlsson.scheduler.Scheduler;
 import com.github.kagkarlsson.scheduler.serializer.Jackson3Serializer;
@@ -30,6 +31,7 @@ class TarefaRecorrenteTest {
 	static class Gravadora extends TarefaRecorrente {
 		final List<Boolean> modos = new CopyOnWriteArrayList<>();
 		final List<Instant> disparos = new CopyOnWriteArrayList<>();
+		volatile RuntimeException lancar;
 
 		Gravadora(String cron) {
 			super("tarefa-de-teste", cron);
@@ -42,18 +44,22 @@ class TarefaRecorrenteTest {
 		}
 
 		@Override
-		protected void executar(boolean dryRun) {
+		protected String executar(boolean dryRun) {
 			modos.add(dryRun);
+			if (lancar != null) throw lancar;
+			return "fez " + (dryRun ? "simulado" : "real");
 		}
 	}
 
 	@Autowired JdbcTemplate jdbc;
 	@Autowired DataSource ds;
+	@Autowired Execucoes execucoes;
 
 	@BeforeEach
 	@AfterEach
 	void limpar() {
 		jdbc.update("delete from scheduled_tasks where task_name = 'tarefa-de-teste'");
+		jdbc.update("delete from tarefa_execucao where tarefa in ('tarefa-de-teste', 'outra-tarefa')");
 	}
 
 	@Test
@@ -64,6 +70,71 @@ class TarefaRecorrenteTest {
 		t.setEnvironment(new MockEnvironment().withProperty("clama.tarefas.tarefa-de-teste.dry-run", "true"));
 		t.executeRecurringly(null, null);
 		assertThat(t.modos).containsExactly(false, true);
+	}
+
+	private Gravadora comRegistro(String... propriedades) {
+		var t = new Gravadora("0 0 4 * * *");
+		var env = new MockEnvironment();
+		for (int i = 0; i < propriedades.length; i += 2) env.setProperty(propriedades[i], propriedades[i + 1]);
+		t.setEnvironment(env);
+		t.setExecucoes(execucoes);
+		return t;
+	}
+
+	private List<java.util.Map<String, Object>> linhas() {
+		return jdbc.queryForList("select * from tarefa_execucao where tarefa = 'tarefa-de-teste' order by id");
+	}
+
+	@Test
+	void disparoAgendadoGravaAExecucaoComOResumoEOModoDaConfiguracao() {
+		var t = comRegistro("clama.tarefas.tarefa-de-teste.dry-run", "true");
+		t.executeRecurringly(null, null);
+		assertThat(linhas()).singleElement().satisfies(l -> {
+			assertThat(l).containsEntry("ok", true).containsEntry("simulacao", true).containsEntry("manual", false)
+					.containsEntry("resumo", "fez simulado").containsEntry("autor_id", null).containsEntry("erro", null);
+		});
+	}
+
+	@Test
+	void rodarGravaManualComOAutorENaoRelancaAFalha() {
+		var t = comRegistro();
+		t.rodar(false, 42L);
+		t.lancar = new IllegalStateException("segredo@exemplo.com");
+		t.rodar(true, 42L); // so registra: o job nao falha duas vezes
+		assertThat(linhas()).hasSize(2);
+		assertThat(linhas().get(0)).containsEntry("manual", true).containsEntry("autor_id", 42L).containsEntry("simulacao", false).containsEntry("ok", true);
+		assertThat(linhas().get(1)).containsEntry("ok", false).containsEntry("simulacao", true);
+	}
+
+	@Test
+	void falhaGravaSoAClasseDoErroERelancaNoDisparoAgendado() {
+		var t = comRegistro();
+		t.lancar = new IllegalStateException("segredo@exemplo.com");
+		assertThatThrownBy(() -> t.executeRecurringly(null, null)).isSameAs(t.lancar);
+		assertThat(linhas()).singleElement().satisfies(l -> {
+			assertThat(l).containsEntry("ok", false).containsEntry("erro", "java.lang.IllegalStateException").containsEntry("resumo", null);
+			assertThat(l.toString()).doesNotContain("segredo@exemplo.com");
+		});
+	}
+
+	@Test
+	void falhaParcialGravaOkFalsoComOResumoDaTarefa() {
+		var t = comRegistro();
+		t.lancar = new TarefaRecorrente.FalhaParcial("2 de 3 instituições, faltou 1");
+		assertThatThrownBy(() -> t.executeRecurringly(null, null)).isSameAs(t.lancar);
+		assertThat(linhas()).singleElement().satisfies(l -> assertThat(l).containsEntry("ok", false)
+				.containsEntry("resumo", "2 de 3 instituições, faltou 1").containsEntry("erro", TarefaRecorrente.FalhaParcial.class.getName()));
+	}
+
+	@Test
+	void cadaGravacaoApagaAsDaMesmaTarefaComMaisDeNoventaDias() {
+		jdbc.update("insert into tarefa_execucao (tarefa, inicio, fim, simulacao, manual, ok) values "
+				+ "('tarefa-de-teste', now() - interval '91 days', now() - interval '91 days', false, false, true),"
+				+ "('tarefa-de-teste', now() - interval '89 days', now() - interval '89 days', false, false, true),"
+				+ "('outra-tarefa', now() - interval '91 days', now() - interval '91 days', false, false, true)");
+		comRegistro().executeRecurringly(null, null);
+		assertThat(linhas()).hasSize(2);
+		assertThat(jdbc.queryForObject("select count(*) from tarefa_execucao where tarefa = 'outra-tarefa'", Integer.class)).isEqualTo(1);
 	}
 
 	@Test

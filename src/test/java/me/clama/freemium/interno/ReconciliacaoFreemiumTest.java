@@ -75,7 +75,7 @@ class ReconciliacaoFreemiumTest {
 	void quarentaEOitoHorasMaisUmSegundoExpiraEMenosUmSegundoFica() {
 		var velho = pendente(Duration.ofHours(48).plusSeconds(1));
 		var novo = pendente(Duration.ofHours(48).minusSeconds(1));
-		tarefa.executar(false);
+		assertThat(tarefa.executar(false)).isEqualTo("1 pedido(s) expirados");
 		assertThat(status(velho)).isEqualTo(StatusPedido.CONFIRMACAO_EXPIRADA);
 		assertThat(status(novo)).isEqualTo(StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL);
 	}
@@ -83,7 +83,7 @@ class ReconciliacaoFreemiumTest {
 	@Test
 	void dryRunSoContaELoga(CapturedOutput log) {
 		var velho = pendente(Duration.ofHours(60));
-		tarefa.executar(true);
+		assertThat(tarefa.executar(true)).isEqualTo("1 pedido(s) expirariam (simulação)");
 		assertThat(status(velho)).isEqualTo(StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL);
 		assertThat(log.getAll()).contains("reconciliar-freemium (dry-run): 1 pedido(s) expirariam");
 	}
@@ -108,7 +108,7 @@ class ReconciliacaoFreemiumTest {
 	@Test
 	void semMudancaNaoHaWarn(CapturedOutput log) {
 		pendente(Duration.ofHours(1));
-		tarefa.executar(false);
+		assertThat(tarefa.executar(false)).isEqualTo("nada a expirar");
 		assertThat(log.getAll().lines().filter(l -> l.contains("WARN") && l.contains("reconciliar-freemium"))).isEmpty();
 	}
 

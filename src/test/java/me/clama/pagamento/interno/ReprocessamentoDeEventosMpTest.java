@@ -116,7 +116,7 @@ class ReprocessamentoDeEventosMpTest {
 		evento("outro-motivo", 104, "ERRO", "erro_interno", Duration.ofHours(1));
 		evento("recebido", 105, "RECEBIDO", null, Duration.ofHours(1));
 
-		tarefa.executar(false);
+		assertThat(tarefa.executar(false)).isEqualTo("1 de 1 evento(s) tentados");
 
 		assertThat(evento("elegivel")).isEqualTo("PROCESSADO -");
 		assertThat(jdbc.queryForObject("select status from pedido where id = ?", String.class, pedido)).isEqualTo("PAGO");
@@ -134,7 +134,7 @@ class ReprocessamentoDeEventosMpTest {
 		evento("elegivel", 101, "ERRO", "mp_indisponivel", Duration.ofHours(1));
 		evento("velho", 103, "ERRO", "mp_indisponivel", Duration.ofDays(4));
 
-		tarefa.executar(true);
+		assertThat(tarefa.executar(true)).isEqualTo("1 evento(s) seriam reprocessados (simulação)");
 
 		assertThat(evento("elegivel")).isEqualTo("ERRO mp_indisponivel");
 		assertThat(evento("velho")).isEqualTo("ERRO mp_indisponivel");

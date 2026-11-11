@@ -2,6 +2,7 @@ package me.clama.blog.interno;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
@@ -9,6 +10,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.stream.IntStream;
 import me.clama.BancoDeTeste;
+import me.clama.infra.fila.TarefaRecorrente;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -83,7 +85,7 @@ class ReconciliacaoDoEspelhoTest {
 		var antes1 = atualizadoEm(1);
 		pagina(1, 2, post(1, "igual", false), post(2, "novo", false));
 		pagina(2, 2, post(3, "criado", true));
-		tarefa.executar(false);
+		assertThat(tarefa.executar(false)).isEqualTo("2 post(s) criados ou atualizados, 0 deixaram de estar publicados");
 		assertThat(linhas()).isEqualTo(3);
 		assertThat(atualizadoEm(1)).isEqualTo(antes1); // igual: nao grava
 		assertThat(jdbc.queryForObject("select slug from blog_post where wp_id = 2", String.class)).isEqualTo("novo");
@@ -127,7 +129,8 @@ class ReconciliacaoDoEspelhoTest {
 		semiar(2, "b", true);
 		pagina(1, 2, post(1, "a", false), post(9, "novo", false));
 		WP.stubFor(get(urlPathEqualTo(CAMINHO)).withQueryParam("page", equalTo("2")).willReturn(serverError()));
-		tarefa.executar(false);
+		assertThatThrownBy(() -> tarefa.executar(false)).isInstanceOf(TarefaRecorrente.FalhaParcial.class)
+				.hasMessage("abortada, nada foi gravado");
 		abortaSemGravar();
 	}
 
@@ -136,7 +139,8 @@ class ReconciliacaoDoEspelhoTest {
 		semiar(1, "a", true);
 		semiar(2, "b", true);
 		pagina(1, 51, post(1, "a", false), post(9, "novo", false));
-		tarefa.executar(false);
+		assertThatThrownBy(() -> tarefa.executar(false)).isInstanceOf(TarefaRecorrente.FalhaParcial.class)
+				.hasMessage("abortada, nada foi gravado");
 		abortaSemGravar();
 		WP.verify(1, getRequestedFor(urlPathEqualTo(CAMINHO))); // nem tenta as outras
 	}
@@ -154,7 +158,8 @@ class ReconciliacaoDoEspelhoTest {
 		semiar(1, "a", true);
 		semiar(2, "b", true);
 		pagina(1, 1);
-		tarefa.executar(false);
+		assertThatThrownBy(() -> tarefa.executar(false)).isInstanceOf(TarefaRecorrente.FalhaParcial.class)
+				.hasMessage("abortada, nada foi gravado");
 		abortaSemGravar();
 	}
 
@@ -163,7 +168,8 @@ class ReconciliacaoDoEspelhoTest {
 		semiar(1, "a", true);
 		semiar(2, "b", true);
 		WP.stubFor(get(urlPathEqualTo(CAMINHO)).willReturn(serviceUnavailable()));
-		tarefa.executar(false);
+		assertThatThrownBy(() -> tarefa.executar(false)).isInstanceOf(TarefaRecorrente.FalhaParcial.class)
+				.hasMessage("abortada, nada foi gravado");
 		abortaSemGravar();
 	}
 
@@ -172,7 +178,7 @@ class ReconciliacaoDoEspelhoTest {
 		semiar(1, "a", true);
 		semiar(2, "b", true);
 		pagina(1, 1, post(1, "a", false), post(9, "novo", false));
-		tarefa.executar(true);
+		assertThat(tarefa.executar(true)).isEqualTo("1 post(s) criados ou atualizados, 1 deixariam de estar publicados (simulação)");
 		abortaSemGravar();
 	}
 }

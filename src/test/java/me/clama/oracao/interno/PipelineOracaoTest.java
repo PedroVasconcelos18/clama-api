@@ -489,7 +489,7 @@ class PipelineOracaoTest {
 		var recente = parado("GERANDO_ORACAO", Duration.ofMinutes(5));
 		tx.executeWithoutResult(s -> fila.enfileirar(enviar, enviar.instancia(comJob), comJob, Instant.now().plusSeconds(3600)));
 
-		varredura.executar(false);
+		assertThat(varredura.executar(false)).isEqualTo("1 preso(s), 1 marcado(s)");
 
 		assertThat(status(preso)).isEqualTo("ERRO");
 		assertThat(ultimoErro(preso)).isEqualTo("pedido_preso");
@@ -517,7 +517,7 @@ class PipelineOracaoTest {
 	void varreduraEmDryRunNaoMudaNada() throws Exception {
 		var preso = parado("AGUARDANDO_NOVA_TENTATIVA", Duration.ofMinutes(30));
 
-		varredura.executar(true);
+		assertThat(varredura.executar(true)).isEqualTo("1 pedido(s) preso(s) seriam marcados (simulação)");
 		semMudarPor(Duration.ofMillis(300));
 
 		assertThat(status(preso)).isEqualTo("AGUARDANDO_NOVA_TENTATIVA");

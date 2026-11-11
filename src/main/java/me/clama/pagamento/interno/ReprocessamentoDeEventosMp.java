@@ -40,12 +40,12 @@ class ReprocessamentoDeEventosMp extends TarefaRecorrente {
 	}
 
 	@Override
-	protected void executar(boolean dryRun) {
+	protected String executar(boolean dryRun) {
 		var agora = relogio.instant();
 		var pendentes = eventos.mpIndisponivel(agora.minus(ESPERA), agora.minus(JANELA), LIMITE);
 		if (dryRun) {
 			LOG.info("reprocessar-eventos-mp (dry-run): {} evento(s) seriam reprocessados", pendentes.size());
-			return;
+			return pendentes.size() + " evento(s) seriam reprocessados (simulação)";
 		}
 		expirar(agora);
 		int feitos = 0;
@@ -63,6 +63,7 @@ class ReprocessamentoDeEventosMp extends TarefaRecorrente {
 			}
 		}
 		LOG.info("reprocessar-eventos-mp: {} de {} evento(s) tentados", feitos, pendentes.size());
+		return feitos + " de " + pendentes.size() + " evento(s) tentados";
 	}
 
 	/** Uma vez por evento: a marca muda o motivo, e a proxima rodada nao o acha mais. */

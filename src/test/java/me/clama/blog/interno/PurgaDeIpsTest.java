@@ -77,7 +77,7 @@ class PurgaDeIpsTest {
 		var velho = comentarioEm(seisMeses.minusSeconds(1), "cifrado-1");
 		var borda = comentarioEm(seisMeses, "cifrado-2");
 		var novo = comentario(Duration.ofDays(1), "cifrado-3");
-		tarefa.executar(false);
+		assertThat(tarefa.executar(false)).isEqualTo("1 IP(s) apagados");
 		assertThat(ip(velho)).isNull();
 		assertThat(ip(borda)).isEqualTo("cifrado-2");
 		assertThat(ip(novo)).isEqualTo("cifrado-3");
@@ -100,7 +100,7 @@ class PurgaDeIpsTest {
 	void dryRunSoConta(CapturedOutput log) {
 		var velho = comentario(Duration.ofDays(200), "cifrado-1");
 		comentario(Duration.ofDays(200), null);
-		tarefa.executar(true);
+		assertThat(tarefa.executar(true)).isEqualTo("1 IP(s) seriam apagados (simulação)");
 		assertThat(ip(velho)).isEqualTo("cifrado-1");
 		assertThat(log.getAll()).contains("purgar-ips (dry-run): 1 IP(s) seriam apagados");
 	}

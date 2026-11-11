@@ -29,16 +29,17 @@ class PurgaDeIps extends TarefaRecorrente {
 	}
 
 	@Override
-	protected void executar(boolean dryRun) {
+	protected String executar(boolean dryRun) {
 		var corte = relogio.instant().atZone(FUSO).minusMonths(RETENCAO_EM_MESES).toOffsetDateTime();
 		var onde = " from blog_comentario where criado_em < :corte and ip_cifrado is not null";
 		if (dryRun) {
 			var n = jdbc.sql("select count(*)" + onde).param("corte", corte).query(Long.class).single();
 			LOG.info("purgar-ips (dry-run): {} IP(s) seriam apagados", n);
-			return;
+			return n + " IP(s) seriam apagados (simulação)";
 		}
 		var n = jdbc.sql("update blog_comentario set ip_cifrado = null where criado_em < :corte and ip_cifrado is not null")
 				.param("corte", corte).update();
 		LOG.info("purgar-ips: {} IP(s) apagados", n);
+		return n + " IP(s) apagados";
 	}
 }

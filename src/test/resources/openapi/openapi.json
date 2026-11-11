@@ -370,6 +370,42 @@
         },
         "type" : "object"
       },
+      "ExecucaoAdmin" : {
+        "properties" : {
+          "autorId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "erro" : {
+            "type" : "string"
+          },
+          "fim" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "inicio" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "manual" : {
+            "type" : "boolean"
+          },
+          "ok" : {
+            "type" : "boolean"
+          },
+          "resumo" : {
+            "type" : "string"
+          },
+          "simulacao" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
       "Instituicao" : {
         "properties" : {
           "id" : {
@@ -727,6 +763,21 @@
         "required" : [ "content", "page" ],
         "type" : "object"
       },
+      "PagedModelExecucaoAdmin" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ExecucaoAdmin"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageMetadata"
+          }
+        },
+        "required" : [ "content", "page" ],
+        "type" : "object"
+      },
       "PagedModelItem" : {
         "properties" : {
           "content" : {
@@ -836,6 +887,14 @@
           },
           "usuarioNome" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Pedido" : {
+        "properties" : {
+          "simulacao" : {
+            "type" : "boolean"
           }
         },
         "type" : "object"
@@ -1412,6 +1471,37 @@
         },
         "type" : "object"
       },
+      "Tarefa" : {
+        "properties" : {
+          "cron" : {
+            "type" : "string"
+          },
+          "falhasSeguidas" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "nome" : {
+            "type" : "string"
+          },
+          "proximaExecucao" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "rodandoAgora" : {
+            "type" : "boolean"
+          },
+          "simulacaoConfigurada" : {
+            "type" : "boolean"
+          },
+          "situacao" : {
+            "type" : "string"
+          },
+          "ultima" : {
+            "$ref" : "#/components/schemas/UltimaExecucao"
+          }
+        },
+        "type" : "object"
+      },
       "Transferencia" : {
         "properties" : {
           "comprovante" : {
@@ -1437,6 +1527,34 @@
           }
         },
         "required" : [ "novaSenha", "senhaAtual" ],
+        "type" : "object"
+      },
+      "UltimaExecucao" : {
+        "properties" : {
+          "erro" : {
+            "type" : "string"
+          },
+          "fim" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "inicio" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "manual" : {
+            "type" : "boolean"
+          },
+          "ok" : {
+            "type" : "boolean"
+          },
+          "resumo" : {
+            "type" : "string"
+          },
+          "simulacao" : {
+            "type" : "boolean"
+          }
+        },
         "type" : "object"
       },
       "UsuarioAdminItem" : {
@@ -2794,6 +2912,110 @@
           }
         },
         "tags" : [ "repasses-admin-controller" ]
+      }
+    },
+    "/api/admin/tarefas" : {
+      "get" : {
+        "operationId" : "listarTarefas",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Tarefa"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "tarefas-admin-controller" ]
+      }
+    },
+    "/api/admin/tarefas/{nome}/execucoes" : {
+      "get" : {
+        "operationId" : "listarExecucoes",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "nome",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Zero-based page index (0..N)",
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "The size of the page to be returned",
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+          "in" : "query",
+          "name" : "sort",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PagedModelExecucaoAdmin"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "tarefas-admin-controller" ]
+      },
+      "post" : {
+        "operationId" : "rodarTarefa",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "nome",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Pedido"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "202" : {
+            "description" : "Accepted"
+          }
+        },
+        "tags" : [ "tarefas-admin-controller" ]
       }
     },
     "/api/admin/usuarios" : {

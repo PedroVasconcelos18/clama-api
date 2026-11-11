@@ -44,7 +44,7 @@ class VarreduraDePedidosPresos extends TarefaRecorrente {
 	}
 
 	@Override
-	protected void executar(boolean dryRun) {
+	protected String executar(boolean dryRun) {
 		var antesDe = relogio.instant().minus(JANELA); // antes da lista: o corte do falharSeParado nunca e mais novo
 		int presos = 0;
 		int marcados = 0;
@@ -59,6 +59,7 @@ class VarreduraDePedidosPresos extends TarefaRecorrente {
 			}
 		}
 		LOG.info("pedidos-presos: {} preso(s), {} marcado(s){}", presos, marcados, dryRun ? " (dry-run)" : "");
+		return dryRun ? presos + " pedido(s) preso(s) seriam marcados (simulação)" : presos + " preso(s), " + marcados + " marcado(s)";
 	}
 
 	/** ERRO e alerta na mesma transacao; {@code false} = andou no meio, nada feito. */

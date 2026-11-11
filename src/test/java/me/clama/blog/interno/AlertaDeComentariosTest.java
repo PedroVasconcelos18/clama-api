@@ -80,7 +80,7 @@ class AlertaDeComentariosTest {
 		comentario(7, "normal e mais novo", false, Duration.ofHours(1));
 		comentario(8, "suspeito antigo", true, Duration.ofHours(10));
 		comentario(7, "😀".repeat(101), false, Duration.ofHours(2));
-		tarefa.executar(false);
+		assertThat(tarefa.executar(false)).isEqualTo("resumo enviado: 3 comentário(s), 1 suspeito(s)");
 
 		assertThat(caixa.enviados()).hasSize(1);
 		var e = caixa.enviados().get(0).email();
@@ -141,7 +141,7 @@ class AlertaDeComentariosTest {
 	void dryRunNaoEnviaSoLogaAsContagens(CapturedOutput log) {
 		comentario(7, "uns", true, Duration.ofHours(1));
 		comentario(7, "dois", false, Duration.ofHours(1));
-		tarefa.executar(true);
+		assertThat(tarefa.executar(true)).isEqualTo("2 comentário(s), 1 suspeito(s), nada enviado (simulação)");
 		assertThat(caixa.enviados()).isEmpty();
 		assertThat(log.getAll()).contains("alerta-comentarios (dry-run): 2 comentario(s), 1 suspeito(s), nada enviado");
 	}

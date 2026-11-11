@@ -51,7 +51,7 @@ class AlertaDeComentarios extends TarefaRecorrente {
 	}
 
 	@Override
-	protected void executar(boolean dryRun) {
+	protected String executar(boolean dryRun) {
 		var agora = relogio.instant();
 		var desde = OffsetDateTime.ofInstant(agora.minus(JANELA), ZoneOffset.UTC);
 		var ate = OffsetDateTime.ofInstant(agora, ZoneOffset.UTC);
@@ -66,12 +66,12 @@ class AlertaDeComentarios extends TarefaRecorrente {
 				.list();
 		if (linhas.isEmpty()) {
 			LOG.info("alerta-comentarios: nenhum comentario nas ultimas 24 h, nada enviado");
-			return;
+			return "nenhum comentário nas últimas 24 h, nada enviado";
 		}
 		var suspeitos = linhas.stream().filter(Linha::suspeito).count();
 		if (dryRun) {
 			LOG.info("alerta-comentarios (dry-run): {} comentario(s), {} suspeito(s), nada enviado", linhas.size(), suspeitos);
-			return;
+			return linhas.size() + " comentário(s), " + suspeitos + " suspeito(s), nada enviado (simulação)";
 		}
 		var nomes = conta.resumos(linhas.stream().map(Linha::usuarioId).distinct().toList());
 		var texto = linhas.stream().map(l -> {
@@ -85,6 +85,7 @@ class AlertaDeComentarios extends TarefaRecorrente {
 				Map.of("resumo", resumo, "linhas", texto, "link", link));
 		enviador.enviar(email, "alerta-comentarios/" + relogio.instant().atZone(FUSO).toLocalDate());
 		LOG.info("alerta-comentarios: enviado ({} comentario(s), {} suspeito(s))", linhas.size(), suspeitos);
+		return "resumo enviado: " + linhas.size() + " comentário(s), " + suspeitos + " suspeito(s)";
 	}
 
 	/** Uma linha so, no maximo 100 pontos de codigo (emoji nao parte ao meio); "…" so quando cortou. */

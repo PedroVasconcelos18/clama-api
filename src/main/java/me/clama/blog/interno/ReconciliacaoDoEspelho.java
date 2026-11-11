@@ -1,7 +1,5 @@
 package me.clama.blog.interno;
 
-import io.sentry.Sentry;
-import io.sentry.SentryLevel;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -40,15 +38,15 @@ class ReconciliacaoDoEspelho extends TarefaRecorrente {
 	}
 
 	@Override
-	protected void executar(boolean dryRun) {
+	protected String executar(boolean dryRun) {
 		var inicioDaLeitura = relogio.instant();
 		List<PostWp> lista;
 		try {
 			lista = lerTudo();
 		} catch (ClienteWordPress.Indisponivel | IllegalStateException e) {
 			LOG.warn("reconciliar-espelho abortada, nada foi gravado: {}", e.getMessage());
-			Sentry.captureMessage("reconciliar-espelho abortada: " + e.getMessage(), SentryLevel.WARNING);
-			return;
+			// o detalhe fica no log; o resumo da execucao nao leva a mensagem da excecao. TarefaRecorrente avisa o Sentry
+			throw new FalhaParcial("abortada, nada foi gravado");
 		}
 		var existentes = new java.util.HashMap<Long, Post>();
 		posts.findAll().forEach(p -> existentes.put(p.getWpId(), p));
@@ -58,13 +56,14 @@ class ReconciliacaoDoEspelho extends TarefaRecorrente {
 		var sumidos = existentes.values().stream().filter(p -> p.isPublicado() && !vistos.contains(p.getWpId())).map(Post::getWpId).toList();
 		if (dryRun) {
 			LOG.info("reconciliar-espelho (dry-run): {} post(s) criados ou atualizados, {} deixariam de estar publicados", mudados.size(), sumidos.size());
-			return;
+			return mudados.size() + " post(s) criados ou atualizados, " + sumidos.size() + " deixariam de estar publicados (simulação)";
 		}
 		transacao.executeWithoutResult(s -> {
 			mudados.forEach(espelho::gravar);
 			if (!sumidos.isEmpty()) posts.despublicar(sumidos, relogio.instant(), inicioDaLeitura);
 		});
 		LOG.info("reconciliar-espelho: {} post(s) criados ou atualizados, {} deixaram de estar publicados", mudados.size(), sumidos.size());
+		return mudados.size() + " post(s) criados ou atualizados, " + sumidos.size() + " deixaram de estar publicados";
 	}
 
 	/** A lista publica inteira em memoria; qualquer pagina que falhe aborta. */

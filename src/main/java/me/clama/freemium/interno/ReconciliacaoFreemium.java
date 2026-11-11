@@ -31,11 +31,12 @@ class ReconciliacaoFreemium extends TarefaRecorrente {
 	}
 
 	@Override
-	protected void executar(boolean dryRun) {
+	protected String executar(boolean dryRun) {
 		var corte = relogio.instant().minus(JANELA);
 		if (dryRun) {
-			LOG.info("reconciliar-freemium (dry-run): {} pedido(s) expirariam", pedidos.contarConfirmacoesVencidas(corte));
-			return;
+			var n = pedidos.contarConfirmacoesVencidas(corte);
+			LOG.info("reconciliar-freemium (dry-run): {} pedido(s) expirariam", n);
+			return n + " pedido(s) expirariam (simulação)";
 		}
 		int n = pedidos.expirarConfirmacoes(corte);
 		if (n > 0) {
@@ -44,5 +45,6 @@ class ReconciliacaoFreemium extends TarefaRecorrente {
 		} else {
 			LOG.info("reconciliar-freemium: nada a expirar");
 		}
+		return n > 0 ? n + " pedido(s) expirados" : "nada a expirar";
 	}
 }
