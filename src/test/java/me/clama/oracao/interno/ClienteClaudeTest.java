@@ -190,4 +190,75 @@ class ClienteClaudeTest {
 				.hasMessageContaining("ANTHROPIC_API_KEY");
 		verify(0, postRequestedFor(anyUrl()));
 	}
+
+	/** Documentos ativos: blocos document por file_id antes do texto, um cache_control so (no ultimo), o do system fica. Sem header beta. */
+	@Test
+	void documentosViramBlocosComUmCacheControlNoUltimo(WireMockRuntimeInfo wm) {
+		responde(200, OK);
+
+		cliente(wm).gerar("Sistema.", "Pedido: paz", List.of("file_a", "file_b"));
+
+		verify(1, postRequestedFor(urlEqualTo("/v1/messages")).withRequestBody(equalToJson("""
+				{"system": [{"type": "text", "text": "Sistema.", "cache_control": {"type": "ephemeral"}}],
+				 "messages": [{"role": "user", "content": [
+				   {"type": "document", "source": {"type": "file", "file_id": "file_a"}},
+				   {"type": "document", "source": {"type": "file", "file_id": "file_b"}, "cache_control": {"type": "ephemeral"}},
+				   {"type": "text", "text": "Pedido: paz"}]}]}""", false, true)).withoutHeader("anthropic-beta"));
+		var corpo = findAll(postRequestedFor(urlEqualTo("/v1/messages"))).get(0).getBodyAsString();
+		assertThat(corpo.split("cache_control", -1)).hasSize(3); // system + ultimo documento
+	}
+
+	@Test
+	void umDocumentoSoTemOCacheControlDele(WireMockRuntimeInfo wm) {
+		responde(200, OK);
+		cliente(wm).gerar("s", "m", List.of("file_a"));
+		verify(postRequestedFor(urlEqualTo("/v1/messages")).withRequestBody(
+				matchingJsonPath("$.messages[0].content[0].cache_control.type", equalTo("ephemeral"))));
+	}
+
+	@Test
+	void enviarArquivoMandaMultipartComNomeETipo(WireMockRuntimeInfo wm) throws Exception {
+		stubFor(post("/v1/files").willReturn(okJson("""
+				{"id": "file_011", "type": "file", "filename": "salmos.txt", "mime_type": "text/plain", "size_bytes": 5,
+				 "created_at": "2026-11-12T10:00:00Z", "downloadable": false}""")));
+		var f = java.nio.file.Files.createTempFile("doc", ".bin");
+		java.nio.file.Files.writeString(f, "Salmo");
+		try {
+			assertThat(cliente(wm).enviarArquivo(f, "salmos.txt", "text/plain")).isEqualTo("file_011");
+		} finally {
+			java.nio.file.Files.delete(f);
+		}
+		verify(1, postRequestedFor(urlEqualTo("/v1/files")).withHeader("x-api-key", equalTo("sk-ant-teste"))
+				.withHeader("Content-Type", containing("multipart/form-data"))
+				.withRequestBody(containing("filename=\"salmos.txt\"")).withRequestBody(containing("Content-Type: text/plain"))
+				.withRequestBody(containing("Salmo")));
+	}
+
+	@Test
+	void apagarArquivoToleraOs404EFalhaNosOutros(WireMockRuntimeInfo wm) {
+		var c = cliente(wm);
+		stubFor(delete("/v1/files/file_ok").willReturn(okJson("{\"id\": \"file_ok\", \"type\": \"file_deleted\"}")));
+		c.apagarArquivo("file_ok");
+		stubFor(delete("/v1/files/file_x").willReturn(aResponse().withStatus(404).withHeader("Content-Type", "application/json")
+				.withBody("{\"type\": \"error\", \"error\": {\"type\": \"not_found_error\", \"message\": \"File not found\"}}")));
+		c.apagarArquivo("file_x");
+		stubFor(delete("/v1/files/file_y").willReturn(aResponse().withStatus(500).withHeader("Content-Type", "application/json")
+				.withBody("{\"type\": \"error\", \"error\": {\"type\": \"api_error\", \"message\": \"x\"}}")));
+		assertThatThrownBy(() -> c.apagarArquivo("file_y")).isInstanceOf(ClienteClaude.Falha.class);
+	}
+
+	@Test
+	void arquivoExisteDistingue404DeFalha(WireMockRuntimeInfo wm) {
+		var c = cliente(wm);
+		stubFor(get("/v1/files/file_ok").willReturn(okJson("""
+				{"id": "file_ok", "type": "file", "filename": "a.pdf", "mime_type": "application/pdf", "size_bytes": 5,
+				 "created_at": "2026-11-12T10:00:00Z", "downloadable": false}""")));
+		assertThat(c.arquivoExiste("file_ok")).isTrue();
+		stubFor(get("/v1/files/file_x").willReturn(aResponse().withStatus(404).withHeader("Content-Type", "application/json")
+				.withBody("{\"type\": \"error\", \"error\": {\"type\": \"not_found_error\", \"message\": \"nao\"}}")));
+		assertThat(c.arquivoExiste("file_x")).isFalse();
+		stubFor(get("/v1/files/file_y").willReturn(aResponse().withStatus(500).withHeader("Content-Type", "application/json")
+				.withBody("{\"type\": \"error\", \"error\": {\"type\": \"api_error\", \"message\": \"x\"}}")));
+		assertThatThrownBy(() -> c.arquivoExiste("file_y")).isInstanceOf(ClienteClaude.Indisponivel.class);
+	}
 }

@@ -57,6 +57,15 @@ public final class Navegador {
 		return enviar(req, headers);
 	}
 
+	/** PUT com o corpo cru (sem multipart), em memoria ou em fluxo. */
+	public HttpResponse<String> putCru(String caminho, String contentType, HttpRequest.BodyPublisher corpo,
+			String... headers) throws Exception {
+		var req = HttpRequest.newBuilder(URI.create(base + caminho)).header("Content-Type", contentType).PUT(corpo);
+		var xsrf = cookie("XSRF-TOKEN");
+		if (xsrf != null) req.header("X-XSRF-TOKEN", xsrf);
+		return enviar(req, headers);
+	}
+
 	/** PUT multipart com uma parte de arquivo; o Content-Type da parte e o declarado (pode mentir de proposito). */
 	public HttpResponse<String> putArquivo(String caminho, String parte, String nomeDoArquivo, String contentType,
 			byte[] conteudo, String... headers) throws Exception {

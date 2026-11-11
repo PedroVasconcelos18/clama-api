@@ -121,6 +121,39 @@
         "required" : [ "email", "senha" ],
         "type" : "object"
       },
+      "DocumentoAdmin" : {
+        "properties" : {
+          "ativo" : {
+            "type" : "boolean"
+          },
+          "atualizadoEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "criadoEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "fileId" : {
+            "type" : [ "string", "null" ]
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "mime" : {
+            "type" : [ "string", "null" ]
+          },
+          "nome" : {
+            "type" : "string"
+          },
+          "tamanhoBytes" : {
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          }
+        },
+        "type" : "object"
+      },
       "EdicaoDaConta" : {
         "properties" : {
           "nomeCompleto" : {
@@ -279,6 +312,15 @@
         },
         "type" : "object"
       },
+      "MudancaDeAtivo" : {
+        "properties" : {
+          "ativo" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "ativo" ],
+        "type" : "object"
+      },
       "MudancaDeInstituicao" : {
         "properties" : {
           "ativo" : {
@@ -360,6 +402,17 @@
           }
         },
         "required" : [ "senha" ],
+        "type" : "object"
+      },
+      "NovoDocumento" : {
+        "properties" : {
+          "nome" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "nome" ],
         "type" : "object"
       },
       "NovoPedido" : {
@@ -1208,9 +1261,154 @@
   },
   "openapi" : "3.1.0",
   "paths" : {
+    "/api/admin/documentos" : {
+      "get" : {
+        "operationId" : "listar_2",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/DocumentoAdmin"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "documentos-admin-controller" ]
+      },
+      "post" : {
+        "operationId" : "criar_3",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/NovoDocumento"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentoAdmin"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "documentos-admin-controller" ]
+      }
+    },
+    "/api/admin/documentos/{id}" : {
+      "delete" : {
+        "operationId" : "apagar",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "documentos-admin-controller" ]
+      },
+      "patch" : {
+        "operationId" : "alterar_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MudancaDeAtivo"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentoAdmin"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "documentos-admin-controller" ]
+      }
+    },
+    "/api/admin/documentos/{id}/arquivo" : {
+      "put" : {
+        "operationId" : "enviarArquivo",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/pdf" : {
+              "schema" : {
+                "format" : "binary",
+                "type" : "string"
+              }
+            },
+            "text/plain" : {
+              "schema" : {
+                "format" : "binary",
+                "type" : "string"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentoAdmin"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "documentos-admin-controller" ]
+      }
+    },
     "/api/admin/eventos-mp" : {
       "get" : {
-        "operationId" : "listar_4",
+        "operationId" : "listar_5",
         "parameters" : [ {
           "in" : "query",
           "name" : "status",
@@ -1467,7 +1665,7 @@
     },
     "/api/admin/pedidos" : {
       "get" : {
-        "operationId" : "listar_3",
+        "operationId" : "listar_4",
         "parameters" : [ {
           "description" : "Um ou mais status separados por virgula.",
           "in" : "query",
@@ -1832,7 +2030,7 @@
     },
     "/api/admin/repasses" : {
       "get" : {
-        "operationId" : "listar_2",
+        "operationId" : "listar_3",
         "parameters" : [ {
           "in" : "query",
           "name" : "instituicaoId",

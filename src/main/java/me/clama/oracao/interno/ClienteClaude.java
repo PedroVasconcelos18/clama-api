@@ -5,7 +5,13 @@ import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.errors.AnthropicInvalidDataException;
 import com.anthropic.errors.AnthropicIoException;
 import com.anthropic.errors.AnthropicServiceException;
+import com.anthropic.core.MultipartField;
+import com.anthropic.errors.NotFoundException;
+import com.anthropic.models.files.FileUploadParams;
 import com.anthropic.models.messages.CacheControlEphemeral;
+import com.anthropic.models.messages.ContentBlockParam;
+import com.anthropic.models.messages.DocumentBlockParam;
+import com.anthropic.models.messages.FileDocumentSource;
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.StopReason;
@@ -13,10 +19,16 @@ import com.anthropic.models.messages.TextBlockParam;
 import io.sentry.Sentry;
 import io.sentry.SentryLevel;
 import jakarta.annotation.PreDestroy;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -99,21 +111,42 @@ public class ClienteClaude {
 
 	/** Geracao do pedido, com a retentativa. {@code mensagem} tem PII: nunca vai para o log. */
 	public String gerar(String sistema, String mensagem) {
-		return chamar(sistema, mensagem, TENTATIVAS);
+		return gerar(sistema, mensagem, List.of());
+	}
+
+	/**
+	 * Com os documentos de contexto ativos ({@code file_id} da Files API, em ordem estavel): um bloco {@code document}
+	 * por arquivo antes do texto, e um unico {@code cache_control} no ultimo (com o do system sao 2 pontos, o limite da
+	 * API e 4). A Files API saiu do beta no SDK 3.x: nenhum header beta.
+	 */
+	public String gerar(String sistema, String mensagem, List<String> fileIds) {
+		return chamar(sistema, mensagem, fileIds, TENTATIVAS);
 	}
 
 	/** Previa do admin: uma chamada so (o admin espera na tela). */
 	public String previa(String sistema, String mensagem) {
-		return chamar(sistema, mensagem, 1);
+		return chamar(sistema, mensagem, List.of(), 1);
 	}
 
-	private String chamar(String sistema, String mensagem, int tentativas) {
+	private String chamar(String sistema, String mensagem, List<String> fileIds, int tentativas) {
 		if (cliente == null) {
 			throw new Indisponivel("ANTHROPIC_API_KEY não configurada: geração de oração indisponível", null);
 		}
-		var params = MessageCreateParams.builder().model(props.modelo()).maxTokens(props.maxTokens())
-				.systemOfTextBlockParams(List.of(TextBlockParam.builder().text(sistema).cacheControl(EFEMERO).build()))
-				.addUserMessage(mensagem).build();
+		var builder = MessageCreateParams.builder().model(props.modelo()).maxTokens(props.maxTokens())
+				.systemOfTextBlockParams(List.of(TextBlockParam.builder().text(sistema).cacheControl(EFEMERO).build()));
+		if (fileIds.isEmpty()) {
+			builder.addUserMessage(mensagem);
+		} else {
+			var blocos = new java.util.ArrayList<ContentBlockParam>();
+			for (int i = 0; i < fileIds.size(); i++) {
+				var doc = DocumentBlockParam.builder().source(FileDocumentSource.builder().fileId(fileIds.get(i)).build());
+				if (i == fileIds.size() - 1) doc.cacheControl(EFEMERO);
+				blocos.add(ContentBlockParam.ofDocument(doc.build()));
+			}
+			blocos.add(ContentBlockParam.ofText(TextBlockParam.builder().text(mensagem).build()));
+			builder.addUserMessageOfContentBlockParams(blocos);
+		}
+		var params = builder.build();
 		for (int tentativa = 1;; tentativa++) {
 			var inicio = System.nanoTime();
 			Indisponivel falha;
@@ -146,6 +179,69 @@ public class ClienteClaude {
 			}
 			if (!retentavel || tentativa == tentativas) throw falha;
 			dormir.accept(Duration.ofSeconds(1L << (tentativa - 1)));
+		}
+	}
+
+	/** Sobe o arquivo (lido em fluxo) para a Files API e devolve o {@code file_id}. Uma tentativa so: o admin espera na tela. */
+	public String enviarArquivo(Path arquivo, String nome, String mime) {
+		try {
+			return arquivos("upload", () -> {
+				try (InputStream in = Files.newInputStream(arquivo)) {
+					var parte = MultipartField.<InputStream>builder().value(in).filename(nome).contentType(mime).build();
+					return cliente.files().upload(FileUploadParams.builder().file(parte).build()).id();
+				} catch (IOException e) {
+					throw new UncheckedIOException(e);
+				}
+			});
+		} catch (NaoExiste e) {
+			throw new Falha("Files API respondeu 404 ao enviar", null);
+		}
+	}
+
+	/** Apaga na Files API; 404 (ja nao existe) conta como apagado. */
+	public void apagarArquivo(String fileId) {
+		try {
+			arquivos("delete", () -> cliente.files().delete(fileId));
+		} catch (NaoExiste e) {
+			// ja apagado la
+		}
+	}
+
+	/** Metadados na Files API: {@code false} so no 404; qualquer outra falha lanca. */
+	public boolean arquivoExiste(String fileId) {
+		try {
+			arquivos("metadata", () -> cliente.files().retrieveMetadata(fileId));
+			return true;
+		} catch (NaoExiste e) {
+			return false;
+		}
+	}
+
+	private static final class NaoExiste extends RuntimeException {
+		NaoExiste() {
+			super(null, null, false, false);
+		}
+	}
+
+	private <T> T arquivos(String operacao, Supplier<T> chamada) {
+		if (cliente == null) {
+			throw new Indisponivel("ANTHROPIC_API_KEY não configurada: Files API indisponível", null);
+		}
+		try {
+			return chamada.get();
+		} catch (NotFoundException e) {
+			throw new NaoExiste();
+		} catch (AnthropicIoException | UncheckedIOException e) {
+			LOG.warn("Files API falhou (event=claude_files, op={}, error=io)", operacao);
+			throw new Indisponivel("Files API inacessível (rede ou timeout)", e);
+		} catch (AnthropicServiceException e) {
+			LOG.warn("Files API falhou (event=claude_files, op={}, status={})", operacao, e.statusCode());
+			var status = e.statusCode();
+			if (status == 400 || status == 413 || status == 422) throw new Falha("Files API recusou o pedido (HTTP " + status + ")", e);
+			throw new Indisponivel("Files API indisponível (HTTP " + status + ")", e);
+		} catch (RuntimeException e) {
+			LOG.warn("Files API falhou (event=claude_files, op={}, error={})", operacao, e.getClass().getSimpleName());
+			throw new Falha("Erro inesperado do SDK na Files API", e);
 		}
 	}
 

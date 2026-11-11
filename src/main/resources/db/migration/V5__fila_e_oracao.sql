@@ -42,3 +42,17 @@ end $$;
 
 create trigger prompt_versao_imutavel before update of conteudo on prompt_versao
   for each row when (old.conteudo is distinct from new.conteudo) execute function prompt_versao_imutavel();
+
+-- Documentos de contexto (D14): a Files API da Anthropic e a fonte da verdade (o arquivo nao fica em disco nosso); aqui
+-- so os metadados. mime, tamanho_bytes e file_id sao nulos ate o upload; ativo exige file_id.
+create table documento_contexto (
+  id bigserial primary key,
+  nome text not null,
+  mime text,
+  tamanho_bytes bigint,
+  file_id text,
+  ativo boolean not null default false,
+  criado_em timestamptz not null,
+  atualizado_em timestamptz not null,
+  constraint documento_contexto_ativo_com_arquivo check (not ativo or file_id is not null)
+);
