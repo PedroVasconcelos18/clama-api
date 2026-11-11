@@ -14,19 +14,20 @@ import org.junit.jupiter.api.Test;
 class ErroDoMercadoPagoTest {
 
 	static MercadoPago.Falha falha(Integer status, String descricao) {
-		return new MercadoPago.Falha("m", status, descricao, MercadoPago.Falha.quatroXX(status) && MercadoPago.ehDeCredencial(descricao));
+		return status == null ? new MercadoPago.Falha("m", null, descricao, false) : MercadoPago.Falha.daApi("m", status, descricao);
 	}
 
 	@Test
-	void credencialOuTokenAusenteDa503ComAvisoNoSentry() {
+	void credencial401Ou403OuTokenAusenteDa503ComAvisoNoSentry() {
 		try (var sentry = mockStatic(Sentry.class)) {
 			for (var f : new MercadoPago.Falha[] { falha(401, "invalid access token"), falha(403, "Payer COLLECTOR mismatch"),
-					falha(400, "Recurso NÃO AUTORIZADO"), new MercadoPago.Falha("sem token", null, null, true) }) {
+					falha(400, "Recurso NÃO AUTORIZADO"), falha(401, "qualquer coisa"), falha(403, null),
+					new MercadoPago.Falha("sem token", null, null, true) }) {
 				var e = Cobrancas.paraResposta(f, UUID.randomUUID());
-				assertThat(e.status().value()).as(f.descricao()).isEqualTo(503);
+				assertThat(e.status().value()).as("%s", f.status()).isEqualTo(503);
 				assertThat(e.mensagemPastoral()).isEqualTo(Cobrancas.PASTORAL_CONFIGURACAO);
 			}
-			sentry.verify(() -> Sentry.captureMessage(anyString(), eq(SentryLevel.ERROR)), org.mockito.Mockito.times(4));
+			sentry.verify(() -> Sentry.captureMessage(anyString(), eq(SentryLevel.ERROR)), org.mockito.Mockito.times(6));
 		}
 	}
 

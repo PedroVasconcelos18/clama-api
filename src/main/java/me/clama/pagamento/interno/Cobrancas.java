@@ -51,37 +51,44 @@ public class Cobrancas implements PagamentoApi {
 		this.relogio = relogio;
 	}
 
-	/** Pix vigente do pedido, ou um novo (o primeiro, ou o seguinte se o anterior venceu). */
+	/**
+	 * Pix vigente do pedido (a cobranca de maior n, nao cancelada e nao vencida), ou a seguinte ({@code n + 1}). O
+	 * vencimento e o que o MP devolve.
+	 */
 	@Transactional
 	public Cobranca pix(UUID pedidoId) {
 		var p = travar(pedidoId);
 		validar(p);
 		var agora = relogio.instant();
-		var atual = cobrancas.findById(pedidoId).orElse(null);
-		if (atual != null && atual.vigente(agora)) {
-			LOG.info("Pix reaproveitado (event=pix_reaproveitado, pedido_id={}, mp_pagamento_id={})", pedidoId, atual.getMpPagamentoId());
-			return atual;
+		var ultima = cobrancas.findFirstByPedidoIdOrderByNDesc(pedidoId).orElse(null);
+		if (ultima != null && ultima.vigente(agora)) {
+			LOG.info("Pix reaproveitado (event=pix_reaproveitado, pedido_id={}, mp_pagamento_id={})", pedidoId, ultima.getMpPagamentoId());
+			return ultima;
 		}
-		var n = atual == null ? 1 : atual.getN() + 1;
-		var expiraEm = agora.plus(VALIDADE).truncatedTo(ChronoUnit.SECONDS); // a resposta igual a do banco (micros)
+		var n = ultima == null ? 1 : ultima.getN() + 1;
 		MercadoPago.Pix pix;
 		try {
-			pix = mercadoPago.criarPix(p, Cobranca.chave(pedidoId, n), expiraEm);
+			pix = mercadoPago.criarPix(p, Cobranca.chave(pedidoId, n), agora.plus(VALIDADE).truncatedTo(ChronoUnit.SECONDS));
 		} catch (MercadoPago.Falha f) {
 			throw paraResposta(f, pedidoId);
 		}
 		LOG.info("Pix criado (event=pix_criado, pedido_id={}, n={}, mp_pagamento_id={})", pedidoId, n, pix.id());
-		if (atual == null) return cobrancas.save(Cobranca.nova(pedidoId, pix, expiraEm, agora));
-		atual.renovar(pix, expiraEm, agora);
-		return atual;
+		return cobrancas.save(Cobranca.nova(pedidoId, n, pix, agora));
 	}
 
+	/** Para o webhook (T5): o pagamento e de alguma cobranca deste pedido (vigente, vencida ou cancelada)? */
+	@Transactional(readOnly = true)
+	public boolean ehCobrancaDoPedido(UUID pedidoId, long mpPagamentoId) {
+		return cobrancas.existsByPedidoIdAndMpPagamentoId(pedidoId, mpPagamentoId);
+	}
+
+	/** Marca a cobranca mais recente como cancelada (a linha fica: historico e n nunca recomecam). */
 	@Override
 	@Transactional
 	public void cancelarCobranca(UUID pedidoId) {
 		travar(pedidoId);
-		var c = cobrancas.findById(pedidoId).orElse(null);
-		if (c == null) return;
+		var c = cobrancas.findFirstByPedidoIdOrderByNDesc(pedidoId).orElse(null);
+		if (c == null || c.getCanceladaEm() != null) return;
 		try {
 			var status = mercadoPago.status(c.getMpPagamentoId());
 			if ("approved".equals(status)) {
@@ -92,7 +99,7 @@ public class Cobrancas implements PagamentoApi {
 		} catch (MercadoPago.Falha f) {
 			throw paraResposta(f, pedidoId);
 		}
-		cobrancas.delete(c);
+		c.cancelar(relogio.instant());
 		LOG.info("Pix cancelado (event=pix_cancelado, pedido_id={}, mp_pagamento_id={})", pedidoId, c.getMpPagamentoId());
 	}
 

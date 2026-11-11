@@ -1,14 +1,18 @@
 -- editavel ate o primeiro deploy
 
--- Pix vigente do pedido (D16). Vencida, a linha e reaproveitada: n + 1, chave "clama-pedido-<id>-<n>" e novo pagamento no MP
+-- Cobrancas Pix do pedido, todas guardadas (D16, D8: a T5 reconhece qualquer pagamento do pedido e acha o orfao).
+-- Vigente: a de maior n, nao cancelada e nao vencida. A seguinte usa n + 1 e a chave "clama-pedido-<id>-<n>" (a 1a sem sufixo)
 CREATE TABLE cobranca (
-	pedido_id uuid PRIMARY KEY REFERENCES pedido (id) ON DELETE CASCADE,
+	id bigserial PRIMARY KEY,
+	pedido_id uuid NOT NULL REFERENCES pedido (id) ON DELETE CASCADE,
 	n int NOT NULL CHECK (n >= 1),
 	mp_pagamento_id bigint NOT NULL UNIQUE,
 	pix_copia_e_cola text NOT NULL,
 	pix_qr_base64 text,
 	expira_em timestamptz NOT NULL,
-	criada_em timestamptz NOT NULL
+	criada_em timestamptz NOT NULL,
+	cancelada_em timestamptz,
+	UNIQUE (pedido_id, n)
 );
 
 -- Notificacoes do Mercado Pago (D21: so MP, sem provider). O estado vem sempre do GET do pagamento, nunca do corpo.

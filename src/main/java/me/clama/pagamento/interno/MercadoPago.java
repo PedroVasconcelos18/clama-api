@@ -11,6 +11,8 @@ import com.mercadopago.exceptions.MPException;
 import com.mercadopago.net.MPDefaultHttpClient;
 import com.mercadopago.net.MPHttpClient;
 import com.mercadopago.net.MPRequest;
+import io.sentry.Sentry;
+import io.sentry.SentryLevel;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
@@ -20,6 +22,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import me.clama.pedido.PedidoCobravel;
 import org.apache.http.impl.client.HttpClients;
@@ -27,6 +30,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -52,7 +57,8 @@ class MercadoPago {
 			"não autorizado", "nao autorizado", "forbidden", "access token", "access_token", "invalid_token",
 			"invalid access", "collector");
 
-	record Pix(long id, String copiaECola, String qrBase64) {}
+	/** {@code expiraEm}: o vencimento que o MP devolveu (o pedido, se a resposta nao trouxer). */
+	record Pix(long id, String copiaECola, String qrBase64, Instant expiraEm) {}
 
 	/**
 	 * Falha depois das retentativas. {@code status} nulo: rede/timeout, resposta inesperada ou sem token.
@@ -81,6 +87,11 @@ class MercadoPago {
 			return quatroXX(status);
 		}
 
+		/** Erro HTTP do MP: 401/403 ou palavra de credencial num 4xx e configuracao (nada que o doador resolva). */
+		static Falha daApi(String mensagem, int status, String descricao) {
+			return new Falha(mensagem, status, descricao, status == 401 || status == 403 || quatroXX(status) && ehDeCredencial(descricao));
+		}
+
 		static boolean quatroXX(Integer status) {
 			return status != null && status >= 400 && status < 500 && status != 409 && status != 423;
 		}
@@ -94,19 +105,38 @@ class MercadoPago {
 	private final PaymentClient cliente;
 	private final PagamentoProps props;
 	private final Consumer<Duration> dormir;
+	/** Fora de local/teste sem webhook https: Sentry na primeira cobranca (depois so o log de cada uma). */
+	private final AtomicBoolean avisarSemWebhook;
 
+	/**
+	 * Fora dos testes a base do MP tem de ser https (recusa o boot). Fora de local/teste, token ou webhook ausentes sao
+	 * erro de configuracao: ERROR no boot, como o {@code AvisoDeConfiguracao}, sem barrar.
+	 */
 	@Autowired
-	MercadoPago(PagamentoProps props) {
-		this(props, MercadoPago::dormir);
-	}
-
-	MercadoPago(PagamentoProps props, Consumer<Duration> dormir) {
-		this.props = props;
-		this.dormir = dormir;
-		this.cliente = new PaymentClient(http(props.mercadopagoUrl()));
+	MercadoPago(PagamentoProps props, Environment env) {
+		this(props, MercadoPago::dormir, !env.acceptsProfiles(Profiles.of("local", "test"))
+				&& !props.webhookUrl().startsWith("https://"));
+		if (!env.acceptsProfiles(Profiles.of("test")) && !props.mercadopagoUrl().startsWith("https://")) {
+			throw new IllegalStateException("clama.pagamento.mercadopago-url precisa ser https fora dos testes");
+		}
+		if (env.acceptsProfiles(Profiles.of("local", "test"))) return;
 		if (props.mercadopagoToken().isBlank()) {
 			LOG.error("MERCADOPAGO_ACCESS_TOKEN ausente: toda cobranca Pix vai responder 503 ate configurar");
 		}
+		if (avisarSemWebhook.get()) {
+			LOG.error("BACKEND_PUBLIC_URL ausente ou sem https: o Mercado Pago nao vai entregar o webhook dos Pix");
+		}
+	}
+
+	MercadoPago(PagamentoProps props, Consumer<Duration> dormir) {
+		this(props, dormir, false);
+	}
+
+	private MercadoPago(PagamentoProps props, Consumer<Duration> dormir, boolean avisarSemWebhook) {
+		this.props = props;
+		this.dormir = dormir;
+		this.avisarSemWebhook = new AtomicBoolean(avisarSemWebhook);
+		this.cliente = new PaymentClient(http(props.mercadopagoUrl()));
 	}
 
 	Pix criarPix(PedidoCobravel p, String chave, Instant expiraEm) {
@@ -130,7 +160,8 @@ class MercadoPago {
 		if (pagamento.getId() == null || dados == null || dados.getQrCode() == null || dados.getQrCode().isBlank()) {
 			throw new Falha("Resposta do Mercado Pago sem id/QR Pix", null, null, false);
 		}
-		return new Pix(pagamento.getId(), dados.getQrCode(), dados.getQrCodeBase64());
+		var vence = pagamento.getDateOfExpiration() == null ? expiraEm : pagamento.getDateOfExpiration().toInstant();
+		return new Pix(pagamento.getId(), dados.getQrCode(), dados.getQrCodeBase64(), vence);
 	}
 
 	/** Status bruto do MP ({@code pending}, {@code approved}...); nulo se a resposta nao traz. */
@@ -147,9 +178,15 @@ class MercadoPago {
 		if (props.webhookUrl().startsWith("https://")) return props.webhookUrl();
 		LOG.warn("Pix criado SEM notification_url: clama.pagamento.webhook-url nao e https; webhook nao sera entregue "
 				+ "(event=pix_notification_url_missing)");
+		if (avisarSemWebhook.getAndSet(false)) {
+			Sentry.captureMessage("Pix criado sem notification_url: BACKEND_PUBLIC_URL ausente ou sem https", SentryLevel.ERROR);
+		}
 		return null;
 	}
 
+	// ponytail: o timeout e por leitura do socket, nao pela chamada inteira (o Apache 4 do SDK nao tem prazo total). Pior
+	// caso hoje, com o MP respondendo a cada leitura: 3 x 10 s + esperas de 1 e 2 s = ~33 s com o pedido travado. Se um
+	// corpo gotejando virar problema: abort() agendado no HttpRequestBase do cliente Apache (um MPHttpClient proprio).
 	private MPRequestOptions opcoes(Map<String, String> headers) {
 		var ms = (int) props.mercadopagoTimeout().toMillis();
 		return MPRequestOptions.builder().accessToken(props.mercadopagoToken()).connectionTimeout(ms).socketTimeout(ms)
@@ -173,8 +210,7 @@ class MercadoPago {
 			} catch (MPApiException e) {
 				var status = e.getStatusCode();
 				var descricao = descricao(e.getApiResponse() == null ? null : e.getApiResponse().getContent());
-				falha = new Falha("Erro do Mercado Pago em " + operacao + " (HTTP " + status + ")", status, descricao,
-						Falha.quatroXX(status) && ehDeCredencial(descricao));
+				falha = Falha.daApi("Erro do Mercado Pago em " + operacao + " (HTTP " + status + ")", status, descricao);
 				retentavel = RETENTAVEIS.contains(status); // o SDK devolve falha de rede na conexao como 500 sintetico
 			} catch (MPException e) {
 				falha = new Falha("Mercado Pago inacessível em " + operacao, null, null, false);
@@ -193,9 +229,9 @@ class MercadoPago {
 	 * <ul>
 	 * <li>base configuravel: o SDK fixa {@code https://api.mercadopago.com} ({@code MercadoPagoConfig.BASE_URL} e
 	 * constante) e o cliente padrao so registra https; aqui o Apache aceita http (WireMock nos testes);</li>
-	 * <li>cabecalho duplicado: no POST o SDK poe uma {@code X-Idempotency-Key} aleatoria e um {@code Authorization} com o
-	 * token global (nulo) alem dos nossos, que chegam em minusculas pelo {@code MPRequestOptions}. HTTP nao diferencia
-	 * caixa, entao sairiam dois de cada e o MP escolheria um; fica so o nosso.</li>
+	 * <li>chave duplicada: no POST o SDK poe uma {@code X-Idempotency-Key} aleatoria alem da nossa, que chega em minusculas
+	 * pelo {@code MPRequestOptions}. HTTP nao diferencia caixa, entao sairiam duas e o MP escolheria uma; fica so a nossa.
+	 * (O {@code Authorization} com o token global nulo o proprio SDK sobrescreve com o das opcoes.)</li>
 	 * </ul>
 	 */
 	private static MPHttpClient http(String base) {

@@ -2,15 +2,19 @@ package me.clama.pagamento.interno;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Pix vigente de um pedido (D16). Vencida, a mesma linha vira a cobranca seguinte ({@code n + 1}). */
+/** Uma cobranca Pix de um pedido (a n-esima). Nunca e apagada: cancelada, ganha {@code canceladaEm}. */
 @Entity
 public class Cobranca {
 
 	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 	private UUID pedidoId;
 	private int n;
 	private long mpPagamentoId;
@@ -19,27 +23,28 @@ public class Cobranca {
 	private String pixQrBase64;
 	private Instant expiraEm;
 	private Instant criadaEm;
+	private Instant canceladaEm;
 
 	protected Cobranca() {}
 
-	static Cobranca nova(UUID pedidoId, MercadoPago.Pix pix, Instant expiraEm, Instant agora) {
+	static Cobranca nova(UUID pedidoId, int n, MercadoPago.Pix pix, Instant agora) {
 		var c = new Cobranca();
 		c.pedidoId = pedidoId;
-		c.renovar(pix, expiraEm, agora);
+		c.n = n;
+		c.mpPagamentoId = pix.id();
+		c.pixCopiaECola = pix.copiaECola();
+		c.pixQrBase64 = pix.qrBase64();
+		c.expiraEm = pix.expiraEm();
+		c.criadaEm = agora;
 		return c;
 	}
 
-	void renovar(MercadoPago.Pix pix, Instant expiraEm, Instant agora) {
-		n++;
-		mpPagamentoId = pix.id();
-		pixCopiaECola = pix.copiaECola();
-		pixQrBase64 = pix.qrBase64();
-		this.expiraEm = expiraEm;
-		criadaEm = agora;
+	boolean vigente(Instant agora) {
+		return canceladaEm == null && expiraEm.isAfter(agora);
 	}
 
-	boolean vigente(Instant agora) {
-		return expiraEm.isAfter(agora);
+	void cancelar(Instant agora) {
+		canceladaEm = agora;
 	}
 
 	/** Chave de idempotencia da n-esima cobranca: a primeira e a do sistema antigo (INV:93). */
@@ -53,4 +58,5 @@ public class Cobranca {
 	public String getPixCopiaECola() { return pixCopiaECola; }
 	public String getPixQrBase64() { return pixQrBase64; }
 	public Instant getExpiraEm() { return expiraEm; }
+	public Instant getCanceladaEm() { return canceladaEm; }
 }

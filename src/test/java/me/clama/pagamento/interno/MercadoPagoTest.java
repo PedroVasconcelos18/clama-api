@@ -2,7 +2,9 @@ package me.clama.pagamento.interno;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
+import static org.mockito.Mockito.mockStatic;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -23,7 +25,9 @@ import java.util.UUID;
 import me.clama.pedido.PedidoCobravel;
 import me.clama.pedido.StatusPedido;
 import org.junit.jupiter.api.Test;
+import io.sentry.Sentry;
 import org.slf4j.LoggerFactory;
+import org.springframework.mock.env.MockEnvironment;
 
 /** O SDK do Mercado Pago contra um WireMock: o que sai na rede (corpo, chave, token) e como as falhas voltam. */
 @WireMockTest
@@ -242,5 +246,53 @@ class MercadoPagoTest {
 		stubFor(put(urlPathEqualTo("/v1/payments/123")).willReturn(okJson("{\"id\": 123, \"status\": \"cancelled\"}")));
 		mp(wm).cancelar(123);
 		verify(putRequestedFor(urlPathEqualTo("/v1/payments/123")).withRequestBody(equalToJson("{\"status\": \"cancelled\"}")));
+	}
+
+	@Test
+	void vencimentoEOQueOMpDevolve(WireMockRuntimeInfo wm) {
+		criaResponde(201, PIX_CRIADO.replace("\"status\": \"pending\",",
+				"\"status\": \"pending\", \"date_of_expiration\": \"2026-11-12T08:30:00.000-03:00\","));
+		assertThat(mp(wm).criarPix(pedido(), CHAVE, EXPIRA).expiraEm()).isEqualTo(Instant.parse("2026-11-12T11:30:00Z"));
+	}
+
+	@Test
+	void semVencimentoNaRespostaFicaOPedido(WireMockRuntimeInfo wm) {
+		criaResponde(201, PIX_CRIADO);
+		assertThat(mp(wm).criarPix(pedido(), CHAVE, EXPIRA).expiraEm()).isEqualTo(EXPIRA);
+	}
+
+	@Test
+	void baseSemHttpsSoNosTestes(WireMockRuntimeInfo wm) {
+		var props = new PagamentoProps(100, "test", wm.getHttpBaseUrl(), Duration.ofSeconds(10), "https://x/api/webhooks/mercadopago");
+		assertThatThrownBy(() -> new MercadoPago(props, new MockEnvironment())).isInstanceOf(IllegalStateException.class);
+		var local = new MockEnvironment();
+		local.setActiveProfiles("local");
+		assertThatThrownBy(() -> new MercadoPago(props, local)).isInstanceOf(IllegalStateException.class);
+		var teste = new MockEnvironment();
+		teste.setActiveProfiles("test");
+		new MercadoPago(props, teste);
+	}
+
+	/** Sem token a chamada para antes da rede, mas o corpo (e o aviso do webhook) ja foi montado. */
+	@Test
+	void semWebhookForaDeLocalAvisaOSentrySoNaPrimeiraCobranca() {
+		var props = new PagamentoProps(100, "", "https://api.mercadopago.com", Duration.ofSeconds(10), "/api/webhooks/mercadopago");
+		var producao = new MercadoPago(props, new MockEnvironment());
+		var local = new MercadoPago(props, comPerfil("local"));
+		try (var sentry = mockStatic(Sentry.class)) {
+			for (int i = 0; i < 2; i++) {
+				catchThrowableOfType(MercadoPago.Falha.class, () -> producao.criarPix(pedido(), CHAVE, EXPIRA));
+				catchThrowableOfType(MercadoPago.Falha.class, () -> local.criarPix(pedido(), CHAVE, EXPIRA));
+			}
+			sentry.verify(() -> Sentry.captureMessage(org.mockito.ArgumentMatchers.contains("BACKEND_PUBLIC_URL"),
+					org.mockito.ArgumentMatchers.any(io.sentry.SentryLevel.class)));
+			sentry.verifyNoMoreInteractions();
+		}
+	}
+
+	static MockEnvironment comPerfil(String perfil) {
+		var env = new MockEnvironment();
+		env.setActiveProfiles(perfil);
+		return env;
 	}
 }

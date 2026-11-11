@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -30,6 +31,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -38,6 +40,7 @@ import tools.jackson.databind.JsonNode;
 /** {@code POST /api/pedidos/{id}/pix} contra um WireMock no lugar do Mercado Pago (INV:90-93, D16, D17). */
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @Import(BancoDeTeste.class)
+@ActiveProfiles("test") // base do MP em http (WireMock) so e aceita no perfil de teste
 class PixTest {
 
 	static final WireMockServer MP = new WireMockServer(WireMockConfiguration.options().dynamicPort());
@@ -65,6 +68,7 @@ class PixTest {
 	@Autowired PedidoRepository pedidos;
 	@Autowired HmacDeIdentificador hmac;
 	@Autowired PagamentoApi pagamento;
+	@Autowired me.clama.pagamento.interno.Cobrancas cobrancas;
 	@Autowired TransactionTemplate tx;
 	@Autowired javax.sql.DataSource dataSource;
 
@@ -80,8 +84,8 @@ class PixTest {
 
 	UUID pedido(String cpf) {
 		var plano = jdbc.queryForObject("""
-				insert into plano (nome, valor_centavos, complexidade, tipo, ordem) values ('Pedido', 2000, 'SIMPLES', 'COMUM', 1)
-				returning id""", Long.class);
+				insert into plano (nome, valor_centavos, complexidade, tipo, ordem) values (?, 2000, 'SIMPLES', 'COMUM', 1)
+				returning id""", Long.class, "Pedido " + UUID.randomUUID());
 		var agora = Instant.now();
 		var d = new Pedido.Dados(null, plano, null, 3000, "Maria Souza", "maria@exemplo.com", cpf, null, null, null, "Pela família",
 				agora, null, "1");
@@ -90,6 +94,16 @@ class PixTest {
 
 	UUID pedido() {
 		return pedido("52998224725");
+	}
+
+	/** Resposta de Pix criado com outro id e o vencimento que o MP devolve. */
+	static String pixCriado(long id, Instant expira) {
+		return PIX_CRIADO.replace("1325814423", String.valueOf(id)).replace("\"status\": \"pending\",",
+				"\"status\": \"pending\", \"date_of_expiration\": \"" + expira.atOffset(java.time.ZoneOffset.ofHours(-3)) + "\",");
+	}
+
+	List<Map<String, Object>> historico(UUID id) {
+		return jdbc.queryForList("select n, mp_pagamento_id, cancelada_em is not null as cancelada from cobranca where pedido_id = ? order by n", id);
 	}
 
 	static void mpCria(int status, String corpo) {
@@ -112,13 +126,14 @@ class PixTest {
 	}
 
 	static List<String> chavesEnviadas() {
-		return MP.getAllServeEvents().reversed().stream()
+		return MP.getAllServeEvents().reversed().stream().filter(e -> e.getRequest().getMethod().getName().equals("POST"))
 				.map(e -> e.getRequest().getHeaders().getHeader("X-Idempotency-Key").firstValue()).toList();
 	}
 
 	@Test
-	void criaACobrancaComVencimentoDe24Horas() throws Exception {
-		mpCria(201, PIX_CRIADO);
+	void criaACobrancaPedindo24HorasEDevolveOVencimentoDoMp() throws Exception {
+		var doMp = Instant.now().plus(Duration.ofHours(23)).truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
+		mpCria(201, pixCriado(1325814423L, doMp));
 		var id = pedido();
 
 		var r = pix(id);
@@ -128,11 +143,12 @@ class PixTest {
 		assertThat(c.get("pedidoId").asString()).isEqualTo(id.toString());
 		assertThat(c.get("copiaECola").asString()).startsWith("00020126380014br.gov.bcb.pix");
 		assertThat(c.get("qrBase64").asString()).startsWith("iVBORw0KGgo");
-		var expira = Instant.parse(c.get("expiraEm").asString());
-		assertThat(Duration.between(Instant.now(), expira)).isBetween(Duration.ofHours(23).plusMinutes(59), Duration.ofHours(24));
+		assertThat(Instant.parse(c.get("expiraEm").asString())).isEqualTo(doMp);
 		assertThat(chavesEnviadas()).containsExactly("clama-pedido-" + id);
-		MP.verify(postRequestedFor(urlEqualTo("/v1/payments")).withRequestBody(matchingJsonPath("$.date_of_expiration"))
-				.withRequestBody(matchingJsonPath("$.external_reference", equalTo(id.toString()))));
+		var pedido = MP.getAllServeEvents().getFirst().getRequest().getBodyAsString();
+		var pedida = java.time.OffsetDateTime.parse(Navegador.JSON.readTree(pedido).get("date_of_expiration").asString()).toInstant();
+		assertThat(Duration.between(Instant.now(), pedida)).isBetween(Duration.ofHours(23).plusMinutes(59), Duration.ofHours(24));
+		MP.verify(postRequestedFor(urlEqualTo("/v1/payments")).withRequestBody(matchingJsonPath("$.external_reference", equalTo(id.toString()))));
 		assertThat(jdbc.queryForMap("select n, mp_pagamento_id from cobranca where pedido_id = ?", id))
 				.containsEntry("n", 1).containsEntry("mp_pagamento_id", 1325814423L);
 	}
@@ -151,23 +167,42 @@ class PixTest {
 	}
 
 	@Test
-	void cobrancaVencidaViraOutraComChaveNumerada() throws Exception {
+	void cobrancaVencidaViraOutraComChaveNumeradaEOHistoricoFica() throws Exception {
 		mpCria(201, PIX_CRIADO);
 		var id = pedido();
 		pix(id);
 		jdbc.update("update cobranca set expira_em = now() - interval '1 minute' where pedido_id = ?", id);
-		mpCria(201, PIX_CRIADO.replace("1325814423", "1325814999"));
+		mpCria(201, pixCriado(1325814999L, Instant.now().plus(Duration.ofHours(24))));
 
 		var r = pix(id);
 
 		assertThat(r.statusCode()).as(r.body()).isEqualTo(200);
+		assertThat(corpo(r).get("copiaECola").asString()).isNotNull();
 		assertThat(chavesEnviadas()).containsExactly("clama-pedido-" + id, "clama-pedido-" + id + "-2");
-		assertThat(jdbc.queryForMap("select n, mp_pagamento_id from cobranca where pedido_id = ?", id))
-				.containsEntry("n", 2).containsEntry("mp_pagamento_id", 1325814999L);
+		assertThat(historico(id)).extracting(m -> m.get("n"), m -> m.get("mp_pagamento_id")).containsExactly(
+				org.assertj.core.groups.Tuple.tuple(1, 1325814423L), org.assertj.core.groups.Tuple.tuple(2, 1325814999L));
 		jdbc.update("update cobranca set expira_em = now() - interval '1 minute' where pedido_id = ?", id);
-		mpCria(201, PIX_CRIADO.replace("1325814423", "1325815000"));
+		mpCria(201, pixCriado(1325815000L, Instant.now().plus(Duration.ofHours(24))));
 		pix(id);
 		assertThat(chavesEnviadas()).last().isEqualTo("clama-pedido-" + id + "-3");
+		assertThat(historico(id)).hasSize(3);
+	}
+
+	/** O webhook (T5) reconhece qualquer pagamento do pedido, vigente ou nao; de outro pedido, nao. */
+	@Test
+	void pagamentosDoPedidoContinuamConsultaveis() throws Exception {
+		mpCria(201, PIX_CRIADO);
+		var id = pedido();
+		pix(id);
+		jdbc.update("update cobranca set expira_em = now() - interval '1 minute' where pedido_id = ?", id);
+		mpCria(201, pixCriado(1325814999L, Instant.now().plus(Duration.ofHours(24))));
+		pix(id);
+		var outro = pedido();
+
+		assertThat(cobrancas.ehCobrancaDoPedido(id, 1325814423L)).isTrue();
+		assertThat(cobrancas.ehCobrancaDoPedido(id, 1325814999L)).isTrue();
+		assertThat(cobrancas.ehCobrancaDoPedido(id, 42L)).isFalse();
+		assertThat(cobrancas.ehCobrancaDoPedido(outro, 1325814423L)).isFalse();
 	}
 
 	@Test
@@ -322,17 +357,28 @@ class PixTest {
 	}
 
 	@Test
-	void cancelarCobrancaPendenteCancelaNoMpEApaga() throws Exception {
+	void cancelarCobrancaPendenteCancelaNoMpENuncaMaisEServida() throws Exception {
 		mpCria(201, PIX_CRIADO);
 		var id = pedido();
 		pix(id);
-		MP.stubFor(get("/v1/payments/1325814423").willReturn(okJson("{\"id\": 1325814423, \"status\": \"pending\"}")));
-		MP.stubFor(put(urlPathEqualTo("/v1/payments/1325814423")).willReturn(okJson("{\"id\": 1325814423, \"status\": \"cancelled\"}")));
+		MP.stubFor(get(urlPathMatching("/v1/payments/\\d+")).willReturn(okJson("{\"id\": 1, \"status\": \"pending\"}")));
+		MP.stubFor(put(urlPathMatching("/v1/payments/\\d+")).willReturn(okJson("{\"id\": 1, \"status\": \"cancelled\"}")));
 
 		tx.executeWithoutResult(s -> pagamento.cancelarCobranca(id));
 
 		MP.verify(putRequestedFor(urlPathEqualTo("/v1/payments/1325814423")).withRequestBody(equalToJson("{\"status\": \"cancelled\"}")));
-		assertThat(jdbc.queryForObject("select count(*) from cobranca", Integer.class)).isZero();
+		assertThat(historico(id)).singleElement().satisfies(m -> assertThat(m).containsEntry("cancelada", true));
+
+		mpCria(201, pixCriado(1325814999L, Instant.now().plus(Duration.ofHours(24)))); // ainda vigente, mas cancelada
+		var r = pix(id);
+		assertThat(r.statusCode()).as(r.body()).isEqualTo(200);
+		assertThat(chavesEnviadas()).last().isEqualTo("clama-pedido-" + id + "-2");
+		assertThat(historico(id)).extracting(m -> m.get("n"), m -> m.get("cancelada")).containsExactly(
+				org.assertj.core.groups.Tuple.tuple(1, true), org.assertj.core.groups.Tuple.tuple(2, false));
+		tx.executeWithoutResult(s -> pagamento.cancelarCobranca(id)); // cancela so a mais recente
+		MP.verify(1, putRequestedFor(urlPathEqualTo("/v1/payments/1325814423")));
+		MP.verify(1, putRequestedFor(urlPathEqualTo("/v1/payments/1325814999")));
+		assertThat(historico(id)).extracting(m -> m.get("cancelada")).containsExactly(true, true);
 	}
 
 	@Test
@@ -348,7 +394,7 @@ class PixTest {
 		assertThat(e.status().value()).isEqualTo(409);
 		assertThat(e.mensagemPastoral()).isEqualTo("O pagamento já caiu; reprocesse o evento.");
 		MP.verify(0, putRequestedFor(anyUrl()));
-		assertThat(jdbc.queryForObject("select count(*) from cobranca", Integer.class)).isEqualTo(1);
+		assertThat(historico(id)).singleElement().satisfies(m -> assertThat(m).containsEntry("cancelada", false));
 	}
 
 	@Test
