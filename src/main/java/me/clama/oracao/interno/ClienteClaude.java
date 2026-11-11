@@ -8,6 +8,7 @@ import com.anthropic.errors.AnthropicServiceException;
 import com.anthropic.models.messages.CacheControlEphemeral;
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
+import com.anthropic.models.messages.StopReason;
 import com.anthropic.models.messages.TextBlockParam;
 import io.sentry.Sentry;
 import io.sentry.SentryLevel;
@@ -26,21 +27,25 @@ import org.springframework.stereotype.Component;
 
 /**
  * A Claude pelo SDK oficial ({@code anthropic-java}), {@code POST /v1/messages} nao beta. O SDK manda o
- * {@code anthropic-version} dele; a chave vai como o SDK manda (nunca em log nem em mensagem).
+ * {@code anthropic-version} dele. A chave vai no {@code x-api-key}: o {@code apiKey()} do SDK 3.x manda
+ * {@code Authorization: Bearer} e so deixa de mandar quando o {@code X-Api-Key} ja esta no request
+ * ({@code StaticAuthHeaders}); por isso o header e posto a mao. Nunca em log nem em mensagem.
  *
- * <p>Retentativa nossa (a do SDK fica desligada, {@code maxRetries(0)}): 4 tentativas com esperas de 1, 2 e 4 s, so em
- * rede/timeout e 529. Credito esgotado (400 "credit balance", ou 402) vira {@link CreditosEsgotados} sem retentar. O texto
- * e o do primeiro bloco, que tem de ser texto. O system vai com {@code cache_control} efemero.
+ * <p>Retentativa nossa (a do SDK fica desligada, {@code maxRetries(0)}), paridade com o INV:106: 3 tentativas com esperas
+ * de 1 e 2 s, so em rede/timeout e 529. Credito esgotado (400 "credit balance", ou 402) vira {@link CreditosEsgotados} sem retentar. O texto
+ * e o do primeiro bloco, que tem de ser texto ({@code stop_reason=max_tokens} so gera WARN). O system vai com
+ * {@code cache_control} efemero.
  *
  * <p>Falhas: {@link Falha} = pedido recusado ou resposta inutilizavel (502 na previa); {@link Indisponivel} = a Claude nao
- * atendeu (rede, 401/403, 429, 5xx, 529, sem chave; 503); {@link CreditosEsgotados} = conta sem credito (503).
+ * atendeu (rede, 401/403, 429, 5xx, 529, sem chave; 503); {@link CreditosEsgotados} = conta sem credito (503). Qualquer
+ * outra excecao do SDK vira {@link Falha}.
  */
 @Component
 @EnableConfigurationProperties(OracaoProps.class)
 public class ClienteClaude {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ClienteClaude.class);
-	static final int TENTATIVAS = 4;
+	static final int TENTATIVAS = 3;
 	private static final CacheControlEphemeral EFEMERO = CacheControlEphemeral.builder().build();
 
 	/** Resposta inutilizavel ou pedido recusado pela API; tentar de novo igual nao resolve. */
@@ -81,8 +86,9 @@ public class ClienteClaude {
 	ClienteClaude(OracaoProps props, Consumer<Duration> dormir) {
 		this.props = props;
 		this.dormir = dormir;
-		this.cliente = props.anthropicApiKey().isBlank() ? null
-				: AnthropicOkHttpClient.builder().apiKey(props.anthropicApiKey().strip())
+		var chave = props.anthropicApiKey().strip();
+		this.cliente = chave.isEmpty() ? null
+				: AnthropicOkHttpClient.builder().apiKey(chave).putHeader("X-Api-Key", chave)
 						.baseUrl(props.anthropicUrl().replaceAll("/+$", "")).maxRetries(0).timeout(props.timeout()).build();
 	}
 
@@ -114,6 +120,8 @@ public class ClienteClaude {
 			boolean retentavel;
 			try {
 				return texto(cliente.messages().create(params), tentativa, inicio);
+			} catch (Falha e) {
+				throw e;
 			} catch (AnthropicInvalidDataException e) {
 				throw new Falha("Resposta da Claude fora do formato", e);
 			} catch (AnthropicIoException e) {
@@ -131,6 +139,10 @@ public class ClienteClaude {
 				}
 				falha = new Indisponivel("Claude indisponível (HTTP " + status + ")", e);
 				retentavel = status == 529;
+			} catch (RuntimeException e) { // AnthropicException e o que mais o SDK lancar: nunca sai sem classificar
+				LOG.warn("Claude falhou (event=claude_request, model={}, error={}, attempt={}, duration_ms={})", props.modelo(),
+						e.getClass().getSimpleName(), tentativa, ms(inicio));
+				throw new Falha("Erro inesperado do SDK da Claude", e);
 			}
 			if (!retentavel || tentativa == tentativas) throw falha;
 			dormir.accept(Duration.ofSeconds(1L << (tentativa - 1)));
@@ -144,6 +156,10 @@ public class ClienteClaude {
 				+ "cache_creation_tokens={}, cache_read_tokens={})", props.modelo(), tentativa, ms(inicio),
 				m.stopReason().map(Object::toString).orElse(null), u.outputTokens(), u.cacheCreationInputTokens().orElse(null),
 				u.cacheReadInputTokens().orElse(null));
+		if (m.stopReason().filter(StopReason.MAX_TOKENS::equals).isPresent()) {
+			LOG.warn("Claude parou no max_tokens: oracao possivelmente cortada (event=claude_max_tokens, model={}, max_tokens={})",
+					props.modelo(), props.maxTokens());
+		}
 		if (m.content().isEmpty() || !m.content().get(0).isText()) {
 			throw new Falha("Resposta da Claude sem texto no primeiro bloco", null);
 		}

@@ -33,3 +33,12 @@ create table prompt_versao (
 );
 
 create unique index prompt_versao_uma_ativa on prompt_versao (ativo) where ativo;
+
+-- o banco garante a imutabilidade: UPDATE que muda o conteudo falha (ativo continua mudando)
+create function prompt_versao_imutavel() returns trigger language plpgsql as $$
+begin
+  raise exception 'prompt_versao.conteudo e imutavel: grave uma versao nova';
+end $$;
+
+create trigger prompt_versao_imutavel before update of conteudo on prompt_versao
+  for each row when (old.conteudo is distinct from new.conteudo) execute function prompt_versao_imutavel();

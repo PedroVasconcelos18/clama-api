@@ -4,6 +4,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
@@ -12,6 +16,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 /** O SDK oficial contra um WireMock: o que sai na rede, a retentativa nossa e como cada falha volta. */
 @WireMockTest
@@ -61,18 +66,19 @@ class ClienteClaudeTest {
 				{"model": "claude-sonnet-4-6", "max_tokens": 1500,
 				 "system": [{"type": "text", "text": "Você é o Clama.", "cache_control": {"type": "ephemeral"}}],
 				 "messages": [{"role": "user", "content": "Pedido: paz"}]}""", true, false))
-				.withHeader("anthropic-version", matching(".+")));
+				.withHeader("anthropic-version", matching(".+")).withHeader("x-api-key", equalTo("sk-ant-teste"))
+				.withoutHeader("Authorization"));
 		assertThat(esperas).isEmpty();
 	}
 
 	@Test
-	void sobrecargaRetentaCom1e2e4Segundos(WireMockRuntimeInfo wm) {
-		sequencia(new int[] { 529, 529, 529, 200 }, new String[] { SOBRECARGA, SOBRECARGA, SOBRECARGA, OK });
+	void sobrecargaRetentaCom1e2Segundos(WireMockRuntimeInfo wm) {
+		sequencia(new int[] { 529, 529, 200 }, new String[] { SOBRECARGA, SOBRECARGA, OK });
 
 		assertThat(cliente(wm).gerar("s", "m")).startsWith("Senhor");
 
-		verify(4, postRequestedFor(urlEqualTo("/v1/messages")));
-		assertThat(esperas).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2), Duration.ofSeconds(4));
+		verify(3, postRequestedFor(urlEqualTo("/v1/messages")));
+		assertThat(esperas).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
 	}
 
 	@Test
@@ -81,8 +87,8 @@ class ClienteClaudeTest {
 
 		assertThatThrownBy(() -> cliente(wm).gerar("s", "m")).isExactlyInstanceOf(ClienteClaude.Indisponivel.class);
 
-		verify(4, postRequestedFor(urlEqualTo("/v1/messages")));
-		assertThat(esperas).hasSize(3);
+		verify(3, postRequestedFor(urlEqualTo("/v1/messages")));
+		assertThat(esperas).hasSize(2);
 	}
 
 	@Test
@@ -133,8 +139,8 @@ class ClienteClaudeTest {
 		assertThatThrownBy(() -> cliente(wm.getHttpBaseUrl(), "sk-ant-teste", Duration.ofMillis(200)).gerar("s", "m"))
 				.isExactlyInstanceOf(ClienteClaude.Indisponivel.class);
 
-		verify(4, postRequestedFor(urlEqualTo("/v1/messages")));
-		assertThat(esperas).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2), Duration.ofSeconds(4));
+		verify(3, postRequestedFor(urlEqualTo("/v1/messages")));
+		assertThat(esperas).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
 	}
 
 	@Test
@@ -145,7 +151,24 @@ class ClienteClaudeTest {
 		}
 		assertThatThrownBy(() -> cliente("http://127.0.0.1:" + porta, "sk-ant-teste", Duration.ofSeconds(2)).gerar("s", "m"))
 				.isExactlyInstanceOf(ClienteClaude.Indisponivel.class);
-		assertThat(esperas).hasSize(3);
+		assertThat(esperas).hasSize(2);
+	}
+
+	/** Oracao cortada no max_tokens: devolve o texto sem retentar e avisa em WARN (a T4 decide sobre alerta). */
+	@Test
+	void maxTokensAvisaSemRetentar(WireMockRuntimeInfo wm) {
+		responde(200, OK.replace("end_turn", "max_tokens"));
+		var log = (Logger) LoggerFactory.getLogger(ClienteClaude.class);
+		var eventos = new ListAppender<ILoggingEvent>();
+		eventos.start();
+		log.addAppender(eventos);
+		try {
+			assertThat(cliente(wm).gerar("s", "m")).startsWith("Senhor");
+		} finally {
+			log.detachAppender(eventos);
+		}
+		verify(1, postRequestedFor(urlEqualTo("/v1/messages")));
+		assertThat(eventos.list).anyMatch(e -> e.getLevel() == Level.WARN && e.getFormattedMessage().contains("max_tokens"));
 	}
 
 	/** A previa e uma chamada so: o admin espera na tela. */

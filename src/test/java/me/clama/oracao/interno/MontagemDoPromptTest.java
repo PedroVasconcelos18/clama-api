@@ -28,11 +28,11 @@ class MontagemDoPromptTest {
 				Pedido: Peço oração pela minha família.""");
 	}
 
-	/** Sexo vazio, nulo ou "nao_informado", idade nula e pedido so de espaco. */
+	/** Sexo vazio, nulo ou "nao_informado", idade nula ou 0 (falsy no Django, como no antigo) e pedido so de espaco. */
 	@Test
 	void opcionaisVazios() {
 		for (var sexo : new String[] { null, "", "nao_informado" }) {
-			assertThat(MontagemDoPrompt.mensagem(PROMPT, dados(false, "Ana", sexo, null, " 　\t "),
+			assertThat(MontagemDoPrompt.mensagem(PROMPT, dados(false, "Ana", sexo, sexo == null ? null : (short) 0," 　\t "),
 					plano(Complexidade.SIMPLES, TipoDePlano.COMUM)))
 					.isEqualTo("Curta.\n\nNome: Ana\nSexo: não informado\nIdade: não informada\n\nPedido: [pedido vazio]");
 		}

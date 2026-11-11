@@ -125,7 +125,7 @@ clama:
     anthropic-api-key: ${ANTHROPIC_API_KEY:}
     modelo: claude-sonnet-4-6 # o que roda hoje (mapa §3.2); trocar e decisao a parte (custo e prompt)
     max-tokens: 1500
-    timeout: 30s # por tentativa; 4 tentativas (esperas 1/2/4 s) so em rede/timeout e 529
+    timeout: 30s # por tentativa; 3 tentativas (esperas 1 e 2 s) so em rede/timeout e 529
   turnstile:
     url: https://challenges.cloudflare.com/turnstile/v0/siteverify
     secret: ${TURNSTILE_SECRET_KEY:}

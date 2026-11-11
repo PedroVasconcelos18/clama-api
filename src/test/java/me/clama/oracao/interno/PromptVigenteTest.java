@@ -7,6 +7,7 @@ import me.clama.TesteDeRepositorio;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -53,6 +54,20 @@ class PromptVigenteTest {
 	void indiceImpedeDuasAtivas() {
 		inserir("Um.", true);
 		assertThatThrownBy(() -> inserir("Dois.", true)).isInstanceOf(DataIntegrityViolationException.class);
+	}
+
+	/** Versao e imutavel: o banco recusa UPDATE do conteudo; o resto (ativo) muda. */
+	@Test
+	void conteudoNaoMuda() {
+		var id = inserir("Original.", false);
+		assertThatThrownBy(() -> jdbc.update("update prompt_versao set conteudo = '{}'::jsonb where id = ?", id))
+				.isInstanceOf(DataAccessException.class).hasMessageContaining("imutavel");
+	}
+
+	@Test
+	void ativoMuda() {
+		var id = inserir("Original.", false);
+		assertThat(jdbc.update("update prompt_versao set ativo = true, conteudo = conteudo where id = ?", id)).isEqualTo(1);
 	}
 
 	long inserir(String sistema, boolean ativo) {
