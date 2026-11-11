@@ -126,6 +126,13 @@ clama:
     modelo: claude-sonnet-4-6 # o que roda hoje (mapa §3.2); trocar e decisao a parte (custo e prompt)
     max-tokens: 1500
     timeout: 30s # por tentativa; 3 tentativas (esperas 1 e 2 s) so em rede/timeout e 529
+  freemium:
+    limiar-ip: 3 # bloqueios do mesmo IP na janela (inclusivo) barram o submit
+    janela-ip: 1h
+    validade-link: 24h # link de confirmacao por e-mail
+    janela-pendente: 24h # pedido aguardando confirmacao impede outro so enquanto o link vale
+    frontend-url: ${FRONTEND_URL:http://localhost:5173}
+    espera-email: 30s # 1a retentativa do job do e-mail (30, 60, 120 s)
   turnstile:
     url: https://challenges.cloudflare.com/turnstile/v0/siteverify
     secret: ${TURNSTILE_SECRET_KEY:}

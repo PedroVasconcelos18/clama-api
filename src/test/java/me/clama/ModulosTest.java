@@ -133,6 +133,34 @@ class ModulosTest {
 				.resideInAPackage("me.clama.oracao..").check(classes);
 	}
 
+	/** freemium usa pedido, conta e catalogo; ninguem o conhece. */
+	@Test
+	void freemiumDependeDePedidoContaECatalogoENinguemDependeDele() {
+		var freemium = MODULOS.getModuleByName("freemium").orElseThrow();
+		assertThat(freemium.getDirectDependencies(MODULOS).stream().map(d -> d.getTargetModule().getIdentifier().toString()))
+				.contains("pedido", "conta", "catalogo");
+		MODULOS.stream().filter(m -> !m.getIdentifier().toString().equals("freemium")).forEach(m ->
+				assertThat(m.getDirectDependencies(MODULOS).stream().map(d -> d.getTargetModule().getIdentifier().toString()))
+						.as(m.getIdentifier().toString()).doesNotContain("freemium"));
+		var classes = new ClassFileImporter().withImportOption(new ImportOption.DoNotIncludeTests()).importPackages("me.clama");
+		ArchRuleDefinition.noClasses().that().resideInAPackage("me.clama.infra..").should().dependOnClassesThat()
+				.resideInAPackage("me.clama.freemium..").check(classes);
+	}
+
+	/** As tabelas de pedido e usuario sao privadas: o freemium so passa por PedidoApi e ContaApi, e nao escreve SQL nelas. */
+	@Test
+	void freemiumNaoLeNemEscreveATabelaDePedidoNemDeUsuario() throws Exception {
+		var classes = new ClassFileImporter().withImportOption(new ImportOption.DoNotIncludeTests()).importPackages("me.clama");
+		ArchRuleDefinition.noClasses().that().resideInAPackage("me.clama.freemium..").should().dependOnClassesThat()
+				.resideInAnyPackage("me.clama.pedido.interno..", "me.clama.conta.interno..").check(classes);
+		var sql = java.util.regex.Pattern.compile("(?i)\\b(from|join|into|update|delete\\s+from)\\s+(pedido|usuario)\\b");
+		try (var arquivos = java.nio.file.Files.walk(java.nio.file.Path.of("src/main/java/me/clama/freemium"))) {
+			for (var f : arquivos.filter(p -> p.toString().endsWith(".java")).toList()) {
+				assertThat(sql.matcher(java.nio.file.Files.readString(f)).find()).as(f.toString()).isFalse();
+			}
+		}
+	}
+
 	@Test
 	void documentacao() {
 		new Documenter(MODULOS).writeDocumentation();

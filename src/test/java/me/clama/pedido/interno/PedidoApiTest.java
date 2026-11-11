@@ -302,6 +302,36 @@ class PedidoApiTest {
 		assertThat(api.existePendenteDeConfirmacao(h.email(email), h.cpf("529.982.247-25"), ha24)).as("so pendente conta").isFalse();
 	}
 
+	/** Janela inclusiva: um pedido criado exatamente em {@code desde} conta; um microssegundo depois, nao. */
+	@Test
+	void pendenteNoLimiteExatoDaJanelaConta() {
+		var email = "doador-" + UUID.randomUUID() + "@exemplo.com";
+		var id = freemium(email);
+		var criadoEm = jdbc.queryForObject("select criado_em from pedido where id = ?", java.time.OffsetDateTime.class, id).toInstant();
+		var h = PedidoTest.HMAC;
+		assertThat(api.existePendenteDeConfirmacao(h.email(email), null, criadoEm)).as("criado_em == desde").isTrue();
+		assertThat(api.existePendenteDeConfirmacao(h.email(email), null, criadoEm.plus(java.time.temporal.ChronoUnit.MICROS.getDuration()))).isFalse();
+		assertThat(api.existePendenteDeConfirmacao(h.email(email), null, criadoEm.minus(java.time.temporal.ChronoUnit.MICROS.getDuration()))).isTrue();
+	}
+
+	@Test
+	void criarFreemiumSemPlanoGratuitoDa503SemPedido() {
+		jdbc.update("delete from plano where tipo = 'GRATUITO'");
+		try {
+			assertThatThrownBy(() -> freemium("doador-" + UUID.randomUUID() + "@exemplo.com"))
+					.isInstanceOfSatisfying(me.clama.infra.web.ErroDeNegocio.class, e -> {
+						assertThat(e.codigo()).isEqualTo("freemium_indisponivel");
+						assertThat(e.status()).isEqualTo(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE);
+					});
+			assertThat(jdbc.queryForObject("select count(*) from pedido", Integer.class)).isZero();
+		} finally {
+			jdbc.update("""
+					insert into plano (nome, descricao, valor_centavos, complexidade, tipo, ordem)
+				values ('Gratuito', 'Sua primeira oração — por nossa conta', 0, 'SIMPLES', 'GRATUITO', 1000)
+				on conflict (tipo) where tipo <> 'COMUM' do nothing""");
+		}
+	}
+
 	@Test
 	void cpfTemContaSoComDono() {
 		var cpf = PedidoTest.HMAC.cpf("529.982.247-25");
