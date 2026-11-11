@@ -108,6 +108,19 @@ class ModulosTest {
 				.doesNotContain("pagamento");
 	}
 
+	/** oracao usa pedido e catalogo; nenhum dos dois a conhece. */
+	@Test
+	void oracaoDependeDePedidoECatalogoENaoOContrario() {
+		var oracao = MODULOS.getModuleByName("oracao").orElseThrow();
+		assertThat(oracao.getDirectDependencies(MODULOS).stream().map(d -> d.getTargetModule().getIdentifier().toString()))
+				.contains("pedido", "catalogo");
+		for (var nome : new String[] { "pedido", "catalogo" }) {
+			var m = MODULOS.getModuleByName(nome).orElseThrow();
+			assertThat(m.getDirectDependencies(MODULOS).stream().map(d -> d.getTargetModule().getIdentifier().toString()))
+					.as(nome).doesNotContain("oracao");
+		}
+	}
+
 	@Test
 	void documentacao() {
 		new Documenter(MODULOS).writeDocumentation();

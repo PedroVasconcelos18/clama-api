@@ -142,6 +142,23 @@
 			</exclusions>
 		</dependency>
 		<dependency>
+			<!-- SDK oficial da Claude (oracao): manda o anthropic-version dele; a retentativa e nossa (maxRetries 0) -->
+			<groupId>com.anthropic</groupId>
+			<artifactId>anthropic-java</artifactId>
+			<version>3.6.0</version>
+			<!-- o okhttp-jvm 5 (e o okio-jvm) ja vem pela resend-java; o okhttp 4 duplicaria as classes okhttp3.* no classpath -->
+			<exclusions>
+				<exclusion>
+					<groupId>com.squareup.okhttp3</groupId>
+					<artifactId>okhttp</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.squareup.okio</groupId>
+					<artifactId>okio</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
 			<groupId>io.sentry</groupId>
 			<artifactId>sentry-spring-boot-4</artifactId>
 			<version>8.63.0</version>

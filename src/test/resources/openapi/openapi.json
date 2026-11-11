@@ -716,6 +716,43 @@
         },
         "type" : "object"
       },
+      "PedidoDeExemplo" : {
+        "properties" : {
+          "complexidade" : {
+            "enum" : [ "SIMPLES", "COM_VERSICULO", "COM_PROFECIA_E_VERSICULOS" ],
+            "type" : [ "string", "null" ]
+          },
+          "idade" : {
+            "format" : "int32",
+            "maximum" : 120,
+            "minimum" : 1,
+            "type" : [ "integer", "null" ]
+          },
+          "nome" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : [ "string", "null" ]
+          },
+          "pedidoOracao" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : [ "string", "null" ]
+          },
+          "sexo" : {
+            "pattern" : "feminino|masculino|nao_informado|",
+            "type" : [ "string", "null" ]
+          },
+          "tipo" : {
+            "enum" : [ "COMUM", "GRATUITO", "VALOR_LIVRE" ],
+            "type" : [ "string", "null" ]
+          },
+          "versaoId" : {
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          }
+        },
+        "type" : "object"
+      },
       "PedidoDeLink" : {
         "properties" : {
           "email" : {
@@ -824,6 +861,18 @@
         },
         "type" : "object"
       },
+      "Previa" : {
+        "properties" : {
+          "oracao" : {
+            "type" : "string"
+          },
+          "versaoId" : {
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          }
+        },
+        "type" : "object"
+      },
       "ProblemDetail" : {
         "properties" : {
           "codigo" : {
@@ -860,6 +909,37 @@
             "type" : "string"
           }
         },
+        "type" : "object"
+      },
+      "Prompt" : {
+        "properties" : {
+          "comProfeciaEVersiculos" : {
+            "maxLength" : 5000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "comVersiculo" : {
+            "maxLength" : 5000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "gratuito" : {
+            "maxLength" : 5000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "simples" : {
+            "maxLength" : 5000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "sistema" : {
+            "maxLength" : 50000,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "comProfeciaEVersiculos", "comVersiculo", "gratuito", "simples", "sistema" ],
         "type" : "object"
       },
       "RedefinicaoDeSenhaPedido" : {
@@ -1093,6 +1173,32 @@
           }
         },
         "type" : "object"
+      },
+      "VersaoDePrompt" : {
+        "properties" : {
+          "ativo" : {
+            "type" : "boolean"
+          },
+          "conteudo" : {
+            "$ref" : "#/components/schemas/Prompt"
+          },
+          "criadoEm" : {
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "criadoPor" : {
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
+          "padrao" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
       }
     }
   },
@@ -1104,7 +1210,7 @@
   "paths" : {
     "/api/admin/eventos-mp" : {
       "get" : {
-        "operationId" : "listar_3",
+        "operationId" : "listar_4",
         "parameters" : [ {
           "in" : "query",
           "name" : "status",
@@ -1361,7 +1467,7 @@
     },
     "/api/admin/pedidos" : {
       "get" : {
-        "operationId" : "listar_2",
+        "operationId" : "listar_3",
         "parameters" : [ {
           "description" : "Um ou mais status separados por virgula.",
           "in" : "query",
@@ -1611,9 +1717,122 @@
         "tags" : [ "catalogo-admin-controller" ]
       }
     },
-    "/api/admin/repasses" : {
+    "/api/admin/prompts" : {
       "get" : {
         "operationId" : "listar_1",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/VersaoDePrompt"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "prompts-admin-controller" ]
+      },
+      "post" : {
+        "operationId" : "criar_2",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Prompt"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/VersaoDePrompt"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "prompts-admin-controller" ]
+      }
+    },
+    "/api/admin/prompts/ativacao" : {
+      "delete" : {
+        "operationId" : "voltarAoPadrao",
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "prompts-admin-controller" ]
+      }
+    },
+    "/api/admin/prompts/previa" : {
+      "post" : {
+        "operationId" : "previa",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PedidoDeExemplo"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Previa"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "prompts-admin-controller" ]
+      }
+    },
+    "/api/admin/prompts/{id}/ativacao" : {
+      "post" : {
+        "operationId" : "ativar",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/VersaoDePrompt"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "prompts-admin-controller" ]
+      }
+    },
+    "/api/admin/repasses" : {
+      "get" : {
+        "operationId" : "listar_2",
         "parameters" : [ {
           "in" : "query",
           "name" : "instituicaoId",
