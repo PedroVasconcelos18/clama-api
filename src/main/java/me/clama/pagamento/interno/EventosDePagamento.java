@@ -2,6 +2,7 @@ package me.clama.pagamento.interno;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -40,6 +41,17 @@ class EventosDePagamento {
 				quando, quando);
 		return jdbc.queryForObject("SELECT id, status FROM pagamento_evento WHERE id_externo = ?",
 				(rs, n) -> new Evento(rs.getLong(1), rs.getString(2)), idExterno);
+	}
+
+	record Pendente(long id, String tipo, String mpPagamentoId) {}
+
+	/** ERRO por MP fora, com a ultima tentativa antes de {@code falhouAntesDe} e chegada depois de {@code chegouDepoisDe}. */
+	List<Pendente> mpIndisponivel(Instant falhouAntesDe, Instant chegouDepoisDe, int limite) {
+		return jdbc.query("""
+				SELECT id, tipo, mp_pagamento_id FROM pagamento_evento
+				WHERE status = 'ERRO' AND motivo = 'mp_indisponivel' AND atualizado_em < ? AND recebido_em > ?
+				ORDER BY recebido_em, id LIMIT ?""", (rs, n) -> new Pendente(rs.getLong(1), rs.getString(2), rs.getString(3)),
+				Timestamp.from(falhouAntesDe), Timestamp.from(chegouDepoisDe), limite);
 	}
 
 	/** {@code motivo}: codigo curto, sem PII. {@code pedidoId} nulo mantem o que ja estava. */

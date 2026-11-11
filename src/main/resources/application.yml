@@ -58,6 +58,15 @@ spring:
     locale: pt_BR
     locale-resolver: fixed
 
+# fila e tarefas recorrentes (D13). O scheduler para depois do graceful do Tomcat e espera os jobs em andamento ate
+# 2 x shutdown-max-wait (espera, interrompe, espera de novo): 2 x 7 s cabem na fase de 15 s
+db-scheduler:
+  threads: 4
+  polling-interval: 2s
+  heartbeat-interval: 20s # 6 perdidos (2 min) = execucao morta, retomada por outro no
+  shutdown-max-wait: 7s
+  delay-startup-until-context-ready: true
+
 springdoc:
   api-docs:
     enabled: false # liga em application-local.yml e nos testes; /v3/api-docs fora disso cai no denyAll

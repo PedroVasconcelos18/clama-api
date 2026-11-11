@@ -101,6 +101,12 @@
 			<artifactId>bcprov-jdk18on</artifactId>
 			<version>1.84</version>
 		</dependency>
+		<!-- fila e tarefas recorrentes no Postgres (D13); o starter -4- e o do Boot 4 -->
+		<dependency>
+			<groupId>com.github.kagkarlsson</groupId>
+			<artifactId>db-scheduler-spring-boot-4-starter</artifactId>
+			<version>17.0.0</version>
+		</dependency>
 		<dependency>
 			<groupId>com.bucket4j</groupId>
 			<artifactId>bucket4j_jdk17-core</artifactId>

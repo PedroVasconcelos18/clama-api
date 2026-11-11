@@ -5,3 +5,13 @@ clama:
     chave-hmac: ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=
   pagamento:
     webhook-segredo: segredo-do-webhook-de-teste
+  fila:
+    iniciar: false # so os testes com @FilaLigada executam jobs
+# polling curto para os testes com a fila ligada
+db-scheduler:
+  polling-interval: 100ms
+  heartbeat-interval: 1s
+management:
+  health:
+    db-scheduler:
+      enabled: false # o scheduler parado dos testes seria DOWN
