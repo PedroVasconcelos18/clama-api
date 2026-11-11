@@ -62,6 +62,7 @@ class ReprocessamentoDeEventosMpTest {
 		jdbc.update("delete from pagamento_evento");
 		jdbc.update("delete from repasse");
 		jdbc.update("delete from cobranca");
+		jdbc.update(me.clama.BancoDeTeste.LIMPAR_FILA); // GeracaoSolicitada enfileira gerar-oracao e comita
 		jdbc.update("delete from pedido");
 		jdbc.update("delete from usuario where email like '%@exemplo.com'");
 		jdbc.update("delete from plano where tipo = 'COMUM'");
@@ -154,6 +155,9 @@ class ReprocessamentoDeEventosMpTest {
 		Thread.sleep(200);
 		assertThat(caixa.enviados()).hasSize(1);
 		assertThat(alertas.get(0).email().texto()).contains("mp_indisponivel_expirado", "103");
+		var sem = alertas.get(0).email(); // alerta sem pedido: nada de "null" no assunto, no texto nem no link
+		assertThat(sem.assunto() + sem.texto() + sem.html()).doesNotContain("null");
+		assertThat(sem.assunto()).doesNotContain("pedido");
 		assertThat(evento("velho")).isEqualTo("ERRO mp_indisponivel_expirado");
 		assertThat(getsNoMp(103)).isZero();
 	}

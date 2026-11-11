@@ -78,6 +78,7 @@ class PixTest {
 		limite.limpar();
 		MP.resetAll();
 		jdbc.update("delete from cobranca");
+		jdbc.update(me.clama.BancoDeTeste.LIMPAR_FILA); // GeracaoSolicitada enfileira gerar-oracao e comita
 		jdbc.update("delete from pedido");
 		jdbc.update("delete from plano where tipo = 'COMUM'");
 	}

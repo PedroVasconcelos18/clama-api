@@ -2,6 +2,7 @@ package me.clama;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Predicate;
 import me.clama.infra.email.Email;
 import me.clama.infra.email.EnviadorDeEmail;
 
@@ -12,6 +13,7 @@ public class CaixaDeSaidaEmMemoria implements EnviadorDeEmail {
 
 	private final List<Enviado> enviados = new CopyOnWriteArrayList<>();
 	private volatile boolean falhando;
+	private volatile Predicate<Email> recusa = e -> false;
 	private volatile long atrasoMs;
 
 	@Override
@@ -19,7 +21,7 @@ public class CaixaDeSaidaEmMemoria implements EnviadorDeEmail {
 		if (atrasoMs > 0) {
 			try { Thread.sleep(atrasoMs); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 		}
-		if (falhando) throw new IllegalStateException("Resend fora do ar (teste)");
+		if (falhando || recusa.test(email)) throw new IllegalStateException("Resend fora do ar (teste)");
 		enviados.add(new Enviado(email, chaveIdempotencia));
 	}
 
@@ -30,6 +32,9 @@ public class CaixaDeSaidaEmMemoria implements EnviadorDeEmail {
 	}
 
 	public void falhar(boolean falhando) { this.falhando = falhando; }
+
+	/** Falha so os e-mails que casam (ex.: a oracao falha e o alerta ao admin sai). */
+	public void recusar(Predicate<Email> recusa) { this.recusa = recusa; }
 
 	/** Simula a Resend lenta: cada envio demora isto. */
 	public void atrasar(long ms) { atrasoMs = ms; }
@@ -46,6 +51,7 @@ public class CaixaDeSaidaEmMemoria implements EnviadorDeEmail {
 	public void limpar() {
 		enviados.clear();
 		falhando = false;
+		recusa = e -> false;
 		atrasoMs = 0;
 	}
 }

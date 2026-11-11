@@ -76,6 +76,7 @@ abstract class PagamentoAdminBase {
 		jdbc.update("delete from pagamento_evento");
 		jdbc.update("delete from repasse");
 		jdbc.update("delete from cobranca");
+		jdbc.update(me.clama.BancoDeTeste.LIMPAR_FILA); // GeracaoSolicitada enfileira gerar-oracao e comita
 		jdbc.update("delete from pedido");
 		jdbc.update("delete from usuario where email like '%@exemplo.com'");
 		jdbc.update("delete from plano where tipo = 'COMUM'");

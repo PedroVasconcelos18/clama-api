@@ -78,6 +78,7 @@ abstract class PedidoWebTeste {
 		limite.limpar();
 		capturador.geracoes.clear();
 		TURNSTILE.resetAll();
+		jdbc.update(me.clama.BancoDeTeste.LIMPAR_FILA); // GeracaoSolicitada enfileira gerar-oracao e comita
 		jdbc.update("delete from pedido");
 		jdbc.update("delete from usuario where email like 'ped-%'");
 		jdbc.update("delete from plano where tipo = 'COMUM'");

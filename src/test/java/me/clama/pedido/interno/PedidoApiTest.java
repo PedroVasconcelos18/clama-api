@@ -39,6 +39,7 @@ class PedidoApiTest {
 
 	@BeforeEach @AfterEach
 	void limpar() {
+		jdbc.update(me.clama.BancoDeTeste.LIMPAR_FILA); // GeracaoSolicitada enfileira gerar-oracao e comita
 		jdbc.update("delete from pedido");
 		jdbc.update("delete from usuario where email like 'doador-%'");
 	}
