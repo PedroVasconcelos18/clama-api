@@ -24,6 +24,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -66,6 +68,20 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
         var erros = e.getBindingResult().getFieldErrors().stream()
                 .map(f -> new ErroDeCampo(f.getField(), f.getDefaultMessage())).toList();
         return resposta(e, HttpStatus.BAD_REQUEST, "dados_invalidos", "Dados inválidos.", null, erros, req);
+    }
+
+    /** Limite do multipart (application.yml) estourado antes de qualquer validacao de dominio. */
+    @Override
+    protected ResponseEntity<Object> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e,
+            HttpHeaders headers, HttpStatusCode status, WebRequest req) {
+        return resposta(e, HttpStatus.BAD_REQUEST, "arquivo_grande_demais", "Arquivo grande demais.",
+                "O arquivo é grande demais. Envie uma versão menor.", null, req);
+    }
+
+    /** Multipart malformado (sem boundary, corpo truncado). */
+    @ExceptionHandler(MultipartException.class)
+    ResponseEntity<Object> multipartInvalido(MultipartException e, WebRequest req) {
+        return resposta(e, HttpStatus.BAD_REQUEST, "arquivo_invalido", "Envio de arquivo inválido.", null, null, req);
     }
 
     @Override

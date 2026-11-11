@@ -566,6 +566,66 @@
         "tags" : [ "catalogo-admin-controller" ]
       }
     },
+    "/api/admin/instituicoes/{id}/logo" : {
+      "delete" : {
+        "operationId" : "removerLogo",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "catalogo-admin-controller" ]
+      },
+      "put" : {
+        "operationId" : "trocarLogo",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "properties" : {
+                  "logo" : {
+                    "format" : "binary",
+                    "type" : "string"
+                  }
+                },
+                "type" : "object"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InstituicaoAdmin"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "catalogo-admin-controller" ]
+      }
+    },
     "/api/admin/planos" : {
       "get" : {
         "operationId" : "planos",

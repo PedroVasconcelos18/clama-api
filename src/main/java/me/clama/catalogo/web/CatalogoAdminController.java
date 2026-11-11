@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.io.IOException;
 import java.util.List;
 import me.clama.catalogo.Complexidade;
 import me.clama.catalogo.interno.CatalogoAdminServico;
@@ -14,7 +15,11 @@ import me.clama.catalogo.interno.Instituicao;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -86,6 +91,20 @@ class CatalogoAdminController {
 			Authentication auth) {
 		var i = servico.alterarInstituicao(autor(auth), id, c.nome(), c.ordem(), c.ativo());
 		return InstituicaoAdmin.de(i, servico.hashesDeLogo(List.of(id)).get(id));
+	}
+
+	/** Multipart com a parte {@code logo}; a validacao e pelos bytes (ValidadorDeLogo), nao pelo Content-Type. */
+	@PutMapping("/instituicoes/{id}/logo")
+	InstituicaoAdmin trocarLogo(@PathVariable Long id, @RequestParam(name = "logo", required = false) MultipartFile logo,
+			Authentication auth) throws IOException {
+		var i = servico.trocarLogo(autor(auth), id, logo == null ? null : logo.getBytes());
+		return InstituicaoAdmin.de(i, servico.hashesDeLogo(List.of(id)).get(id));
+	}
+
+	@DeleteMapping("/instituicoes/{id}/logo")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	void removerLogo(@PathVariable Long id, Authentication auth) {
+		servico.removerLogo(autor(auth), id);
 	}
 
 	private static Long autor(Authentication auth) {

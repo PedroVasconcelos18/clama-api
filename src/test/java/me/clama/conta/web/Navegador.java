@@ -57,6 +57,26 @@ public final class Navegador {
 		return enviar(req, headers);
 	}
 
+	/** PUT multipart com uma parte de arquivo; o Content-Type da parte e o declarado (pode mentir de proposito). */
+	public HttpResponse<String> putArquivo(String caminho, String parte, String nomeDoArquivo, String contentType,
+			byte[] conteudo, String... headers) throws Exception {
+		var limite = "----clama" + UUID.randomUUID();
+		var cab = ("--" + limite + "\r\nContent-Disposition: form-data; name=\"" + parte + "\"; filename=\""
+				+ nomeDoArquivo + "\"\r\nContent-Type: " + contentType + "\r\n\r\n")
+				.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+		var fim = ("\r\n--" + limite + "--\r\n").getBytes(java.nio.charset.StandardCharsets.UTF_8);
+		var corpo = new byte[cab.length + conteudo.length + fim.length];
+		System.arraycopy(cab, 0, corpo, 0, cab.length);
+		System.arraycopy(conteudo, 0, corpo, cab.length, conteudo.length);
+		System.arraycopy(fim, 0, corpo, cab.length + conteudo.length, fim.length);
+		var req = HttpRequest.newBuilder(URI.create(base + caminho))
+				.header("Content-Type", "multipart/form-data; boundary=" + limite)
+				.PUT(HttpRequest.BodyPublishers.ofByteArray(corpo));
+		var xsrf = cookie("XSRF-TOKEN");
+		if (xsrf != null) req.header("X-XSRF-TOKEN", xsrf);
+		return enviar(req, headers);
+	}
+
 	/** Fluxo do front: GET antes (emite o XSRF-TOKEN) e depois o POST de login. */
 	public HttpResponse<String> login(String email, String senha, String... headers) throws Exception {
 		if (cookie("XSRF-TOKEN") == null) get("/api/auth/eu");

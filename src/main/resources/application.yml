@@ -36,6 +36,10 @@ spring:
       pageable:
         max-page-size: 100 # PagedModel em JSON estavel: serialization-mode
         serialization-mode: via-dto
+  servlet:
+    multipart:
+      max-file-size: 300KB # logo: o validador recusa >250 KB com texto proprio; isto e so a trava de rede
+      max-request-size: 400KB
   lifecycle:
     timeout-per-shutdown-phase: 15s
   jpa:

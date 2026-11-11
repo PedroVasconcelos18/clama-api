@@ -1,5 +1,6 @@
 package me.clama.catalogo.interno;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -163,7 +164,46 @@ public class CatalogoAdminServico {
 		});
 	}
 
+	/** Valida pelos bytes, depois troca (ou poe) a logo: muda sha256 e atualizadoEm, entao muda o ?v= e o ETag. */
+	public Instituicao trocarLogo(Long autorId, Long id, byte[] bytes) {
+		var mime = ValidadorDeLogo.validar(bytes);
+		var sha = sha256(bytes);
+		return transacao.execute(s -> {
+			var i = instituicoes.travar(id).orElseThrow(CatalogoAdminServico::naoEncontrado);
+			var antes = logos.findById(id).map(InstituicaoLogo::getSha256).orElse(null);
+			if (sha.equals(antes)) return i;
+			logos.saveAndFlush(new InstituicaoLogo(id, bytes, mime, sha, Instant.now()));
+			auditoria.registrar(autorId, "instituicao", id.toString(), Acao.MUDANCA, Map.of("logo", mudanca(curto(antes), curto(sha))));
+			return i;
+		});
+	}
+
+	/** Idempotente: sem logo, nada a fazer (204 sem auditoria). */
+	public void removerLogo(Long autorId, Long id) {
+		transacao.executeWithoutResult(s -> {
+			instituicoes.travar(id).orElseThrow(CatalogoAdminServico::naoEncontrado);
+			logos.findById(id).ifPresent(l -> {
+				logos.delete(l);
+				logos.flush();
+				auditoria.registrar(autorId, "instituicao", id.toString(), Acao.MUDANCA, Map.of("logo", mudanca(curto(l.getSha256()), null)));
+			});
+		});
+	}
+
 	// --- apoio ---
+
+	private static String curto(String sha) {
+		return sha == null ? null : sha.substring(0, 8);
+	}
+
+	private static String sha256(byte[] b) {
+		try {
+			return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(b));
+		} catch (java.security.NoSuchAlgorithmException e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
 
 	/** Roda na transacao propria; a violacao do indice do nome ativo vira 400 depois do rollback. */
 	private <T> T gravar(String mensagemDuplicado, Supplier<T> escrita) {
