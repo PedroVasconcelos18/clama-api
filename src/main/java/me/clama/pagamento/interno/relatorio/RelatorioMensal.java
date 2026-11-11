@@ -96,9 +96,10 @@ public class RelatorioMensal extends TarefaRecorrente {
 		var resumo = "ciclo " + periodo + ": " + feitas.size() + " de " + alvos.size() + " instituições, " + Dinheiro.reais(totalRepasse)
 				+ " a repassar; " + situacaoDoLedger + (dryRun ? " (simulação: nada gravado nem enviado)" : "");
 
+		var falha = falha(feitas.size(), alvos.size(), faltou, ledger == null);
 		if (dryRun) {
 			LOG.info("relatorio-repasse-mensal (dry-run): {}", resumo);
-			if (!faltou.isEmpty()) throw new FalhaParcial(resumo + "; faltou: " + String.join(", ", faltou));
+			if (falha != null) throw new FalhaParcial(resumo + "; " + falha);
 			return resumo;
 		}
 
@@ -114,10 +115,16 @@ public class RelatorioMensal extends TarefaRecorrente {
 		enviador.enviar(email, "relatorio-repasse/" + ciclo.ate());
 		LOG.info("relatorio-repasse-mensal: e-mail enviado ({} instituicao(oes), {} faltou)", feitas.size(), faltou.size());
 
-		if (!faltou.isEmpty()) {
-			throw new FalhaParcial(feitas.size() + " de " + alvos.size() + " instituições, faltou: " + String.join(", ", faltou));
-		}
+		if (falha != null) throw new FalhaParcial(feitas.size() + " de " + alvos.size() + " instituições, " + falha);
 		return resumo;
+	}
+
+	/** Uma so falha para a execucao ({@code ok=false}), sem PII: o que faltou e/ou a auditoria que nao rodou; nulo se deu tudo certo. */
+	private static String falha(int feitas, int alvos, List<String> faltou, boolean auditoriaNaoRodou) {
+		var partes = new ArrayList<String>();
+		if (!faltou.isEmpty()) partes.add("faltou: " + String.join(", ", faltou));
+		if (auditoriaNaoRodou) partes.add("auditoria do ledger não rodou");
+		return partes.isEmpty() ? null : String.join("; ", partes);
 	}
 
 	/** id -> nome: as ativas mais quem tem repasse no ciclo (inclusive inativa), em ordem de nome. */

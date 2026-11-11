@@ -107,17 +107,52 @@ class RelatorioMensalTest extends PagamentoAdminBase {
 	}
 
 	@Test
-	void auditoriaQueLancaViraNaoRodouNuncaCritico() {
+	void auditoriaQueLancaViraNaoRodouNuncaCriticoEDeixaAExecucaoEmFalha() {
 		var a = instituicao("Lar A");
 		doacao("Maria Silva", a, "REGISTRADO", DENTRO, 1);
 		doThrow(new IllegalStateException("rede caiu")).when(auditoria).auditar();
 
-		tarefa.rodar(false, null);
+		assertThatThrownBy(() -> tarefa.executeRecurringly(null, null)).isInstanceOf(TarefaRecorrente.FalhaParcial.class)
+				.hasMessage("1 de 1 instituições, auditoria do ledger não rodou");
 
-		var e = email();
+		var e = email(); // saiu antes de lancar
 		assertThat(e).contains("A auditoria não rodou (erro técnico; veja Tarefas).", ": atenção").doesNotContain("CRÍTIC", "crítico", "Ledger consistente");
 		assertThat(contar("select count(*) from relatorio_repasse")).isEqualTo(1); // o relatorio nao depende da auditoria
-		assertThat(jdbc.queryForObject("select ok from tarefa_execucao where tarefa = 'relatorio-repasse-mensal'", Boolean.class)).isTrue();
+		var x = jdbc.queryForMap("select ok, resumo from tarefa_execucao where tarefa = 'relatorio-repasse-mensal'");
+		assertThat(x.get("ok")).isEqualTo(false);
+		assertThat(x.get("resumo")).isEqualTo("1 de 1 instituições, auditoria do ledger não rodou");
+	}
+
+	@Test
+	void instituicaoQueFaltaEAuditoriaQueNaoRodaViramUmaSoFalhaComAsDuasCoisas() {
+		var a = instituicao("Lar A");
+		var b = instituicao("Lar B");
+		doacao("Maria Silva", a, "REGISTRADO", DENTRO, 1);
+		doThrow(new IllegalStateException("x")).when(relatorio).previa(eq(b), any());
+		doThrow(new IllegalStateException("y")).when(auditoria).auditar();
+
+		assertThatThrownBy(() -> tarefa.executeRecurringly(null, null)).isInstanceOf(TarefaRecorrente.FalhaParcial.class)
+				.hasMessage("1 de 2 instituições, faltou: Lar B; auditoria do ledger não rodou");
+		assertThat(email()).contains("Faltou: Lar B", "A auditoria não rodou");
+		assertThat(contar("select count(*) from tarefa_execucao where tarefa = 'relatorio-repasse-mensal' and not ok")).isEqualTo(1);
+	}
+
+	@Test
+	void dryRunComInstituicaoQueLancaAindaRegistraNaoOkSemGravarNemEnviar() {
+		var a = instituicao("Lar A");
+		var b = instituicao("Lar B");
+		doacao("Maria Silva", a, "REGISTRADO", DENTRO, 1);
+		doThrow(new IllegalStateException("segredo@exemplo.com")).when(relatorio).previa(eq(b), any());
+
+		tarefa.rodar(true, 7L);
+
+		assertThat(contar("select count(*) from relatorio_repasse")).isZero();
+		assertThat(caixa.enviados()).isEmpty();
+		var x = jdbc.queryForMap("select ok, resumo, erro, simulacao from tarefa_execucao where tarefa = 'relatorio-repasse-mensal'");
+		assertThat(x.get("ok")).isEqualTo(false);
+		assertThat(x.get("simulacao")).isEqualTo(true);
+		assertThat((String) x.get("resumo")).contains("faltou: Lar B").doesNotContain("segredo");
+		assertThat(x.get("erro")).isEqualTo(TarefaRecorrente.FalhaParcial.class.getName());
 	}
 
 	@Test
