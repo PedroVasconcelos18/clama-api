@@ -76,6 +76,21 @@
         },
         "type" : "object"
       },
+      "InstituicaoPublica" : {
+        "properties" : {
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "logoUrl" : {
+            "type" : "string"
+          },
+          "nome" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "MensagemPastoral" : {
         "properties" : {
           "mensagemPastoral" : {
@@ -142,6 +157,29 @@
           }
         },
         "required" : [ "email" ],
+        "type" : "object"
+      },
+      "PlanoPublico" : {
+        "properties" : {
+          "complexidade" : {
+            "enum" : [ "SIMPLES", "COM_VERSICULO", "COM_PROFECIA_E_VERSICULOS" ],
+            "type" : "string"
+          },
+          "descricao" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "nome" : {
+            "type" : "string"
+          },
+          "valorCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
         "type" : "object"
       },
       "ProblemDetail" : {
@@ -661,6 +699,76 @@
           }
         },
         "tags" : [ "conta-controller" ]
+      }
+    },
+    "/api/instituicoes" : {
+      "get" : {
+        "operationId" : "instituicoes",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/InstituicaoPublica"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "catalogo-publico-controller" ]
+      }
+    },
+    "/api/instituicoes/{id}/logo" : {
+      "get" : {
+        "operationId" : "logo",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "format" : "byte",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "catalogo-publico-controller" ]
+      }
+    },
+    "/api/planos" : {
+      "get" : {
+        "operationId" : "planos",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/PlanoPublico"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "catalogo-publico-controller" ]
       }
     }
   }
