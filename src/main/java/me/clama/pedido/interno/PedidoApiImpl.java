@@ -12,6 +12,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 import me.clama.conta.ContaApi;
+import me.clama.infra.cripto.HmacDeIdentificador;
+import me.clama.pedido.CorrecaoDeDados;
 import me.clama.pedido.DadosParaOracao;
 import me.clama.pedido.GeracaoSolicitada;
 import me.clama.pedido.PedidoApi;
@@ -36,10 +38,13 @@ class PedidoApiImpl implements PedidoApi {
 	private final ContaApi conta;
 	private final ApplicationEventPublisher eventos;
 	private final Clock relogio;
+	private final HmacDeIdentificador hmac;
 	@PersistenceContext
 	private EntityManager em;
 
-	PedidoApiImpl(PedidoRepository pedidos, ContaApi conta, ApplicationEventPublisher eventos, Clock relogio) {
+	PedidoApiImpl(PedidoRepository pedidos, ContaApi conta, ApplicationEventPublisher eventos, Clock relogio,
+			HmacDeIdentificador hmac) {
+		this.hmac = hmac;
 		this.pedidos = pedidos;
 		this.conta = conta;
 		this.eventos = eventos;
@@ -103,6 +108,11 @@ class PedidoApiImpl implements PedidoApi {
 	public void solicitarReenvio(UUID id) {
 		mudar(id, p -> p.solicitarReenvio(relogio.instant()));
 		eventos.publishEvent(new ReenvioSolicitado(id));
+	}
+
+	@Override
+	public List<String> corrigirDados(UUID id, CorrecaoDeDados correcao) {
+		return travado(id).corrigirDados(correcao, hmac);
 	}
 
 	@Override

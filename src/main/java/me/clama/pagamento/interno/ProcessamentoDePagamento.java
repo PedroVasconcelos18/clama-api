@@ -95,6 +95,11 @@ public class ProcessamentoDePagamento {
 		return processar(evento.id(), dataId);
 	}
 
+	/** Reprocessamento do admin de um evento RECEBIDO ou ERRO: mesmo fluxo do webhook (so {@code payment} tem o que processar). */
+	public Resultado reprocessar(long eventoId, String tipo, String dataId) {
+		return "payment".equals(tipo) ? processar(eventoId, dataId) : ignorar(eventoId, null, "tipo_nao_payment");
+	}
+
 	/** Evento RECEBIDO ou ERRO; o reprocessamento do admin (T6) entra por aqui. Nunca dentro de uma transacao. */
 	public Resultado processar(long eventoId, String dataId) {
 		// o GET ao MP nunca roda com transacao aberta: e o que sustenta o exactly-once do dinheiro

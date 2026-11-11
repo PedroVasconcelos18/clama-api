@@ -11,7 +11,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.QueryHints;
 
-public interface PedidoRepository extends JpaRepository<Pedido, UUID> {
+public interface PedidoRepository extends JpaRepository<Pedido, UUID>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<Pedido> {
 
 	/** {@code SELECT ... FOR UPDATE} com espera maxima de 15 s (lock preso vira erro, nao fila eterna). */
 	@Lock(LockModeType.PESSIMISTIC_WRITE)

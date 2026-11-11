@@ -191,6 +191,21 @@ public class Pedido {
 		this.emailHmac = hmac.email(email);
 	}
 
+	/** Correcao de dados pelo admin; nulo = deixa. Devolve os nomes dos campos que mudaram de fato. O status nao se toca. */
+	public java.util.List<String> corrigirDados(me.clama.pedido.CorrecaoDeDados c, HmacDeIdentificador hmac) {
+		var mudou = new java.util.ArrayList<String>();
+		if (c.nome() != null && !c.nome().equals(nome)) { nome = c.nome(); mudou.add("nome"); }
+		if (c.email() != null && !c.email().equals(email)) { alterarEmail(c.email(), hmac); mudou.add("email"); }
+		if (c.telefone() != null) {
+			var novo = c.telefone().isBlank() ? null : c.telefone();
+			if (!java.util.Objects.equals(novo, telefone)) { telefone = novo; mudou.add("telefone"); }
+		}
+		if (c.idade() != null && !c.idade().equals(idade)) { idade = c.idade(); mudou.add("idade"); }
+		if (c.sexo() != null && !c.sexo().equals(sexo)) { sexo = c.sexo(); mudou.add("sexo"); }
+		if (c.pedidoOracao() != null && !c.pedidoOracao().equals(pedidoOracao)) { pedidoOracao = c.pedidoOracao(); mudou.add("pedidoOracao"); }
+		return mudou;
+	}
+
 	/** Vincula o doador anonimo a conta criada ou achada no pagamento. */
 	public void vincularUsuario(Long usuarioId) {
 		this.usuarioId = usuarioId;

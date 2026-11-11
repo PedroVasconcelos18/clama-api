@@ -13,6 +13,76 @@
         },
         "type" : "object"
       },
+      "CobrancaDoPedido" : {
+        "properties" : {
+          "canceladaEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "criadaEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "expiraEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "mpPagamentoId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "n" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "pagaEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CorrecaoDoPedido" : {
+        "properties" : {
+          "email" : {
+            "format" : "email",
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "idade" : {
+            "format" : "int32",
+            "maximum" : 120,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "nome" : {
+            "maxLength" : 120,
+            "minLength" : 2,
+            "type" : "string"
+          },
+          "pedidoOracao" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "sexo" : {
+            "maxLength" : 20,
+            "minLength" : 0,
+            "pattern" : "feminino|masculino|nao_informado",
+            "type" : "string"
+          },
+          "telefone" : {
+            "maxLength" : 20,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "CredenciaisDeLogin" : {
         "properties" : {
           "email" : {
@@ -71,6 +141,91 @@
             "type" : "string"
           },
           "mensagem" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "EventoDoPedido" : {
+        "properties" : {
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "motivo" : {
+            "type" : "string"
+          },
+          "recebidoEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "tipo" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "EventoMpAdmin" : {
+        "properties" : {
+          "atualizadoEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "idExterno" : {
+            "type" : "string"
+          },
+          "motivo" : {
+            "type" : [ "string", "null" ]
+          },
+          "mpPagamentoId" : {
+            "type" : [ "string", "null" ]
+          },
+          "payload" : {
+            "additionalProperties" : { },
+            "type" : [ "object", "null" ]
+          },
+          "pedidoId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "recebidoEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "tipo" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "type" : "object"
+      },
+      "EventoReprocessado" : {
+        "properties" : {
+          "evento" : {
+            "$ref" : "#/components/schemas/EventoMpAdmin"
+          },
+          "resultado" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Instituicao" : {
+        "properties" : {
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "nome" : {
             "type" : "string"
           }
         },
@@ -331,6 +486,51 @@
         "required" : [ "number", "size", "totalElements", "totalPages" ],
         "type" : "object"
       },
+      "PagedModelEventoMpAdmin" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/EventoMpAdmin"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageMetadata"
+          }
+        },
+        "required" : [ "content", "page" ],
+        "type" : "object"
+      },
+      "PagedModelPedidoAdminItem" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PedidoAdminItem"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageMetadata"
+          }
+        },
+        "required" : [ "content", "page" ],
+        "type" : "object"
+      },
+      "PagedModelRepasseAdmin" : {
+        "properties" : {
+          "content" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RepasseAdmin"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageMetadata"
+          }
+        },
+        "required" : [ "content", "page" ],
+        "type" : "object"
+      },
       "PagedModelUsuarioAdminItem" : {
         "properties" : {
           "content" : {
@@ -344,6 +544,118 @@
           }
         },
         "required" : [ "content", "page" ],
+        "type" : "object"
+      },
+      "PedidoAdminDetalhe" : {
+        "properties" : {
+          "atualizadoEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "cobrancas" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CobrancaDoPedido"
+            },
+            "type" : "array"
+          },
+          "criadoEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "eventos" : {
+            "items" : {
+              "$ref" : "#/components/schemas/EventoDoPedido"
+            },
+            "type" : "array"
+          },
+          "gratuito" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "idade" : {
+            "format" : "int32",
+            "type" : [ "integer", "null" ]
+          },
+          "instituicao" : {
+            "$ref" : "#/components/schemas/Instituicao"
+          },
+          "nome" : {
+            "type" : "string"
+          },
+          "oracaoGerada" : {
+            "type" : [ "string", "null" ]
+          },
+          "pedidoOracao" : {
+            "type" : [ "string", "null" ]
+          },
+          "plano" : {
+            "$ref" : "#/components/schemas/Plano"
+          },
+          "repasse" : {
+            "$ref" : "#/components/schemas/RepasseDoPedido"
+          },
+          "sexo" : {
+            "type" : [ "string", "null" ]
+          },
+          "status" : {
+            "enum" : [ "AGUARDANDO_PAGAMENTO", "PAGO", "GERANDO_ORACAO", "ORACAO_GERADA", "ENVIADA", "AGUARDANDO_NOVA_TENTATIVA", "ERRO" ],
+            "type" : "string"
+          },
+          "telefone" : {
+            "type" : [ "string", "null" ]
+          },
+          "tentativas" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "ultimoErro" : {
+            "type" : [ "string", "null" ]
+          },
+          "usuarioId" : {
+            "format" : "int64",
+            "type" : [ "integer", "null" ]
+          },
+          "valorCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PedidoAdminItem" : {
+        "properties" : {
+          "criadoEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "gratuito" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "nome" : {
+            "type" : "string"
+          },
+          "plano" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "AGUARDANDO_PAGAMENTO", "PAGO", "GERANDO_ORACAO", "ORACAO_GERADA", "ENVIADA", "AGUARDANDO_NOVA_TENTATIVA", "ERRO" ],
+            "type" : "string"
+          },
+          "valorCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
         "type" : "object"
       },
       "PedidoCriado" : {
@@ -428,6 +740,22 @@
           },
           "qrBase64" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Plano" : {
+        "properties" : {
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "nome" : {
+            "type" : "string"
+          },
+          "valorCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -545,6 +873,95 @@
           }
         },
         "required" : [ "novaSenha", "token" ],
+        "type" : "object"
+      },
+      "RepasseAdmin" : {
+        "properties" : {
+          "canceladoEm" : {
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "criadoEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "instituicao" : {
+            "type" : [ "string", "null" ]
+          },
+          "instituicaoId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "motivo" : {
+            "type" : [ "string", "null" ]
+          },
+          "pedidoId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "percentual" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "transferidoEm" : {
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "valorBaseCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "valorCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "RepasseDoPedido" : {
+        "properties" : {
+          "canceladoEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "criadoEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "motivo" : {
+            "type" : "string"
+          },
+          "percentual" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "transferidoEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "valorBaseCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "valorCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
         "type" : "object"
       },
       "RespostaDoWebhook" : {
@@ -668,6 +1085,119 @@
   },
   "openapi" : "3.1.0",
   "paths" : {
+    "/api/admin/eventos-mp" : {
+      "get" : {
+        "operationId" : "listar_3",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 20,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "description" : "Zero-based page index (0..N)",
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "The size of the page to be returned",
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+          "in" : "query",
+          "name" : "sort",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PagedModelEventoMpAdmin"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "eventos-admin-controller" ]
+      }
+    },
+    "/api/admin/eventos-mp/{id}" : {
+      "get" : {
+        "operationId" : "detalhar_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EventoMpAdmin"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "eventos-admin-controller" ]
+      }
+    },
+    "/api/admin/eventos-mp/{id}/reprocessamento" : {
+      "post" : {
+        "operationId" : "reprocessar",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EventoReprocessado"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "eventos-admin-controller" ]
+      }
+    },
     "/api/admin/instituicoes" : {
       "get" : {
         "operationId" : "instituicoes",
@@ -812,6 +1342,174 @@
         "tags" : [ "catalogo-admin-controller" ]
       }
     },
+    "/api/admin/pedidos" : {
+      "get" : {
+        "operationId" : "listar_2",
+        "parameters" : [ {
+          "description" : "Um ou mais status separados por virgula.",
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "description" : "Dia inicial AAAA-MM-DD (Sao Paulo).",
+          "in" : "query",
+          "name" : "de",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "description" : "Dia final AAAA-MM-DD (Sao Paulo), inclusivo.",
+          "in" : "query",
+          "name" : "ate",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "gratuito",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "usuarioId",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 20,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "description" : "Busque pelo e-mail exato, pelo CPF/CNPJ exato ou pelo começo do id do pedido.",
+          "in" : "query",
+          "name" : "q",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "description" : "Zero-based page index (0..N)",
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "The size of the page to be returned",
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+          "in" : "query",
+          "name" : "sort",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PagedModelPedidoAdminItem"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "pedidos-admin-controller" ]
+      }
+    },
+    "/api/admin/pedidos/{id}" : {
+      "get" : {
+        "operationId" : "detalhar_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PedidoAdminDetalhe"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "pedidos-admin-controller" ]
+      },
+      "patch" : {
+        "operationId" : "corrigir",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CorrecaoDoPedido"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PedidoAdminDetalhe"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "pedidos-admin-controller" ]
+      }
+    },
     "/api/admin/planos" : {
       "get" : {
         "operationId" : "planos",
@@ -894,6 +1592,119 @@
           }
         },
         "tags" : [ "catalogo-admin-controller" ]
+      }
+    },
+    "/api/admin/repasses" : {
+      "get" : {
+        "operationId" : "listar_1",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "instituicaoId",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 20,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "status",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 20,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "de",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "ate",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "description" : "Zero-based page index (0..N)",
+          "in" : "query",
+          "name" : "page",
+          "required" : false,
+          "schema" : {
+            "default" : 0,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "The size of the page to be returned",
+          "in" : "query",
+          "name" : "size",
+          "required" : false,
+          "schema" : {
+            "default" : 20,
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        }, {
+          "description" : "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+          "in" : "query",
+          "name" : "sort",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PagedModelRepasseAdmin"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "repasses-admin-controller" ]
+      }
+    },
+    "/api/admin/repasses/{id}/transferencia" : {
+      "post" : {
+        "operationId" : "transferir",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RepasseAdmin"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "repasses-admin-controller" ]
       }
     },
     "/api/admin/usuarios" : {
