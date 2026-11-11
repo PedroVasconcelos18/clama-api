@@ -9,6 +9,12 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @TestConfiguration(proxyBeanMethods = false)
 public class BancoDeTeste {
 
+	/**
+	 * Quem enfileira e comita limpa a fila no {@code @BeforeEach} e no {@code @AfterEach} ({@code @FilaLigada} ja faz):
+	 * {@code jdbc.update(BancoDeTeste.LIMPAR_FILA)}.
+	 */
+	public static final String LIMPAR_FILA = "delete from scheduled_tasks";
+
 	@Bean
 	@ServiceConnection
 	PostgreSQLContainer postgres() {

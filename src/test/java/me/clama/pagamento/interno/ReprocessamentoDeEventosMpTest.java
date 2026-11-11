@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import me.clama.BancoDeTeste;
+import me.clama.CaixaDeSaidaEmMemoria;
 import me.clama.EmailDeTeste;
 import me.clama.infra.cripto.HmacDeIdentificador;
 import me.clama.infra.email.EnvioAssincrono;
@@ -48,12 +49,16 @@ class ReprocessamentoDeEventosMpTest {
 	@Autowired PedidoRepository pedidos;
 	@Autowired HmacDeIdentificador hmac;
 	@Autowired EnvioAssincrono envio;
+	@Autowired CaixaDeSaidaEmMemoria caixa;
+	@Autowired EmailDeTeste.RelogioAvancavel relogio;
 
 	@BeforeEach
 	@AfterEach
 	void limpar() throws Exception {
 		for (int i = 0; i < 500 && envio.pendentes() > 0; i++) Thread.sleep(10); // o link de senha grava token
 		MP.resetAll();
+		caixa.limpar();
+		relogio.zerar();
 		jdbc.update("delete from pagamento_evento");
 		jdbc.update("delete from repasse");
 		jdbc.update("delete from cobranca");
@@ -115,22 +120,60 @@ class ReprocessamentoDeEventosMpTest {
 		assertThat(evento("elegivel")).isEqualTo("PROCESSADO -");
 		assertThat(jdbc.queryForObject("select status from pedido where id = ?", String.class, pedido)).isEqualTo("PAGO");
 		assertThat(evento("recente")).isEqualTo("ERRO mp_indisponivel");
-		assertThat(evento("velho")).isEqualTo("ERRO mp_indisponivel");
+		assertThat(evento("velho")).isEqualTo("ERRO mp_indisponivel_expirado");
 		assertThat(evento("outro-motivo")).isEqualTo("ERRO erro_interno");
 		assertThat(evento("recebido")).isEqualTo("RECEBIDO -");
 		for (long id : new long[] { 102, 103, 104, 105 }) assertThat(getsNoMp(id)).as("GET %d", id).isZero();
 	}
 
 	@Test
-	void dryRunNaoChamaOMpNemAltera() {
+	void dryRunNaoChamaOMpNemAltera() throws Exception {
 		var pedido = pedidoComCobranca(101);
 		aprovado(101, pedido);
 		evento("elegivel", 101, "ERRO", "mp_indisponivel", Duration.ofHours(1));
+		evento("velho", 103, "ERRO", "mp_indisponivel", Duration.ofDays(4));
 
 		tarefa.executar(true);
 
 		assertThat(evento("elegivel")).isEqualTo("ERRO mp_indisponivel");
+		assertThat(evento("velho")).isEqualTo("ERRO mp_indisponivel");
 		assertThat(getsNoMp(101)).isZero();
+		Thread.sleep(200);
+		assertThat(caixa.enviados()).isEmpty();
+	}
+
+	/** Saiu da janela de 3 dias ainda em ERRO: um alerta so (sem PII), e o evento fica para o admin reprocessar. */
+	@Test
+	void foraDaJanelaAlertaUmaVez() throws Exception {
+		evento("velho", 103, "ERRO", "mp_indisponivel", Duration.ofDays(4));
+
+		tarefa.executar(false);
+		tarefa.executar(false);
+
+		var alertas = caixa.aguardarPara("contato@clama.me", 1);
+		Thread.sleep(200);
+		assertThat(caixa.enviados()).hasSize(1);
+		assertThat(alertas.get(0).email().texto()).contains("mp_indisponivel_expirado", "103");
+		assertThat(evento("velho")).isEqualTo("ERRO mp_indisponivel_expirado");
+		assertThat(getsNoMp(103)).isZero();
+	}
+
+	/** O que sempre falha nao segura os outros: a tentativa remarca atualizado_em e ele vai para o fim da fila. */
+	@Test
+	void eventoQueSempreFalhaNaoSeguraOsMaisNovos() {
+		MP.stubFor(get("/v1/payments/401").willReturn(aResponse().withStatus(500)));
+		var pedido = pedidoComCobranca(402);
+		aprovado(402, pedido);
+		evento("sempre-falha", 401, "ERRO", "mp_indisponivel", Duration.ofHours(2));
+		evento("mais-novo", 402, "ERRO", "mp_indisponivel", Duration.ofHours(1));
+
+		tarefa.executar(false); // o mais antigo falha e encerra a rodada
+		assertThat(evento("mais-novo")).isEqualTo("ERRO mp_indisponivel");
+		relogio.avancar(Duration.ofHours(1));
+		tarefa.executar(false);
+
+		assertThat(evento("mais-novo")).isEqualTo("PROCESSADO -");
+		assertThat(evento("sempre-falha")).isEqualTo("ERRO mp_indisponivel");
 	}
 
 	/** O MP continua fora: o evento fica ERRO para a proxima hora, e a rodada para (cada GET custa ate ~33 s). */

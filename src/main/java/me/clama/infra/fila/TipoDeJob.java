@@ -36,12 +36,17 @@ public abstract class TipoDeJob<P> extends OneTimeTask<P> {
 				.thenRemove(this::desistiu);
 	}
 
-	/** {@code tentativa}: falhas anteriores desta instancia (0 na primeira execucao). */
+	/**
+	 * {@code tentativa}: falhas anteriores desta instancia (0 na primeira execucao). <b>Precisa ser idempotente</b>: a
+	 * mesma instancia pode rodar mais de uma vez (revivida pelo heartbeat ~2 min depois de um no sumir, deploy no meio,
+	 * thread que sobrevive ao stop()).
+	 */
 	protected abstract void executar(P payload, int tentativa) throws Exception;
 
 	/**
-	 * Chamado uma vez quando as retentativas acabam, com a linha ja removida: aqui da para reenfileirar a mesma instancia
-	 * (numa transacao propria). {@code erro} pode ser nulo. Excecao aqui so vai para o log.
+	 * Chamado <b>no maximo</b> uma vez quando as retentativas acabam, com a linha ja removida: aqui da para reenfileirar a
+	 * mesma instancia (numa transacao propria). Pode nao rodar (no que morre entre remover a linha e chamar o gancho): a
+	 * rede de seguranca e a varredura de pedidos presos. {@code erro} pode ser nulo. Excecao aqui so vai para o log.
 	 */
 	protected void aoDesistir(P payload, Throwable erro) {}
 

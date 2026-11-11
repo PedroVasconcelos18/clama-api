@@ -45,13 +45,29 @@ class EventosDePagamento {
 
 	record Pendente(long id, String tipo, String mpPagamentoId) {}
 
-	/** ERRO por MP fora, com a ultima tentativa antes de {@code falhouAntesDe} e chegada depois de {@code chegouDepoisDe}. */
+	/**
+	 * ERRO por MP fora, com a ultima tentativa antes de {@code falhouAntesDe} e chegada depois de {@code chegouDepoisDe}. O
+	 * menos tentado recentemente primeiro: a tentativa que falha remarca {@code atualizado_em} e o evento vai para o fim.
+	 */
 	List<Pendente> mpIndisponivel(Instant falhouAntesDe, Instant chegouDepoisDe, int limite) {
 		return jdbc.query("""
 				SELECT id, tipo, mp_pagamento_id FROM pagamento_evento
 				WHERE status = 'ERRO' AND motivo = 'mp_indisponivel' AND atualizado_em < ? AND recebido_em > ?
-				ORDER BY recebido_em, id LIMIT ?""", (rs, n) -> new Pendente(rs.getLong(1), rs.getString(2), rs.getString(3)),
+				ORDER BY atualizado_em, id LIMIT ?""", (rs, n) -> new Pendente(rs.getLong(1), rs.getString(2), rs.getString(3)),
 				Timestamp.from(falhouAntesDe), Timestamp.from(chegouDepoisDe), limite);
+	}
+
+	/** Os ERRO por MP fora que chegaram antes de {@code chegouAntesDe} passam a {@code mp_indisponivel_expirado}, uma vez so. */
+	List<Pendente> expirarMpIndisponivel(Instant chegouAntesDe, Instant agora) {
+		return jdbc.query("""
+				UPDATE pagamento_evento SET motivo = 'mp_indisponivel_expirado', atualizado_em = ?
+				WHERE status = 'ERRO' AND motivo = 'mp_indisponivel' AND recebido_em <= ?
+				RETURNING id, tipo, mp_pagamento_id""", (rs, n) -> new Pendente(rs.getLong(1), rs.getString(2), rs.getString(3)),
+				Timestamp.from(agora), Timestamp.from(chegouAntesDe));
+	}
+
+	String motivo(long id) {
+		return jdbc.queryForObject("SELECT motivo FROM pagamento_evento WHERE id = ?", String.class, id);
 	}
 
 	/** {@code motivo}: codigo curto, sem PII. {@code pedidoId} nulo mantem o que ja estava. */

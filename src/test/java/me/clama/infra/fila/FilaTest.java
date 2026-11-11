@@ -100,7 +100,6 @@ class FilaTest {
 	@BeforeEach
 	@AfterEach
 	void limpar() {
-		jdbc.update("delete from scheduled_tasks");
 		job.zerar();
 		backoff.zerar();
 	}
@@ -300,15 +299,23 @@ class FilaTest {
 	}
 
 	/**
-	 * O db-scheduler espera shutdown-max-wait, interrompe e espera de novo (2x). A fila tem que drenar dentro de uma fase
-	 * de shutdown do Spring (15 s), depois do graceful do Tomcat.
+	 * O stop() do db-scheduler roda no destroy do bean, depois das fases de lifecycle (o graceful do Tomcat): espera
+	 * shutdown-max-wait, interrompe e espera de novo, e os executores utilitarios levam ate ~6 s. Tudo dentro dos 60 s de
+	 * draining do Railway.
 	 */
 	@Test
-	void drenagemCabeNaFaseDeShutdown(@Autowired Scheduler scheduler,
+	void shutdownCabeNoDraining(@Autowired Scheduler scheduler,
 			@Value("${spring.lifecycle.timeout-per-shutdown-phase}") Duration fase) {
 		var espera = (Duration) ReflectionTestUtils.getField(scheduler, "shutdownMaxWait");
-		assertThat(espera).isPositive();
-		assertThat(espera.multipliedBy(2)).isLessThanOrEqualTo(fase);
+		assertThat(espera).isEqualTo(Duration.ofSeconds(15));
+		assertThat(fase.plus(espera.multipliedBy(2)).plusSeconds(6)).isLessThanOrEqualTo(Duration.ofSeconds(60));
+	}
+
+	@Test
+	void tipoQueNaoEBeanERecusado() {
+		var avulso = new Gravador("avulso", TipoDeJob.Retentativas.NENHUMA);
+		assertThatThrownBy(() -> tx.executeWithoutResult(s -> fila.enfileirar(avulso, "a/1", new Dado("x"), Instant.now())))
+				.isInstanceOf(IllegalArgumentException.class).hasMessageContaining("avulso");
 	}
 
 	static void aguardar(CountDownLatch l) {
