@@ -147,7 +147,7 @@ public class AdminDeUsuariosServico {
 		sessoes.derrubarTodas(id);
 	}
 
-	/** Apaga o usuario (token_de_senha cai em cascade). ponytail: guardas "baniu alguem" e "autor de post" entram na onda 6, quando as tabelas existirem. */
+	/** Apaga o usuario. O resto cai pelas FKs: token_de_senha, comentarios, curtidas e ban recebido em cascade; "banido por" vira nulo (V7, D10). Sem guarda do blog. */
 	public void excluir(Long autorId, Long id) {
 		transacao.executeWithoutResult(s -> {
 			if (id.equals(autorId)) {
