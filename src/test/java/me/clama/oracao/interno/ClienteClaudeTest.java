@@ -72,6 +72,16 @@ class ClienteClaudeTest {
 	}
 
 	@Test
+	void textoEmBrancoNoPrimeiroBlocoEFalhaSemRetentar(WireMockRuntimeInfo wm) {
+		responde(200, OK.replace("Senhor, acolhe a Maria.\\n\\nAmém.", " \\n "));
+
+		assertThatThrownBy(() -> cliente(wm).gerar("s", "m")).isExactlyInstanceOf(ClienteClaude.Falha.class);
+
+		verify(1, postRequestedFor(urlEqualTo("/v1/messages")));
+		assertThat(esperas).isEmpty();
+	}
+
+	@Test
 	void sobrecargaRetentaCom1e2Segundos(WireMockRuntimeInfo wm) {
 		sequencia(new int[] { 529, 529, 200 }, new String[] { SOBRECARGA, SOBRECARGA, OK });
 

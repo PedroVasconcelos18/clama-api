@@ -6,6 +6,8 @@ import me.clama.infra.fila.Fila;
 import me.clama.infra.fila.TipoDeJob;
 import me.clama.pedido.GeracaoSolicitada;
 import me.clama.pedido.ReenvioSolicitado;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
@@ -16,13 +18,17 @@ import org.springframework.stereotype.Component;
 @Component
 class OuvinteDePedido {
 
+	private static final Logger LOG = LoggerFactory.getLogger(OuvinteDePedido.class);
+
 	private final Fila fila;
 	private final JobGerarOracao gerar;
+	private final JobEnviarOracao enviar;
 	private final JobReenviarOracao reenviar;
 
-	OuvinteDePedido(Fila fila, JobGerarOracao gerar, JobReenviarOracao reenviar) {
+	OuvinteDePedido(Fila fila, JobGerarOracao gerar, JobEnviarOracao enviar, JobReenviarOracao reenviar) {
 		this.fila = fila;
 		this.gerar = gerar;
+		this.enviar = enviar;
 		this.reenviar = reenviar;
 	}
 
@@ -31,9 +37,17 @@ class OuvinteDePedido {
 		enfileirarOuAntecipar(gerar, e.pedidoId(), e.pedidoId());
 	}
 
-	/** O {@code envio} novo faz a chave do e-mail nova: o reenvio sempre sai (D10). */
+	/**
+	 * O {@code envio} novo faz a chave do e-mail nova: o reenvio sempre sai (D10). Com a geracao ou o envio ainda na fila
+	 * e no-op, como no antigo: esse job ja vai entregar a oracao.
+	 */
 	@EventListener
 	void reenviar(ReenvioSolicitado e) {
+		var id = e.pedidoId();
+		if (fila.existePendente(gerar.getName(), gerar.instancia(id)) || fila.existePendente(enviar.getName(), enviar.instancia(id))) {
+			LOG.info("reenvio: geracao ou envio ainda na fila, nada enfileirado (pedido_id={})", id);
+			return;
+		}
 		enfileirarOuAntecipar(reenviar, e.pedidoId(), new JobReenviarOracao.Reenvio(e.pedidoId(), UUID.randomUUID()));
 	}
 

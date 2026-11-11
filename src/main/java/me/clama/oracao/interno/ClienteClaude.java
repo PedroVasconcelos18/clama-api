@@ -45,7 +45,7 @@ import org.springframework.stereotype.Component;
  * ({@code StaticAuthHeaders}); por isso o header e posto a mao. Nunca em log nem em mensagem.
  *
  * <p>Retentativa nossa (a do SDK fica desligada, {@code maxRetries(0)}), paridade com o INV:106: 3 tentativas com esperas
- * de 1 e 2 s, so em rede/timeout e 529. Credito esgotado (400 "credit balance", ou 402) vira {@link CreditosEsgotados} sem retentar. O texto
+ * de 1 e 2 s, so em rede/timeout e 529. Primeiro bloco sem texto (ou em branco) e {@link Falha}. Credito esgotado (400 "credit balance", ou 402) vira {@link CreditosEsgotados} sem retentar. O texto
  * e o do primeiro bloco, que tem de ser texto ({@code stop_reason=max_tokens} so gera WARN). O system vai com
  * {@code cache_control} efemero.
  *
@@ -267,7 +267,9 @@ public class ClienteClaude {
 		if (m.content().isEmpty() || !m.content().get(0).isText()) {
 			throw new Falha("Resposta da Claude sem texto no primeiro bloco", null);
 		}
-		return m.content().get(0).asText().text();
+		var texto = m.content().get(0).asText().text();
+		if (texto.isBlank()) throw new Falha("Resposta da Claude com texto vazio", null);
+		return texto;
 	}
 
 	/** 402 (billing) ou o 400 "Your credit balance is too low...". */

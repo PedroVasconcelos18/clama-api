@@ -45,6 +45,11 @@ public class AlertaAoAdmin {
 
 	/** {@code chave}: o mesmo alerta logico repetido em 24 h nao sai de novo (idempotencia da Resend). */
 	public void enviar(Alerta a, String chave) {
+		envio.executar("alerta ao admin (" + a.motivo() + ")", () -> enviarAgora(a, chave));
+	}
+
+	/** Sincrono, para quem ja esta fora da requisicao (job da fila): falha de envio lanca. */
+	public void enviarAgora(Alerta a, String chave) {
 		var id = a.pedidoId() == null ? null : a.pedidoId().toString(); // alerta sem pedido (evento expirado): sem "null"
 		var base = props.frontendUrl().replaceAll("/+$", "");
 		var email = modelos.montar(props.emailAdmin(), "[Clama] Alerta " + a.motivo() + (id == null ? "" : " — pedido " + id.substring(0, 8)),
@@ -56,7 +61,7 @@ public class AlertaAoAdmin {
 						"plano", ou(a.plano()),
 						"valor", a.valorCentavos() == null ? "-" : Dinheiro.reais(a.valorCentavos()),
 						"link", base + (id == null ? "/admin" : "/admin/pedidos?id=" + id)));
-		envio.executar("alerta ao admin (" + a.motivo() + ")", () -> enviador.enviar(email, "alerta/" + chave));
+		enviador.enviar(email, "alerta/" + chave);
 	}
 
 	private static String ou(String s) {

@@ -83,6 +83,7 @@ class PipelineOracaoTest {
 	@Autowired JobGerarOracao gerar;
 	@Autowired JobEnviarOracao enviar;
 	@Autowired VarreduraDePedidosPresos varredura;
+	@Autowired JobAlertaAdmin alertaAdmin;
 	@MockitoSpyBean PedidoApi api;
 
 	@BeforeEach
@@ -91,6 +92,7 @@ class PipelineOracaoTest {
 		for (int i = 0; i < 500 && envio.pendentes() > 0; i++) Thread.sleep(10);
 		CLAUDE.resetAll();
 		caixa.limpar();
+		jdbc.update(BancoDeTeste.LIMPAR_FILA); // gerar, enviar, reenviar e alerta-admin
 		jdbc.update("delete from pedido");
 		jdbc.update("delete from plano where tipo = 'COMUM'");
 		jdbc.update("delete from documento_contexto");
@@ -361,6 +363,66 @@ class PipelineOracaoTest {
 		assertThat(ultimoErro(id)).isNull();
 	}
 
+	@Test
+	void reenvioAPartirDeErroQueEsgotaVoltaParaErro() throws Exception {
+		claude(200, OK);
+		caixa.recusar(e -> e.assunto().startsWith("Sua oração"));
+		var id = pedidoPago();
+		aguardarStatus(id, StatusPedido.ERRO); // o envio esgotou: ERRO com a oracao gravada
+		caixa.aguardarPara(ADMIN, 1);
+
+		api.solicitarReenvio(id); // ERRO com oracao volta a ORACAO_GERADA
+
+		assertThat(caixa.aguardarPara(ADMIN, 2)).hasSize(2);
+		assertThat(status(id)).isEqualTo("ERRO");
+		assertThat(ultimoErro(id)).isEqualTo("falha_envio");
+	}
+
+	@Test
+	void reenvioComGeracaoOuEnvioNaFilaENoOp() throws Exception {
+		claude(200, OK);
+		var id = pedidoPago();
+		aguardarStatus(id, StatusPedido.ENVIADA);
+		tx.executeWithoutResult(s -> fila.enfileirar(enviar, enviar.instancia(id), id, Instant.now().plusSeconds(3600)));
+
+		api.solicitarReenvio(id);
+		semMudarPor(Duration.ofMillis(500));
+
+		assertThat(fila.existePendente("reenviar-oracao", "reenviar-oracao/" + id)).isFalse();
+		assertThat(oracoes()).hasSize(1);
+	}
+
+	// --- alerta (D11) ---
+
+	@Test
+	void alertaSoSaiDepoisDoCommitENaoSaiNoRollback() throws Exception {
+		var id = pedido();
+
+		tx.executeWithoutResult(s -> {
+			alertaAdmin.enfileirar(id, "pedido_preso");
+			s.setRollbackOnly();
+		});
+		semMudarPor(Duration.ofMillis(600));
+		assertThat(caixa.para(ADMIN)).as("rollback").isEmpty();
+
+		tx.executeWithoutResult(s -> {
+			alertaAdmin.enfileirar(id, "pedido_preso");
+			semMudarPorSemExcecao(Duration.ofMillis(600)); // a fila nao ve a linha antes do commit
+			assertThat(caixa.para(ADMIN)).as("antes do commit").isEmpty();
+		});
+		assertThat(alerta(id)).contains("pedido_preso", "AGUARDANDO_PAGAMENTO", "Oração Simples", "R$");
+		assertThat(fila.existePendente(alertaAdmin.getName(), alertaAdmin.instancia(id))).isFalse();
+		assertThat(jdbc.queryForObject("select count(*) from scheduled_tasks", Integer.class)).isZero();
+	}
+
+	void semMudarPorSemExcecao(Duration d) {
+		try {
+			Thread.sleep(d.toMillis());
+		} catch (InterruptedException e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
 	// --- varredura ---
 
 	UUID parado(String status, Duration ha) {
@@ -385,6 +447,20 @@ class PipelineOracaoTest {
 		assertThat(status(comJob)).isEqualTo("ORACAO_GERADA");
 		assertThat(status(recente)).isEqualTo("GERANDO_ORACAO");
 		assertThat(chamadasAClaude()).isZero(); // nunca regera
+	}
+
+	@Test
+	void varreduraPulaPedidoComJobEmExecucao() throws Exception {
+		var preso = parado("GERANDO_ORACAO", Duration.ofMinutes(30));
+		tx.executeWithoutResult(s -> fila.enfileirar(gerar, gerar.instancia(preso), preso, Instant.now().plusSeconds(3600)));
+		// outro no esta executando agora (a linha fica picked ate o job terminar)
+		jdbc.update("update scheduled_tasks set picked = true, picked_by = 'outro-no', last_heartbeat = now() where task_instance = ?",
+				gerar.instancia(preso));
+
+		varredura.executar(false);
+
+		assertThat(status(preso)).isEqualTo("GERANDO_ORACAO");
+		assertThat(caixa.para(ADMIN)).isEmpty();
 	}
 
 	@Test

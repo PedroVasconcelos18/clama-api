@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * {@code enviar-oracao/<pedido>} (INV:110, D12): e-mail {@code oracao} com a chave {@code oracao/<id>}, fora de transacao,
@@ -33,15 +34,17 @@ class JobEnviarOracao extends TipoDeJob<UUID> {
 	private final PedidoApi pedidos;
 	private final ModelosDeEmail modelos;
 	private final EnviadorDeEmail enviador;
-	private final AlertasDaOracao alertas;
+	private final JobAlertaAdmin alerta;
+	private final TransactionTemplate tx;
 
-	JobEnviarOracao(PedidoApi pedidos, ModelosDeEmail modelos, EnviadorDeEmail enviador, AlertasDaOracao alertas,
+	JobEnviarOracao(PedidoApi pedidos, ModelosDeEmail modelos, EnviadorDeEmail enviador, JobAlertaAdmin alerta, TransactionTemplate tx,
 			@Value("${clama.oracao.espera-envio:30s}") Duration espera) {
 		super("enviar-oracao", UUID.class, politica(espera));
 		this.pedidos = pedidos;
 		this.modelos = modelos;
 		this.enviador = enviador;
-		this.alertas = alertas;
+		this.alerta = alerta;
+		this.tx = tx;
 	}
 
 	static Retentativas politica(Duration espera) {
@@ -97,16 +100,17 @@ class JobEnviarOracao extends TipoDeJob<UUID> {
 			return;
 		}
 		if (d.status() == StatusPedido.ENVIADA) {
-			alertas.alertar(id, "falha_reenvio", "O reenvio da oração falhou em todas as tentativas (Resend). O pedido segue ENVIADA.");
+			tx.executeWithoutResult(s -> alerta.enfileirar(id, "falha_reenvio"));
 			return;
 		}
-		try {
-			pedidos.falhar(id, "falha_envio");
+		try { // ERRO e alerta na mesma transacao; a transicao recusada e tratada fora do template
+			tx.executeWithoutResult(s -> {
+				pedidos.falhar(id, "falha_envio");
+				alerta.enfileirar(id, "falha_envio");
+			});
 		} catch (TransicaoInvalidaException e) {
 			LOG.warn("enviar-oracao: desistiu, mas o pedido ja esta em {} (pedido_id={})", d.status(), id);
-			return;
 		}
-		alertas.alertar(id, "falha_envio", "O e-mail da oração falhou em todas as tentativas (Resend). A oração está gravada: use o reenvio.");
 	}
 
 	private Email email(DadosParaOracao d) {

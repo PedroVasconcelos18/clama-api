@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * {@code pedidos-presos} (INV:113), a cada 10 min: pedido em andamento sem mudar ha mais de 20 min e <b>sem job na
@@ -27,16 +28,18 @@ class VarreduraDePedidosPresos extends TarefaRecorrente {
 	private final PedidoApi pedidos;
 	private final Fila fila;
 	private final List<TipoDeJob<?>> jobs;
-	private final AlertasDaOracao alertas;
+	private final JobAlertaAdmin alerta;
+	private final TransactionTemplate tx;
 	private final Clock relogio;
 
 	VarreduraDePedidosPresos(PedidoApi pedidos, @Lazy Fila fila, JobGerarOracao gerar, JobEnviarOracao enviar,
-			JobReenviarOracao reenviar, AlertasDaOracao alertas, Clock relogio) {
+			JobReenviarOracao reenviar, JobAlertaAdmin alerta, TransactionTemplate tx, Clock relogio) {
 		super("pedidos-presos", "0 */10 * * * *");
 		this.pedidos = pedidos;
 		this.fila = fila;
 		this.jobs = List.of(gerar, enviar, reenviar);
-		this.alertas = alertas;
+		this.alerta = alerta;
+		this.tx = tx;
 		this.relogio = relogio;
 	}
 
@@ -50,16 +53,22 @@ class VarreduraDePedidosPresos extends TarefaRecorrente {
 			presos++;
 			if (dryRun) {
 				LOG.info("pedidos-presos (dry-run): pedido {} seria marcado como preso", id);
-			} else if (pedidos.falharSeParado(id, antesDe, "pedido_preso")) {
+			} else if (Boolean.TRUE.equals(tx.execute(s -> marcar(id, antesDe)))) {
 				marcados++;
 				LOG.warn("pedidos-presos: pedido {} parado ha mais de {} min sem job, foi para ERRO", id, JANELA.toMinutes());
-				alertas.alertar(id, "pedido_preso", "O pedido ficou mais de " + JANELA.toMinutes()
-						+ " minutos parado sem job na fila. Nada foi regerado: confira e regenere ou reenvie pelo admin.");
 			}
 		}
 		LOG.info("pedidos-presos: {} preso(s), {} marcado(s){}", presos, marcados, dryRun ? " (dry-run)" : "");
 	}
 
+	/** ERRO e alerta na mesma transacao; {@code false} = andou no meio, nada feito. */
+	private boolean marcar(UUID id, java.time.Instant antesDe) {
+		if (!pedidos.falharSeParado(id, antesDe, "pedido_preso")) return false;
+		alerta.enfileirar(id, "pedido_preso");
+		return true;
+	}
+
+	/** Agendado, em retentativa ou em execucao (linha picked) em outro no. */
 	private boolean comJob(UUID id) {
 		return jobs.stream().anyMatch(j -> fila.existePendente(j.getName(), j.instancia(id)));
 	}

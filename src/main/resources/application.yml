@@ -60,7 +60,7 @@ spring:
 
 # fila e tarefas recorrentes (D13). O stop() do scheduler roda no destroy do bean, DEPOIS das fases de lifecycle, e soma
 # ao tempo delas: graceful do Tomcat (15 s) + jobs em andamento ate 2 x shutdown-max-wait (espera, interrompe, espera de
-# novo) + ~6 s dos executores utilitarios = ~51 s, dentro dos 60 s de draining do Railway (FilaTest.shutdownCabeNoDraining)
+# novo) + ~6 s dos executores utilitarios + ate 5 s da fila de e-mail (EnvioAssincrono) = ~56 s, dentro dos 60 s de draining do Railway (FilaTest.shutdownCabeNoDraining)
 db-scheduler:
   threads: 4
   polling-interval: 2s

@@ -78,6 +78,7 @@ class FluxoDoacaoPagaTest {
 		FORA.resetAll();
 		caixa.limpar();
 		limite.limpar();
+		jdbc.update(BancoDeTeste.LIMPAR_FILA);
 		jdbc.update("delete from pagamento_evento");
 		jdbc.update("delete from repasse");
 		jdbc.update("delete from cobranca");

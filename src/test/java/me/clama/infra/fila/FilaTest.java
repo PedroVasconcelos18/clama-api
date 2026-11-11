@@ -308,7 +308,8 @@ class FilaTest {
 			@Value("${spring.lifecycle.timeout-per-shutdown-phase}") Duration fase) {
 		var espera = (Duration) ReflectionTestUtils.getField(scheduler, "shutdownMaxWait");
 		assertThat(espera).isEqualTo(Duration.ofSeconds(15));
-		assertThat(fase.plus(espera.multipliedBy(2)).plusSeconds(6)).isLessThanOrEqualTo(Duration.ofSeconds(60));
+		assertThat(fase.plus(espera.multipliedBy(2)).plusSeconds(6).plus(me.clama.infra.email.EnvioAssincrono.ESPERA_NO_DESLIGAMENTO))
+				.isLessThanOrEqualTo(Duration.ofSeconds(60));
 	}
 
 	@Test

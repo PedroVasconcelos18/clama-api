@@ -2,8 +2,8 @@ package me.clama.oracao.interno;
 
 import io.sentry.Sentry;
 import io.sentry.SentryLevel;
+import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
@@ -50,12 +50,13 @@ class JobGerarOracao extends TipoDeJob<UUID> {
 	private final ClienteClaude claude;
 	private final Fila fila;
 	private final JobEnviarOracao enviar;
-	private final AlertasDaOracao alertas;
+	private final JobAlertaAdmin alerta;
 	private final TransactionTemplate tx;
+	private final Clock relogio;
 	private final Duration novaTentativa;
 
 	JobGerarOracao(PedidoApi pedidos, CatalogoApi catalogo, PromptVigente prompts, AdminDeDocumentos documentos,
-			ClienteClaude claude, @Lazy Fila fila, JobEnviarOracao enviar, AlertasDaOracao alertas, TransactionTemplate tx,
+			ClienteClaude claude, @Lazy Fila fila, JobEnviarOracao enviar, JobAlertaAdmin alerta, TransactionTemplate tx, Clock relogio,
 			@Value("${clama.oracao.espera-geracao:60s}") Duration espera,
 			@Value("${clama.oracao.espera-nova-tentativa:300s}") Duration novaTentativa) {
 		super("gerar-oracao", UUID.class, new Retentativas(3, espera, 1.0));
@@ -66,8 +67,9 @@ class JobGerarOracao extends TipoDeJob<UUID> {
 		this.claude = claude;
 		this.fila = fila;
 		this.enviar = enviar;
-		this.alertas = alertas;
+		this.alerta = alerta;
 		this.tx = tx;
+		this.relogio = relogio;
 		this.novaTentativa = novaTentativa;
 	}
 
@@ -87,20 +89,19 @@ class JobGerarOracao extends TipoDeJob<UUID> {
 		} catch (ClienteClaude.CreditosEsgotados e) {
 			LOG.error("gerar-oracao: Anthropic sem creditos (pedido_id={})", id);
 			Sentry.captureMessage("Anthropic sem créditos: pedido em ERRO aguardando o admin", SentryLevel.ERROR);
-			falhar(id, "credit_balance", "A conta da Anthropic está sem créditos. Recarregue e regenere o pedido pelo admin.");
+			falhar(id, "credit_balance");
 			return;
 		} catch (ClienteClaude.Indisponivel e) {
 			LOG.warn("gerar-oracao: Claude indisponivel, a fila retenta (pedido_id={}, tentativa={})", id, tentativa + 1);
 			throw e;
 		} catch (ClienteClaude.Falha e) {
 			LOG.error("gerar-oracao: Claude recusou o pedido (pedido_id={}, documentos={})", id, fileIds.size(), e);
-			falhar(id, "falha_geracao", "A Claude recusou o pedido de geração (sem retentativa)."
-					+ (fileIds.isEmpty() ? "" : " Há documentos de contexto ativos: conferir documentos ativos (um arquivo pode ter sumido da Files API)."));
+			falhar(id, "falha_geracao");
 			return;
 		}
 		tx.executeWithoutResult(s -> {
 			pedidos.registrarOracao(id, texto);
-			fila.enfileirar(enviar, enviar.instancia(id), id, Instant.now());
+			fila.enfileirar(enviar, enviar.instancia(id), id, relogio.instant());
 		});
 		LOG.info("gerar-oracao: oracao gravada, envio enfileirado (pedido_id={})", id);
 	}
@@ -118,7 +119,7 @@ class JobGerarOracao extends TipoDeJob<UUID> {
 			return null;
 		}
 		if (d.status() == StatusPedido.ORACAO_GERADA) {
-			tx.executeWithoutResult(s -> fila.enfileirar(enviar, enviar.instancia(id), id, Instant.now())); // no-op se ja esta na fila
+			tx.executeWithoutResult(s -> fila.enfileirar(enviar, enviar.instancia(id), id, relogio.instant())); // no-op se ja esta na fila
 			LOG.info("gerar-oracao: oracao ja gerada, so garante o envio (pedido_id={})", id);
 			return null;
 		}
@@ -131,15 +132,19 @@ class JobGerarOracao extends TipoDeJob<UUID> {
 		return d;
 	}
 
-	/** O pedido vai a ERRO (transacao propria) e, depois do commit, o alerta. */
-	private void falhar(UUID id, String motivo, String detalhe) {
+	/**
+	 * ERRO e o alerta na mesma transacao. A transicao recusada sai do template (que desfaz tudo) e e tratada aqui fora:
+	 * pega-la la dentro deixaria a transacao marcada para rollback.
+	 */
+	private void falhar(UUID id, String motivo) {
 		try {
-			pedidos.falhar(id, motivo);
+			tx.executeWithoutResult(s -> {
+				pedidos.falhar(id, motivo);
+				alerta.enfileirar(id, motivo);
+			});
 		} catch (TransicaoInvalidaException e) {
 			LOG.warn("gerar-oracao: pedido ja mudou de status, sem {} (pedido_id={})", motivo, id);
-			return;
 		}
-		alertas.alertar(id, motivo, detalhe);
 	}
 
 	/** INV:109: reagenda em {@code novaTentativa} ate {@link #NOVAS_TENTATIVAS} vezes; depois ERRO e alerta. */
@@ -154,13 +159,13 @@ class JobGerarOracao extends TipoDeJob<UUID> {
 		if (d.status() == StatusPedido.GERANDO_ORACAO && d.tentativas() < NOVAS_TENTATIVAS) {
 			tx.executeWithoutResult(s -> {
 				pedidos.agendarNovaTentativa(id, "falha_geracao");
-				fila.enfileirar(this, instancia(id), id, Instant.now().plus(novaTentativa));
+				fila.enfileirar(this, instancia(id), id, relogio.instant().plus(novaTentativa));
 			});
 			LOG.warn("gerar-oracao: retentativas esgotadas, nova tentativa em {} s (pedido_id={}, novas_tentativas={})",
 					novaTentativa.toSeconds(), id, d.tentativas() + 1);
 		} else if (EM_ANDAMENTO.contains(d.status())) {
 			LOG.error("gerar-oracao: desistiu de vez (pedido_id={}, novas_tentativas={})", id, d.tentativas());
-			falhar(id, "falha_geracao", "A geração falhou em todas as tentativas (Claude indisponível ou erro interno).");
+			falhar(id, "falha_geracao");
 		}
 	}
 }

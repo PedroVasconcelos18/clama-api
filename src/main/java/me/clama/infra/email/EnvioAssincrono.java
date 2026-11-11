@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 public class EnvioAssincrono {
 
 	private static final Logger LOG = LoggerFactory.getLogger(EnvioAssincrono.class);
+	public static final java.time.Duration ESPERA_NO_DESLIGAMENTO = java.time.Duration.ofSeconds(5);
 
 	private final ThreadPoolExecutor executor = new ThreadPoolExecutor(2, 2, 0, TimeUnit.SECONDS,
 			new ArrayBlockingQueue<>(100), r -> {
@@ -56,8 +57,19 @@ public class EnvioAssincrono {
 		Sentry.captureException(e);
 	}
 
+	/**
+	 * Da ate {@link #ESPERA_NO_DESLIGAMENTO} para o que ja esta na fila sair (5 s e nao mais: entra na conta do draining
+	 * do Railway, {@code FilaTest.shutdownCabeNoDraining}). O que sobrar se perde, com aviso no log.
+	 */
 	@PreDestroy
 	void encerrar() {
 		executor.shutdown();
+		try {
+			if (!executor.awaitTermination(ESPERA_NO_DESLIGAMENTO.toMillis(), TimeUnit.MILLISECONDS)) {
+				LOG.warn("Desligando com {} envio(s) ainda pendente(s)", pendentes.get());
+			}
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
 	}
 }
