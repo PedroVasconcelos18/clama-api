@@ -1,5 +1,7 @@
 package me.clama.pedido.interno;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -34,6 +36,8 @@ class PedidoApiImpl implements PedidoApi {
 	private final ContaApi conta;
 	private final ApplicationEventPublisher eventos;
 	private final Clock relogio;
+	@PersistenceContext
+	private EntityManager em;
 
 	PedidoApiImpl(PedidoRepository pedidos, ContaApi conta, ApplicationEventPublisher eventos, Clock relogio) {
 		this.pedidos = pedidos;
@@ -42,8 +46,14 @@ class PedidoApiImpl implements PedidoApi {
 		this.relogio = relogio;
 	}
 
+	/**
+	 * Trava e relê. O {@code Pedido} nao tem {@code @Version}: se a transacao ja tinha lido o pedido (um {@code resumo}
+	 * antes), o {@code FOR UPDATE} devolveria a instancia velha do contexto e a transicao rodaria sobre um status vencido.
+	 */
 	private Pedido travado(UUID id) {
-		return pedidos.travar(id).orElseThrow(PedidoNaoEncontradoException::new);
+		var p = pedidos.travar(id).orElseThrow(PedidoNaoEncontradoException::new);
+		em.refresh(p);
+		return p;
 	}
 
 	/** Trava, aplica a transicao e grava (o JPA so atualiza o que mudou). */

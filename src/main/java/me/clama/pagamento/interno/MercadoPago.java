@@ -168,11 +168,13 @@ class MercadoPago {
 	 * O pagamento como o MP o ve agora: status bruto ({@code pending}, {@code approved}...), {@code external_reference},
 	 * {@code transaction_amount} (em reais, {@code BigDecimal}) e {@code currency_id}. Campos ausentes vem nulos.
 	 */
-	record Pagamento(String status, String referencia, BigDecimal valor, String moeda) {}
+	record Pagamento(String status, String referencia, BigDecimal valor, String moeda, String detalhe) {}
 
+	/** {@code detalhe}: o {@code status_detail} ({@code accredited}, {@code partially_refunded}...). */
 	Pagamento pagamento(long id) {
 		var p = chamar("payment_get", () -> cliente.get(id, opcoes(Map.of())));
-		return new Pagamento(p.getStatus(), p.getExternalReference(), p.getTransactionAmount(), p.getCurrencyId());
+		return new Pagamento(p.getStatus(), p.getExternalReference(), p.getTransactionAmount(), p.getCurrencyId(),
+				p.getStatusDetail());
 	}
 
 	void cancelar(long id) {

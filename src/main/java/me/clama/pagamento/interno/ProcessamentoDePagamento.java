@@ -14,6 +14,8 @@ import me.clama.pedido.PedidoApi;
 import me.clama.pedido.StatusPedido;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.dao.RecoverableDataAccessException;
 import org.springframework.dao.TransientDataAccessException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.TransactionException;
@@ -89,7 +91,7 @@ public class ProcessamentoDePagamento {
 			LOG.info("Mercado Pago webhook: ja processado (event=mercadopago_webhook_duplicate, id_externo={})", idExterno);
 			return Resultado.JA_PROCESSADO;
 		}
-		if (!"payment".equals(tipo)) return ignorar(evento.id(), "tipo_nao_payment");
+		if (!"payment".equals(tipo)) return ignorar(evento.id(), null, "tipo_nao_payment");
 		return processar(evento.id(), dataId);
 	}
 
@@ -101,7 +103,7 @@ public class ProcessamentoDePagamento {
 		try {
 			mpId = Long.parseLong(dataId);
 		} catch (NumberFormatException e) {
-			return ignorar(eventoId, "data_id_invalido");
+			return ignorar(eventoId, null, "data_id_invalido");
 		}
 		MercadoPago.Pagamento pagamento;
 		try {
@@ -110,7 +112,7 @@ public class ProcessamentoDePagamento {
 			if (f.quatroXX() && !TRANSIENTES.contains(f.status())) {
 				// pagamento inexistente ou requisicao recusada: nao e transiente, 200 sem loop de reenvio
 				Sentry.captureMessage("Mercado Pago webhook: GET do pagamento deu " + f.status(), SentryLevel.ERROR);
-				return ignorar(eventoId, "mp_" + f.status());
+				return ignorar(eventoId, null, "mp_" + f.status());
 			}
 			eventos.marcar(eventoId, EventosDePagamento.ERRO, "mp_indisponivel", null, relogio.instant());
 			LOG.warn("Mercado Pago webhook: GET do pagamento falhou (event=mercadopago_webhook_fetch_failed, mp_pagamento_id={}, "
@@ -119,10 +121,26 @@ public class ProcessamentoDePagamento {
 		}
 		var status = pagamento.status() == null ? "" : pagamento.status();
 		var aprovado = "approved".equals(status);
-		if (!aprovado && !ESTORNOS.contains(status)) return ignorar(eventoId, "nao_aprovado:" + status);
+		var mediacao = "in_mediation".equals(status);
+		if (!aprovado && !mediacao && !ESTORNOS.contains(status)) return ignorar(eventoId, null, "nao_aprovado:" + status);
 		var pedidoId = uuid(pagamento.referencia());
 		// antes da transacao: dentro dela o "nao encontrado" lancaria e a marca de IGNORADO voltaria junto
-		if (pedidoId == null || pedidos.resumo(pedidoId).isEmpty()) return ignorar(eventoId, "pedido_inexistente");
+		if (pedidoId == null || pedidos.resumo(pedidoId).isEmpty()) {
+			var r = ignorar(eventoId, null, "pedido_inexistente");
+			if (aprovado && pedidoId != null && r == Resultado.IGNORADO) {
+				alertar(pedidoId, mpId, "pedido_inexistente", "O pagamento " + mpId + " foi aprovado com a referência de um "
+						+ "pedido que não existe. Estorne pelo painel do Mercado Pago.");
+			}
+			return r;
+		}
+		if (mediacao) { // disputa aberta: nada muda ate o desfecho (refunded/charged_back ou approved), mas o admin fica sabendo
+			var r = ignorar(eventoId, pedidoId, "em_mediacao");
+			if (r == Resultado.IGNORADO) {
+				alertar(pedidoId, mpId, "em_mediacao", "O pagamento " + mpId + " entrou em disputa (in_mediation) no Mercado Pago. "
+						+ "O repasse não muda até o desfecho.");
+			}
+			return r;
+		}
 
 		Decisao d;
 		try {
@@ -153,6 +171,7 @@ public class ProcessamentoDePagamento {
 		}
 		if (p.status() != StatusPedido.AGUARDANDO_PAGAMENTO) {
 			if (cobrancas.pagouOPedido(pedidoId, mpId)) { // outra notificacao do pagamento que ja pagou
+				if (parcial(pagamento)) return ignorado(eventoId, pedidoId, "estorno_parcial", estornoParcial(mpId));
 				return Decisao.de(marcar(eventoId, EventosDePagamento.IGNORADO, "ja_pago", pedidoId) ? Resultado.JA_PAGO
 						: Resultado.JA_PROCESSADO);
 			}
@@ -173,7 +192,16 @@ public class ProcessamentoDePagamento {
 		if (!eventos.marcar(eventoId, EventosDePagamento.PROCESSADO, null, pedidoId, agora)) {
 			LOG.warn("Mercado Pago webhook: evento ja terminal ao marcar processado (evento_id={})", eventoId);
 		}
-		return Decisao.de(Resultado.OK);
+		return parcial(pagamento) ? new Decisao(Resultado.OK, "estorno_parcial", estornoParcial(mpId)) : Decisao.de(Resultado.OK);
+	}
+
+	/** Estorno parcial: o MP mantem {@code approved}; o repasse nao muda, o admin decide o acerto. */
+	private static boolean parcial(MercadoPago.Pagamento p) {
+		return "partially_refunded".equals(p.detalhe());
+	}
+
+	private static String estornoParcial(long mpId) {
+		return "O pagamento " + mpId + " teve estorno parcial. O repasse não foi alterado: confira e acerte no próximo ciclo.";
 	}
 
 	/** D9: o pedido nao muda; o repasse REGISTRADO e cancelado, o ja TRANSFERIDO vira alerta de acerto. */
@@ -194,8 +222,8 @@ public class ProcessamentoDePagamento {
 		return new Decisao(Resultado.IGNORADO, detalhe == null ? null : motivo, detalhe);
 	}
 
-	private Resultado ignorar(long eventoId, String motivo) {
-		return marcar(eventoId, EventosDePagamento.IGNORADO, motivo, null) ? Resultado.IGNORADO : Resultado.JA_PROCESSADO;
+	private Resultado ignorar(long eventoId, UUID pedidoId, String motivo) {
+		return marcar(eventoId, EventosDePagamento.IGNORADO, motivo, pedidoId) ? Resultado.IGNORADO : Resultado.JA_PROCESSADO;
 	}
 
 	private boolean marcar(long eventoId, String status, String motivo, UUID pedidoId) {
@@ -205,18 +233,22 @@ public class ProcessamentoDePagamento {
 	/** Depois do commit, sem PII (D11). Falha aqui so vai para o log: o pagamento ja foi decidido. */
 	private void alertar(UUID pedidoId, long mpId, String motivo, String detalhe) {
 		try {
-			var p = pedidos.resumo(pedidoId).orElseThrow();
-			var plano = catalogo.planos(List.of(p.planoId())).get(p.planoId());
-			alerta.enviar(new AlertaAoAdmin.Alerta(motivo, detalhe, pedidoId, p.status().name(), plano == null ? null : plano.nome(),
-					p.valorCentavos()), "pagamento/" + mpId + "/" + motivo);
+			var p = pedidos.resumo(pedidoId).orElse(null); // pedido inexistente: so id e motivo
+			var plano = p == null ? null : catalogo.planos(List.of(p.planoId())).get(p.planoId());
+			alerta.enviar(new AlertaAoAdmin.Alerta(motivo, detalhe, pedidoId, p == null ? null : p.status().name(),
+					plano == null ? null : plano.nome(), p == null ? null : p.valorCentavos()), "pagamento/" + mpId + "/" + motivo);
 		} catch (RuntimeException e) {
 			EnvioAssincrono.registrar("alerta ao admin (" + motivo + ") do pedido " + pedidoId, e);
 		}
 	}
 
-	/** Trava presa, banco fora: o MP reenviando resolve. O resto (dado ruim, bug) repetiria a mesma falha. */
-	private static boolean transitoria(Throwable e) {
-		return e instanceof TransientDataAccessException || e instanceof TransactionException;
+	/**
+	 * Infraestrutura (trava presa, conexao caida, banco fora): o MP reenviando resolve. O resto (violacao de integridade,
+	 * argumento ou estado invalido, NPE, pedido apagado) e deterministico e repetiria a mesma falha.
+	 */
+	static boolean transitoria(Throwable e) {
+		return e instanceof TransientDataAccessException || e instanceof TransactionException
+				|| e instanceof DataAccessResourceFailureException || e instanceof RecoverableDataAccessException;
 	}
 
 	/** {@code external_reference} e o uuid do pedido (a cobranca grava assim); outra coisa e pedido inexistente. */

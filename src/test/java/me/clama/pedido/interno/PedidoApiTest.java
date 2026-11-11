@@ -63,6 +63,28 @@ class PedidoApiTest {
 		assertThat(eventos.stream(GeracaoSolicitada.class)).extracting(GeracaoSolicitada::pedidoId).containsExactly(id);
 	}
 
+	/**
+	 * Regressao: ler o pedido e depois travar na mesma transacao. Sem {@code @Version}, o {@code FOR UPDATE} devolveria a
+	 * instancia velha do contexto e confirmaria de novo um pedido que outra transacao ja pagou.
+	 */
+	@Test
+	void lerAntesDeTravarNaMesmaTransacaoEnxergaOEstadoAtual() {
+		var id = novo("doador-" + UUID.randomUUID() + "@exemplo.com").getId();
+		var confirmou = tx.execute(s -> {
+			assertThat(api.resumo(id).orElseThrow().status()).isEqualTo(StatusPedido.AGUARDANDO_PAGAMENTO); // fica no contexto
+			var outra = new Thread(() -> jdbc.update("update pedido set status = 'PAGO' where id = ?", id)); // commit proprio
+			outra.start();
+			try {
+				outra.join();
+			} catch (InterruptedException e) {
+				throw new IllegalStateException(e);
+			}
+			return api.confirmarPagamento(id);
+		});
+		assertThat(confirmou).isFalse();
+		assertThat(eventos.stream(GeracaoSolicitada.class)).isEmpty();
+	}
+
 	@Test
 	void confirmarPagamentoRepetidoNaoFazNadaEDevolveFalse() {
 		var id = novo("doador-" + UUID.randomUUID() + "@exemplo.com").getId();

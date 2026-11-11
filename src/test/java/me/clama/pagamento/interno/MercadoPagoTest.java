@@ -237,14 +237,15 @@ class MercadoPagoTest {
 	@Test
 	void pagamentoLeStatusReferenciaValorEMoeda(WireMockRuntimeInfo wm) {
 		stubFor(get("/v1/payments/123").willReturn(okJson("""
-				{"id": 123, "status": "approved", "external_reference": "ref-1", "transaction_amount": 30.01, "currency_id": "BRL"}""")));
+				{"id": 123, "status": "approved", "external_reference": "ref-1", "transaction_amount": 30.01, "currency_id": "BRL", "status_detail": "accredited"}""")));
 		var p = mp(wm).pagamento(123);
+		assertThat(p.detalhe()).isEqualTo("accredited");
 		assertThat(p.status()).isEqualTo("approved");
 		assertThat(p.referencia()).isEqualTo("ref-1");
 		assertThat(p.valor()).isEqualByComparingTo("30.01");
 		assertThat(p.moeda()).isEqualTo("BRL");
 		stubFor(get("/v1/payments/124").willReturn(okJson("{\"id\": 124}")));
-		assertThat(mp(wm).pagamento(124)).isEqualTo(new MercadoPago.Pagamento(null, null, null, null));
+		assertThat(mp(wm).pagamento(124)).isEqualTo(new MercadoPago.Pagamento(null, null, null, null, null));
 		verify(getRequestedFor(urlEqualTo("/v1/payments/123")).withHeader("Authorization", equalTo("Bearer test")));
 	}
 

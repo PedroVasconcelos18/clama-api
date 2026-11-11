@@ -41,8 +41,8 @@ final class AssinaturaMercadoPago extends OncePerRequestFilter {
 
 	private static final Logger LOG = LoggerFactory.getLogger(AssinaturaMercadoPago.class);
 	private static final JsonMapper JSON = JsonMapper.builder().build();
-	/** A notificacao do MP tem poucas centenas de bytes; o payload vai para um jsonb. */
-	static final int LIMITE_DO_CORPO = 64 * 1024;
+	/** A notificacao do MP tem ~200 bytes (vetores do sistema antigo); 8 KB e folga de sobra. */
+	static final int LIMITE_DO_CORPO = 8 * 1024;
 	static final String PASTORAL_ASSINATURA = "Não pudemos confirmar quem enviou essa requisição.";
 
 	private final String segredo;

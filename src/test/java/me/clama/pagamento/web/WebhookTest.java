@@ -2,6 +2,9 @@ package me.clama.pagamento.web;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -28,6 +31,7 @@ import me.clama.EmailDeTeste;
 import me.clama.conta.web.Navegador;
 import me.clama.infra.cripto.HmacDeIdentificador;
 import me.clama.infra.email.EnvioAssincrono;
+import me.clama.pagamento.interno.Cobrancas;
 import me.clama.pedido.interno.Pedido;
 import me.clama.pedido.interno.PedidoRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -41,6 +45,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.dao.RecoverableDataAccessException;
 import tools.jackson.databind.JsonNode;
 
 /**
@@ -75,6 +82,7 @@ class WebhookTest {
 	@Autowired HmacDeIdentificador hmac;
 	@Autowired CaixaDeSaidaEmMemoria caixa;
 	@Autowired EnvioAssincrono envio;
+	@MockitoSpyBean Cobrancas cobrancas;
 
 	final HttpClient http = HttpClient.newHttpClient();
 
@@ -121,10 +129,14 @@ class WebhookTest {
 	}
 
 	static void mp(long id, String status, Object referencia, String valor, String moeda) {
+		mp(id, status, referencia, valor, moeda, "accredited");
+	}
+
+	static void mp(long id, String status, Object referencia, String valor, String moeda, String detalhe) {
 		var ref = referencia == null ? "null" : "\"" + referencia + "\"";
 		MP.stubFor(get("/v1/payments/" + id).willReturn(okJson("""
-				{"id": %d, "status": "%s", "external_reference": %s, "transaction_amount": %s, "currency_id": "%s"}"""
-				.formatted(id, status, ref, valor, moeda))));
+				{"id": %d, "status": "%s", "status_detail": "%s", "external_reference": %s, "transaction_amount": %s, "currency_id": "%s"}"""
+				.formatted(id, status, detalhe, ref, valor, moeda))));
 	}
 
 	static void aprovado(long id, UUID pedido) {
@@ -150,7 +162,8 @@ class WebhookTest {
 		var requestId = "req-" + idNotificacao;
 		var ts = "1762434000";
 		var corpo = "{\"id\": " + idNotificacao + ", \"type\": \"" + tipo + "\", \"action\": \"payment.updated\", "
-				+ "\"data\": {\"id\": \"" + dataId + "\"}}";
+				+ "\"api_version\": \"v1\", \"live_mode\": true, \"user_id\": \"2061717470\", "
+				+ "\"date_created\": \"2026-11-06T13:00:00Z\", \"data\": {\"id\": \"" + dataId + "\", \"extra\": 1}}";
 		return enviar("?data.id=" + dataId + "&type=" + tipo, corpo, "x-request-id", requestId, "x-signature",
 				"ts=" + ts + ",v1=" + assinar(String.valueOf(dataId), requestId, ts));
 	}
@@ -215,7 +228,7 @@ class WebhookTest {
 
 	@Test
 	void corpoAcimaDoTetoE400AntesDaAssinatura() throws Exception {
-		var grande = "{\"id\": 1, \"x\": \"" + "a".repeat(70_000) + "\"}";
+		var grande = "{\"id\": 1, \"x\": \"" + "a".repeat(8_200) + "\"}"; // teto de 8 KB
 		var r = enviar("?data.id=" + PAG, grande);
 		assertThat(r.statusCode()).as("400 antes do 401 da assinatura").isEqualTo(400);
 		assertThat(Navegador.json(r).get("codigo").asString()).isEqualTo("corpo_grande_demais");
@@ -266,6 +279,9 @@ class WebhookTest {
 		assertThat(evento(1)).startsWith("PROCESSADO");
 		assertThat(jdbc.queryForMap("select pedido_id, mp_pagamento_id from pagamento_evento where id_externo = '1'"))
 				.containsEntry("pedido_id", id).containsEntry("mp_pagamento_id", String.valueOf(PAG));
+		assertThat(Navegador.JSON.readTree(jdbc.queryForObject("select payload::text from pagamento_evento where id_externo = '1'",
+				String.class))).as("so id, type, action e data.id").isEqualTo(Navegador.JSON.readTree("""
+						{"id": 1, "type": "payment", "action": "payment.updated", "data": {"id": "%d"}}""".formatted(PAG)));
 		assertThat(contar("select count(*) from cobranca where pedido_id = ? and paga_em is not null", id)).isEqualTo(1);
 		assertThat(caixa.aguardarPara("maria@exemplo.com", 1)).as("link de definir senha da conta nova").hasSize(1);
 		assertThat(caixa.para(ADMIN)).isEmpty();
@@ -364,16 +380,20 @@ class WebhookTest {
 
 	@Test
 	void pedidoInexistenteOuReferenciaInvalidaFicaIgnorado() throws Exception {
-		mp(PAG, "approved", UUID.randomUUID(), "30.01", "BRL");
+		var inexistente = UUID.randomUUID();
+		mp(PAG, "approved", inexistente, "30.01", "BRL");
 		assertThat(status(notificar(1))).isEqualTo("ignored");
 		assertThat(evento(1)).isEqualTo("IGNORADO pedido_inexistente");
+		assertThat(alerta(inexistente)).as("dinheiro aprovado sem pedido: alerta").contains("pedido_inexistente");
 		mp(PAG, "approved", "nao-e-uuid", "30.01", "BRL");
 		assertThat(status(notificar(2))).isEqualTo("ignored");
 		assertThat(evento(2)).isEqualTo("IGNORADO pedido_inexistente");
 		mp(PAG, "approved", null, "30.01", "BRL");
 		assertThat(status(notificar(3))).isEqualTo("ignored");
 		assertThat(evento(3)).isEqualTo("IGNORADO pedido_inexistente");
-		assertThat(caixa.enviados()).isEmpty();
+		mp(PAG, "refunded", UUID.randomUUID(), "30.01", "BRL");
+		assertThat(status(notificar(4))).isEqualTo("ignored");
+		assertThat(caixa.enviados()).as("referencia invalida ou estorno: sem alerta").hasSize(1);
 	}
 
 	@Test
@@ -468,7 +488,61 @@ class WebhookTest {
 		assertThat(statusDoPedido(id)).isEqualTo("AGUARDANDO_PAGAMENTO");
 	}
 
+	@Test
+	void disputaAbertaAlertaSemMexerNoRepasse() throws Exception {
+		var id = pedido();
+		cobranca(id, 1, PAG);
+		aprovado(PAG, id);
+		assertThat(status(notificar(1))).isEqualTo("ok");
+
+		mp(PAG, "in_mediation", id, "30.01", "BRL");
+		assertThat(status(notificar(2))).isEqualTo("ignored");
+
+		assertThat(evento(2)).isEqualTo("IGNORADO em_mediacao");
+		assertThat(alerta(id)).contains("em_mediacao", "disputa");
+		assertThat(jdbc.queryForObject("select status from repasse where pedido_id = ?", String.class, id)).isEqualTo("REGISTRADO");
+		assertThat(statusDoPedido(id)).isEqualTo("PAGO");
+	}
+
+	@Test
+	void estornoParcialAlertaSemMexerNoRepasse() throws Exception {
+		var id = pedido();
+		cobranca(id, 1, PAG);
+		aprovado(PAG, id);
+		assertThat(status(notificar(1))).isEqualTo("ok");
+
+		mp(PAG, "approved", id, "30.01", "BRL", "partially_refunded"); // o MP mantem approved no estorno parcial
+		assertThat(status(notificar(2))).isEqualTo("ignored");
+
+		assertThat(evento(2)).isEqualTo("IGNORADO estorno_parcial");
+		assertThat(alerta(id)).contains("estorno_parcial", "estorno parcial");
+		assertThat(jdbc.queryForObject("select status from repasse where pedido_id = ?", String.class, id)).isEqualTo("REGISTRADO");
+	}
+
 	// --- falha interna ---
+
+	/** Banco ou conexao caindo no meio: 5xx para o MP reentregar sozinho, sem alerta; o evento fica reprocessavel. */
+	@Test
+	void falhaDeInfraestruturaDevolve5xxParaOMpReentregar() throws Exception {
+		var id = pedido();
+		cobranca(id, 1, PAG);
+		aprovado(PAG, id);
+		var n = 0L;
+		for (var falha : List.of(new DataAccessResourceFailureException("conexao caiu (teste)"),
+				new RecoverableDataAccessException("banco reiniciando (teste)"))) {
+			doThrow(falha).when(cobrancas).registrarPagamento(anyLong(), any());
+			var r = notificar(++n);
+			assertThat(r.statusCode()).as(falha.getClass().getSimpleName()).isEqualTo(500);
+			assertThat(evento(n)).as("nao terminal: a reentrega processa").isEqualTo("ERRO erro_interno");
+			assertThat(statusDoPedido(id)).isEqualTo("AGUARDANDO_PAGAMENTO");
+		}
+		org.mockito.Mockito.reset(cobrancas);
+		assertThat(status(notificar(1))).isEqualTo("ok");
+		assertThat(contar("select count(*) from repasse")).isEqualTo(1);
+		for (int i = 0; i < 500 && envio.pendentes() > 0; i++) Thread.sleep(10); // um alerta, se houvesse, ja teria saido
+		assertThat(caixa.para(ADMIN)).as("infra: sem alerta").isEmpty();
+	}
+
 
 	/**
 	 * O e-mail estoura dentro do provisionamento (coluna de 254): a transacao inteira volta, o evento fica ERRO numa

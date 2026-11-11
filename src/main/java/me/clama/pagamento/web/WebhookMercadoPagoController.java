@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -42,12 +43,26 @@ class WebhookMercadoPagoController {
 		}
 		var tipo = texto(payload.get("type"));
 		var dataId = AssinaturaMercadoPago.parametro(req.getQueryString(), "data.id"); // o assinado; o do corpo nunca vale
-		var r = processamento.receber(id, tipo == null ? "" : tipo, dataId, JSON.writeValueAsString(payload));
+		var r = processamento.receber(id, tipo == null ? "" : tipo, dataId, JSON.writeValueAsString(essencial(payload)));
 		if (r == Resultado.FALHA_TEMPORARIA) {
 			throw new ErroDeNegocio(HttpStatus.INTERNAL_SERVER_ERROR, "falha_temporaria", "Falha temporária; o Mercado Pago reenvia.",
 					"Tente novamente em instantes.");
 		}
 		return new RespostaDoWebhook(r.status);
+	}
+
+	/**
+	 * O que fica gravado: so {@code id}, {@code type}, {@code action} e {@code data.id}. O corpo nao e assinado, entao o
+	 * resto (qualquer coisa que um replay quisesse plantar) nao vai para o banco.
+	 */
+	private static ObjectNode essencial(JsonNode payload) {
+		var r = JSON.createObjectNode();
+		for (var campo : new String[] { "id", "type", "action" }) {
+			if (payload.has(campo)) r.set(campo, payload.get(campo));
+		}
+		var dataId = payload.path("data").get("id");
+		if (dataId != null) r.putObject("data").set("id", dataId);
+		return r;
 	}
 
 	/** O corpo se for um objeto JSON; senao nulo (vazio, lista, texto). */
