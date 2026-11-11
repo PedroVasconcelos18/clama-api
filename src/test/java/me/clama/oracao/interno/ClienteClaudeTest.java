@@ -36,7 +36,7 @@ class ClienteClaudeTest {
 	final List<Duration> esperas = new ArrayList<>();
 
 	ClienteClaude cliente(String url, String chave, Duration timeout) {
-		return new ClienteClaude(new OracaoProps(chave, url, "claude-sonnet-4-6", 1500, timeout), esperas::add);
+		return new ClienteClaude(new OracaoProps(chave, url, "claude-sonnet-4-6", 1500, timeout, null), esperas::add);
 	}
 
 	ClienteClaude cliente(WireMockRuntimeInfo wm) {
@@ -57,10 +57,24 @@ class ClienteClaudeTest {
 	}
 
 	@Test
+	void devolveOUsoDaResposta(WireMockRuntimeInfo wm) {
+		responde(200, OK);
+
+		var uso = cliente(wm).gerar("s", "m").uso();
+
+		assertThat(uso.tokensEntrada()).isEqualTo(812);
+		assertThat(uso.tokensSaida()).isEqualTo(164);
+		assertThat(uso.tokensCacheEscrita()).isZero(); // 0 no JSON
+		assertThat(uso.tokensCacheLeitura()).isEqualTo(790);
+		assertThat(uso.modelo()).isEqualTo("claude-sonnet-4-6");
+		assertThat(uso.duracaoMs()).isNotNegative();
+	}
+
+	@Test
 	void corpoComModeloTokensSystemEmCacheEMensagem(WireMockRuntimeInfo wm) {
 		responde(200, OK);
 
-		assertThat(cliente(wm).gerar("Você é o Clama.", "Pedido: paz")).isEqualTo("Senhor, acolhe a Maria.\n\nAmém.");
+		assertThat(cliente(wm).gerar("Você é o Clama.", "Pedido: paz").texto()).isEqualTo("Senhor, acolhe a Maria.\n\nAmém.");
 
 		verify(1, postRequestedFor(urlEqualTo("/v1/messages")).withRequestBody(equalToJson("""
 				{"model": "claude-sonnet-4-6", "max_tokens": 1500,
@@ -85,7 +99,7 @@ class ClienteClaudeTest {
 	void sobrecargaRetentaCom1e2Segundos(WireMockRuntimeInfo wm) {
 		sequencia(new int[] { 529, 529, 200 }, new String[] { SOBRECARGA, SOBRECARGA, OK });
 
-		assertThat(cliente(wm).gerar("s", "m")).startsWith("Senhor");
+		assertThat(cliente(wm).gerar("s", "m").texto()).startsWith("Senhor");
 
 		verify(3, postRequestedFor(urlEqualTo("/v1/messages")));
 		assertThat(esperas).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
@@ -173,7 +187,7 @@ class ClienteClaudeTest {
 		eventos.start();
 		log.addAppender(eventos);
 		try {
-			assertThat(cliente(wm).gerar("s", "m")).startsWith("Senhor");
+			assertThat(cliente(wm).gerar("s", "m").texto()).startsWith("Senhor");
 		} finally {
 			log.detachAppender(eventos);
 		}

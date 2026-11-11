@@ -90,6 +90,10 @@ public class Pedido {
 	private Instant criadoEm;
 	private Instant atualizadoEm;
 
+	/** Metricas (D14): marcados uma vez cada, pelo proprio pedido. */
+	private Instant pagoEm;
+	private Instant enviadaEm;
+
 	protected Pedido() {}
 
 	/** Pedido pago depois: nasce AGUARDANDO_PAGAMENTO. Os HMACs de busca saem do e-mail e do CPF/CNPJ (nulo se nao informado). */
@@ -141,10 +145,12 @@ public class Pedido {
 
 	public void confirmarPagamento(Instant agora) {
 		ir(PAGO, "confirmar pagamento", EnumSet.of(AGUARDANDO_PAGAMENTO), agora);
+		pagoEm = atualizadoEm;
 	}
 
 	public void concederGratuidade(Instant agora) {
 		ir(PAGO, "conceder gratuidade", EnumSet.of(AGUARDANDO_PAGAMENTO), agora);
+		pagoEm = atualizadoEm;
 		gratuito = true;
 		valorCentavos = 0;
 	}
@@ -152,6 +158,7 @@ public class Pedido {
 	/** Freemium: e-mail confirmado; vai a PAGO ("pronto para gerar", como o gratuito logado). */
 	public void confirmarEmail(Instant agora) {
 		ir(PAGO, "confirmar e-mail", EnumSet.of(AGUARDANDO_CONFIRMACAO_EMAIL), agora);
+		pagoEm = atualizadoEm;
 	}
 
 	/** Freemium: o link nunca foi usado; terminal. */
@@ -184,6 +191,7 @@ public class Pedido {
 	/** No reenvio o pedido ja esta ENVIADA: fica como esta. */
 	public void marcarEnviado(Instant agora) {
 		ir(ENVIADA, "marcar enviado", EnumSet.of(ORACAO_GERADA, ENVIADA), agora);
+		if (enviadaEm == null) enviadaEm = atualizadoEm; // so o primeiro envio (D14)
 	}
 
 	/** ERRO com oracao volta a ORACAO_GERADA; ENVIADA e ORACAO_GERADA ficam como estao. */
@@ -255,4 +263,6 @@ public class Pedido {
 	public int getTentativas() { return tentativas; }
 	public Instant getCriadoEm() { return criadoEm; }
 	public Instant getAtualizadoEm() { return atualizadoEm; }
+	public Instant getPagoEm() { return pagoEm; }
+	public Instant getEnviadaEm() { return enviadaEm; }
 }

@@ -1,5 +1,6 @@
 package me.clama.infra.web;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -37,6 +38,22 @@ public final class FiltrosDeAdmin {
 	/** Meia-noite de Sao Paulo do dia seguinte (limite exclusivo do dia final). */
 	public static Instant fimExclusivo(LocalDate dia) {
 		return dia == null ? null : dia.plusDays(1).atStartOfDay(SAO_PAULO).toInstant();
+	}
+
+	/** Periodo em dias de SP, {@code [inicio, fimExclusivo)}. */
+	public record Periodo(Instant inicio, Instant fimExclusivo) {}
+
+	/**
+	 * {@code de}/{@code ate} das metricas: o padrao e do dia 1 do mes de {@code ate} (do mes corrente se nao vier) ate
+	 * {@code ate} (hoje em SP se nao vier). Malformado ou fora de ordem e 400.
+	 */
+	public static Periodo periodoDoMes(String de, String ate, Clock relogio) {
+		var fim = dia("ate", ate);
+		if (fim == null) fim = relogio.instant().atZone(SAO_PAULO).toLocalDate();
+		var inicio = dia("de", de);
+		if (inicio == null) inicio = fim.withDayOfMonth(1);
+		ordemDoPeriodo(inicio, fim);
+		return new Periodo(inicio(inicio), fimExclusivo(fim));
 	}
 
 	public static void ordemDoPeriodo(LocalDate de, LocalDate ate) {

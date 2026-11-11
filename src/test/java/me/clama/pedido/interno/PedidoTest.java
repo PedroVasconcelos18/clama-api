@@ -266,4 +266,31 @@ class PedidoTest {
 	}
 
 	private static final StatusPedido AGORA_STATUS = PAGO;
+
+	@Test
+	void pagoEmNasTresConfirmacoes() {
+		var pago = novo();
+		pago.confirmarPagamento(AGORA);
+		var gratis = novo();
+		gratis.concederGratuidade(AGORA);
+		var freemium = freemium();
+		freemium.confirmarEmail(AGORA);
+
+		assertThat(pago.getPagoEm()).isEqualTo(AGORA);
+		assertThat(gratis.getPagoEm()).isEqualTo(AGORA);
+		assertThat(freemium.getPagoEm()).isEqualTo(AGORA);
+		assertThat(novo().getPagoEm()).isNull();
+		assertThat(freemium().getPagoEm()).isNull();
+	}
+
+	@Test
+	void enviadaEmSoNoPrimeiroEnvio() {
+		var p = em(ORACAO_GERADA, true);
+		assertThat(p.getEnviadaEm()).isNull();
+		p.marcarEnviado(AGORA);
+		p.marcarEnviado(AGORA.plusSeconds(3600)); // reenvio
+
+		assertThat(p.getEnviadaEm()).isEqualTo(AGORA);
+		assertThat(p.getAtualizadoEm()).isEqualTo(AGORA.plusSeconds(3600));
+	}
 }

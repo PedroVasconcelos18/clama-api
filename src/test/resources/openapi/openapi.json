@@ -2574,6 +2574,84 @@
         "tags" : [ "catalogo-admin-controller" ]
       }
     },
+    "/api/admin/metricas/oracao" : {
+      "get" : {
+        "operationId" : "resumo_1",
+        "parameters" : [ {
+          "description" : "Dia inicial AAAA-MM-DD (Sao Paulo). Padrao: dia 1 do mes.",
+          "in" : "query",
+          "name" : "de",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "description" : "Dia final AAAA-MM-DD (Sao Paulo), inclusivo. Padrao: hoje.",
+          "in" : "query",
+          "name" : "ate",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Resumo"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "metricas-da-oracao-controller" ]
+      }
+    },
+    "/api/admin/metricas/pedidos" : {
+      "get" : {
+        "operationId" : "resumo",
+        "parameters" : [ {
+          "description" : "Dia inicial AAAA-MM-DD (Sao Paulo). Padrao: dia 1 do mes.",
+          "in" : "query",
+          "name" : "de",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        }, {
+          "description" : "Dia final AAAA-MM-DD (Sao Paulo), inclusivo. Padrao: hoje.",
+          "in" : "query",
+          "name" : "ate",
+          "required" : false,
+          "schema" : {
+            "maxLength" : 10,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Resumo"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "metricas-controller" ]
+      }
+    },
     "/api/admin/pedidos" : {
       "get" : {
         "operationId" : "listar_6",

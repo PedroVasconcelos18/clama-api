@@ -48,6 +48,7 @@ class JobGerarOracao extends TipoDeJob<UUID> {
 	private final PromptVigente prompts;
 	private final AdminDeDocumentos documentos;
 	private final ClienteClaude claude;
+	private final Geracoes geracoes;
 	private final Fila fila;
 	private final JobEnviarOracao enviar;
 	private final JobAlertaAdmin alerta;
@@ -56,7 +57,7 @@ class JobGerarOracao extends TipoDeJob<UUID> {
 	private final Duration novaTentativa;
 
 	JobGerarOracao(PedidoApi pedidos, CatalogoApi catalogo, PromptVigente prompts, AdminDeDocumentos documentos,
-			ClienteClaude claude, @Lazy Fila fila, JobEnviarOracao enviar, JobAlertaAdmin alerta, TransactionTemplate tx, Clock relogio,
+			ClienteClaude claude, Geracoes geracoes, @Lazy Fila fila, JobEnviarOracao enviar, JobAlertaAdmin alerta, TransactionTemplate tx, Clock relogio,
 			@Value("${clama.oracao.espera-geracao:60s}") Duration espera,
 			@Value("${clama.oracao.espera-nova-tentativa:300s}") Duration novaTentativa) {
 		super("gerar-oracao", UUID.class, new Retentativas(3, espera, 1.0));
@@ -65,6 +66,7 @@ class JobGerarOracao extends TipoDeJob<UUID> {
 		this.prompts = prompts;
 		this.documentos = documentos;
 		this.claude = claude;
+		this.geracoes = geracoes;
 		this.fila = fila;
 		this.enviar = enviar;
 		this.alerta = alerta;
@@ -83,9 +85,9 @@ class JobGerarOracao extends TipoDeJob<UUID> {
 		var fileIds = documentos.fileIdsAtivos();
 		LOG.info("gerar-oracao: chamando a Claude (pedido_id={}, tentativa={}, novas_tentativas={}, documentos={})", id,
 				tentativa + 1, d.tentativas(), fileIds.size());
-		String texto;
+		ClienteClaude.Resposta resposta;
 		try {
-			texto = claude.gerar(prompt.sistema(), MontagemDoPrompt.mensagem(prompt, d, plano), fileIds);
+			resposta = claude.gerar(prompt.sistema(), MontagemDoPrompt.mensagem(prompt, d, plano), fileIds);
 		} catch (ClienteClaude.CreditosEsgotados e) {
 			LOG.error("gerar-oracao: Anthropic sem creditos (pedido_id={})", id);
 			Sentry.captureMessage("Anthropic sem créditos: pedido em ERRO aguardando o admin", SentryLevel.ERROR);
@@ -104,7 +106,8 @@ class JobGerarOracao extends TipoDeJob<UUID> {
 			return;
 		}
 		tx.executeWithoutResult(s -> {
-			pedidos.registrarOracao(id, texto);
+			pedidos.registrarOracao(id, resposta.texto());
+			geracoes.registrar(id, resposta.uso(), relogio.instant()); // mesma transacao: sem oracao, sem linha
 			fila.enfileirar(enviar, enviar.instancia(id), id, relogio.instant());
 		});
 		LOG.info("gerar-oracao: oracao gravada, envio enfileirado (pedido_id={})", id);

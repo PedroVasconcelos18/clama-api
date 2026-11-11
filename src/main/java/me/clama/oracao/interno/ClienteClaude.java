@@ -85,6 +85,18 @@ public class ClienteClaude {
 		}
 	}
 
+	/** Tokens de uma chamada bem-sucedida (D14), o modelo que respondeu e a duracao da tentativa que deu certo. */
+	public record Uso(long tokensEntrada, long tokensSaida, long tokensCacheEscrita, long tokensCacheLeitura, String modelo,
+			long duracaoMs) {}
+
+	/** O texto da Claude e o que ela custou. {@code toString} sem o texto (e a oracao de uma pessoa). */
+	public record Resposta(String texto, Uso uso) {
+		@Override
+		public String toString() {
+			return "Resposta[uso=" + uso + "]";
+		}
+	}
+
 	private final OracaoProps props;
 	private final Consumer<Duration> dormir;
 	private final AnthropicClient cliente;
@@ -114,7 +126,7 @@ public class ClienteClaude {
 	}
 
 	/** Geracao do pedido, com a retentativa. {@code mensagem} tem PII: nunca vai para o log. */
-	public String gerar(String sistema, String mensagem) {
+	public Resposta gerar(String sistema, String mensagem) {
 		return gerar(sistema, mensagem, List.of());
 	}
 
@@ -123,16 +135,16 @@ public class ClienteClaude {
 	 * por arquivo antes do texto, e um unico {@code cache_control} no ultimo (com o do system sao 2 pontos, o limite da
 	 * API e 4). A Files API saiu do beta no SDK 3.x: nenhum header beta.
 	 */
-	public String gerar(String sistema, String mensagem, List<String> fileIds) {
+	public Resposta gerar(String sistema, String mensagem, List<String> fileIds) {
 		return chamar(sistema, mensagem, fileIds, TENTATIVAS);
 	}
 
 	/** Previa do admin: uma chamada so (o admin espera na tela). */
 	public String previa(String sistema, String mensagem) {
-		return chamar(sistema, mensagem, List.of(), 1);
+		return chamar(sistema, mensagem, List.of(), 1).texto();
 	}
 
-	private String chamar(String sistema, String mensagem, List<String> fileIds, int tentativas) {
+	private Resposta chamar(String sistema, String mensagem, List<String> fileIds, int tentativas) {
 		if (cliente == null) {
 			throw new Indisponivel("ANTHROPIC_API_KEY não configurada: geração de oração indisponível", null);
 		}
@@ -254,7 +266,7 @@ public class ClienteClaude {
 	}
 
 	/** Primeiro bloco tem de ser texto; tokens e cache no log, sem PII (o input nao e logado). */
-	private String texto(Message m, int tentativa, long inicio) {
+	private Resposta texto(Message m, int tentativa, long inicio) {
 		var u = m.usage();
 		LOG.info("Claude ok (event=claude_request, model={}, attempt={}, duration_ms={}, stop_reason={}, output_tokens={}, "
 				+ "cache_creation_tokens={}, cache_read_tokens={})", props.modelo(), tentativa, ms(inicio),
@@ -269,7 +281,8 @@ public class ClienteClaude {
 		}
 		var texto = m.content().get(0).asText().text();
 		if (texto.isBlank()) throw new Falha("Resposta da Claude com texto vazio", null);
-		return texto;
+		return new Resposta(texto, new Uso(u.inputTokens(), u.outputTokens(), u.cacheCreationInputTokens().orElse(0L),
+				u.cacheReadInputTokens().orElse(0L), m.model().asString(), ms(inicio)));
 	}
 
 	/** 402 (billing) ou o 400 "Your credit balance is too low...". */
