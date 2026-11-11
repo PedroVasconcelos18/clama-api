@@ -148,7 +148,7 @@ class RedefinicaoTest {
 		assertThat(new Navegador(porta).login(email, ANTIGA).statusCode()).isEqualTo(401);
 
 		var texto = caixa.para(email).get(0).email().texto();
-		assertThat(texto).contains("http://localhost:5173/definir-senha?token=");
+		assertThat(texto).contains("http://localhost:5173/definir-senha#token=");
 		assertThat(redefinir(ultimoToken(email), NOVA).statusCode()).isEqualTo(200);
 		assertThat(new Navegador(porta).login(email, NOVA).statusCode()).isEqualTo(200);
 	}

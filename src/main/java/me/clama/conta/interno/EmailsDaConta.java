@@ -39,7 +39,7 @@ class EmailsDaConta {
 		var base = props.frontendUrl().replaceAll("/+$", "");
 		var primeiro = usuario.getNomeCompleto().isBlank() ? "Amada" : usuario.getNomeCompleto().strip().split("\\s+")[0];
 		var email = modelos.montar(usuario.getEmail(), assunto, modelo,
-				Map.of("primeiro_nome", primeiro, "link", base + "/" + rota + "?token=" + token));
+				Map.of("primeiro_nome", primeiro, "link", base + "/" + rota + "#token=" + token));
 		enviador.enviar(email, "senha/" + TokensDeSenha.hash(token)); // chave estavel por token: retentativa nao duplica
 	}
 

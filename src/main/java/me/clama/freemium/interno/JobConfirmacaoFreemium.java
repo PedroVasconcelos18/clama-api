@@ -52,7 +52,7 @@ class JobConfirmacaoFreemium extends TipoDeJob<UUID> {
 			}
 			var token = confirmacoes.emitir(id);
 			var primeiro = d.nome() == null || d.nome().isBlank() ? "Amada" : d.nome().strip().split("\\s+")[0];
-			var link = props.frontendUrl().replaceAll("/+$", "") + "/confirmar?token=" + token;
+			var link = props.frontendUrl().replaceAll("/+$", "") + "/confirmar#token=" + token;
 			var email = modelos.montar(d.email(), "Confirme sua oração — clama", "confirmacao_freemium",
 					Map.of("primeiro_nome", primeiro, "link_confirmacao", link,
 							"expira_em_horas", String.valueOf(props.validadeLink().toHours())));

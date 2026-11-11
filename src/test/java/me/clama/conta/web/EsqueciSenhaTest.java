@@ -79,7 +79,7 @@ class EsqueciSenhaTest {
 		assertThat(caixa.enviados()).hasSize(1);
 		var enviado = caixa.enviados().get(0);
 		assertThat(enviado.email().para()).isEqualTo(existente);
-		assertThat(enviado.email().texto()).contains("http://localhost:5173/redefinir-senha?token=");
+		assertThat(enviado.email().texto()).contains("http://localhost:5173/redefinir-senha#token=");
 		assertThat(enviado.email().texto()).contains("Fulana"); // primeiro nome
 		assertThat(enviado.chave()).isNotBlank();
 	}

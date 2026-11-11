@@ -41,7 +41,7 @@ import org.springframework.test.context.DynamicPropertySource;
 class FluxoFreemiumTest {
 
 	static final WireMockServer FORA = new WireMockServer(WireMockConfiguration.options().dynamicPort());
-	static final Pattern LINK = Pattern.compile("/confirmar\\?token=([A-Za-z0-9_-]+)");
+	static final Pattern LINK = Pattern.compile("/confirmar#token=([A-Za-z0-9_-]+)");
 	static final String EMAIL = "frm-fluxo@exemplo.com";
 
 	static {

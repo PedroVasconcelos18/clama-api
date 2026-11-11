@@ -55,6 +55,7 @@ class ConfirmacaoFreemiumTest {
 	@Autowired PedidoApi pedidos;
 	@Autowired ConfirmacaoFreemium saga;
 	@Autowired HmacDeIdentificador hmac;
+	@Autowired Bloqueios bloqueios;
 	@Autowired CaixaDeSaidaEmMemoria caixa;
 	@Autowired EnvioAssincrono envio;
 	@Autowired LimiteDeTaxa limite;
@@ -149,6 +150,32 @@ class ConfirmacaoFreemiumTest {
 		var senha = caixa.aguardarPara(email, 1);
 		assertThat(senha).singleElement().satisfies(e -> assertThat(e.email().assunto()).isEqualTo(SENHA));
 		assertThat(caixa.para("contato@clama.me")).isEmpty();
+	}
+
+	// --- limiar do IP na confirmacao ---
+
+	void bloqueiosDoIp(int n) {
+		for (int i = 0; i < n; i++) bloqueios.inserir("e" + i, "c" + i, hmac.ip("203.0.113.9"), Instant.now());
+	}
+
+	@Test
+	void ipNoLimiarNaConfirmacaoE409ENadaMudaOLinkContinuaValido() throws Exception {
+		var p = pendente(email);
+		bloqueiosDoIp(3);
+		exige(confirmar(anonimo(), p.token()), 409, "freemium_ja_usado", PedidoFreemium.JA_USOU);
+		assertThat(status(p.pedido())).isEqualTo(StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL);
+		assertThat(linkUsado(p.token())).isFalse();
+		assertThat(contar("freemium_bloqueio")).isEqualTo(3);
+		assertThat(contar("usuario where email = '" + email + "'")).isZero();
+		semEmailAlgum();
+	}
+
+	@Test
+	void ipAbaixoDoLimiarNaConfirmacaoPassa() throws Exception {
+		var p = pendente(email);
+		bloqueiosDoIp(2);
+		assertThat(confirmar(anonimo(), p.token()).statusCode()).isEqualTo(200);
+		assertThat(contar("freemium_bloqueio")).isEqualTo(3);
 	}
 
 	// --- links ---

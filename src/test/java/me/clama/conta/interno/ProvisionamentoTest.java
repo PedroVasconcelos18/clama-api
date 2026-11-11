@@ -65,7 +65,7 @@ class ProvisionamentoTest {
 		assertThat(u.isAtivo()).isTrue();
 		assertThat(caixa.para(email)).hasSize(1);
 		var texto = caixa.para(email).get(0).email().texto();
-		assertThat(texto).contains("Maria").contains("/definir-senha?token=");
+		assertThat(texto).contains("Maria").contains("/definir-senha#token=");
 	}
 
 	@Test

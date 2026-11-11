@@ -26,8 +26,10 @@ public class ConfirmacaoFreemium {
 	private final PedidoApi pedidos;
 	private final Bloqueios bloqueios;
 	private final Clock relogio;
+	private final FreemiumProps props;
 
-	ConfirmacaoFreemium(Confirmacoes confirmacoes, PedidoApi pedidos, Bloqueios bloqueios, Clock relogio) {
+	ConfirmacaoFreemium(Confirmacoes confirmacoes, PedidoApi pedidos, Bloqueios bloqueios, Clock relogio, FreemiumProps props) {
+		this.props = props;
 		this.confirmacoes = confirmacoes;
 		this.pedidos = pedidos;
 		this.bloqueios = bloqueios;
@@ -44,8 +46,12 @@ public class ConfirmacaoFreemium {
 			throw new ErroDeNegocio(HttpStatus.BAD_REQUEST, "link_expirado", "Link de confirmação expirado", EXPIRADO);
 		}
 		var ids = confirmar(link.pedidoId());
+		// o limiar do IP tambem vale aqui: bloqueio so nasce na confirmacao, entao varios pedidos submetidos antes nao o veem
+		if (ids.ip() != null && bloqueios.contarPorIp(ids.ip(), agora.minus(props.janelaIp())) >= props.limiarIp()) {
+			throw jaUsado();
+		}
 		if (!bloqueios.inserir(ids.emailHmac(), ids.cpfHmac(), ids.ip(), agora)) {
-			throw new ErroDeNegocio(HttpStatus.CONFLICT, "freemium_ja_usado", "Oração gratuita já utilizada", PedidoFreemium.JA_USOU);
+			throw jaUsado();
 		}
 		confirmacoes.marcarUsado(link.id());
 		return link.pedidoId();
@@ -58,6 +64,10 @@ public class ConfirmacaoFreemium {
 		} catch (TransicaoInvalidaException | PedidoNaoEncontradoException e) { // fora do estado: o mesmo "nao e mais valido"
 			throw invalido();
 		}
+	}
+
+	private static ErroDeNegocio jaUsado() {
+		return new ErroDeNegocio(HttpStatus.CONFLICT, "freemium_ja_usado", "Oração gratuita já utilizada", PedidoFreemium.JA_USOU);
 	}
 
 	private static ErroDeNegocio invalido() {

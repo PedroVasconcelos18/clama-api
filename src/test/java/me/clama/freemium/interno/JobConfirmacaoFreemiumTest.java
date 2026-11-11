@@ -38,7 +38,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @ExtendWith(OutputCaptureExtension.class)
 class JobConfirmacaoFreemiumTest {
 
-	static final Pattern LINK = Pattern.compile("http://localhost:5173/confirmar\\?token=([A-Za-z0-9_-]+)");
+	static final Pattern LINK = Pattern.compile("http://localhost:5173/confirmar#token=([A-Za-z0-9_-]+)");
 
 	@DynamicPropertySource
 	static void props(DynamicPropertyRegistry r) {
@@ -91,7 +91,7 @@ class JobConfirmacaoFreemiumTest {
 		var token = tokenDe(e);
 		assertThat(e.email().assunto()).isEqualTo("Confirme sua oração — clama");
 		assertThat(e.email().texto()).contains("Paz e bem, Maria.", "expira em 24 horas");
-		assertThat(e.email().html()).contains("Maria", "/confirmar?token=" + token, "24");
+		assertThat(e.email().html()).contains("Maria", "/confirmar#token=" + token, "24");
 		assertThat(token).hasSize(43); // 32 bytes em base64url, sem padding
 		assertThat(e.chave()).isEqualTo("confirmacao-freemium/" + Confirmacoes.hash(token));
 		assertThat(caixa.para("contato@clama.me")).isEmpty();
