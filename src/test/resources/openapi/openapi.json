@@ -312,15 +312,6 @@
         },
         "type" : "object"
       },
-      "MudancaDeAtivo" : {
-        "properties" : {
-          "ativo" : {
-            "type" : "boolean"
-          }
-        },
-        "required" : [ "ativo" ],
-        "type" : "object"
-      },
       "MudancaDeInstituicao" : {
         "properties" : {
           "ativo" : {
@@ -372,6 +363,20 @@
             "maximum" : 2147483647,
             "minimum" : 0,
             "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "MudancaDoDocumento" : {
+        "properties" : {
+          "ativo" : {
+            "type" : [ "boolean", "null" ]
+          },
+          "nome" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "pattern" : ".*\\S.*",
+            "type" : [ "string", "null" ]
           }
         },
         "type" : "object"
@@ -1342,7 +1347,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/MudancaDeAtivo"
+                "$ref" : "#/components/schemas/MudancaDoDocumento"
               }
             }
           },

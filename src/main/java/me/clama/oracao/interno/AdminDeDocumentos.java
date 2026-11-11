@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Semaphore;
 import me.clama.infra.auditoria.Acao;
 import me.clama.infra.auditoria.Auditoria;
 import me.clama.infra.web.ErroDeNegocio;
@@ -43,6 +44,8 @@ public class AdminDeDocumentos {
 	public record Documento(long id, String nome, @Nullable String mime, @Nullable Long tamanhoBytes, @Nullable String fileId,
 			boolean ativo, Instant criadoEm, Instant atualizadoEm) {}
 
+	/** Uploads ao mesmo tempo: cada um segura um temporario de ate 100 MB e uma conexao longa com a Anthropic. */
+	private final Semaphore vagas = new Semaphore(2);
 	private final JdbcClient jdbc;
 	private final Auditoria auditoria;
 	private final TransactionTemplate transacao;
@@ -83,21 +86,32 @@ public class AdminDeDocumentos {
 	}
 
 	/**
-	 * Recebe o corpo cru: grava num temporario contando os bytes (acima de 100 MB, 400 sem ler o resto), valida o formato,
-	 * sobe para a Files API e guarda o {@code file_id}. Se ja havia outro arquivo, apaga o antigo la depois (falha so avisa).
+	 * Recebe o corpo cru: recusa na hora pelo Content-Length (-1 = desconhecido) e quando ja ha 2 uploads (503), grava num
+	 * temporario contando os bytes (acima de 100 MB, 400 sem ler o resto), valida o formato, sobe para a Files API e guarda o
+	 * {@code file_id} com compare-and-set sobre o antigo: quem perde a corrida apaga o arquivo novo la e recebe 409. Se ja
+	 * havia outro arquivo, apaga o antigo la depois (falha so avisa).
 	 */
-	public Documento receberArquivo(Long autorId, long id, InputStream corpo) {
+	public Documento receberArquivo(Long autorId, long id, InputStream corpo, long contentLength) {
 		var antigo = documento(id);
+		if (contentLength > MAXIMO) throw grandeDemais();
+		if (!vagas.tryAcquire()) {
+			throw new ErroDeNegocio(HttpStatus.SERVICE_UNAVAILABLE, "documento_upload_ocupado", "Uploads em andamento.",
+					"Já há envios de documentos em andamento. Tente de novo em instantes.");
+		}
 		Path temp = null;
 		try {
 			final var arquivo = temp = Files.createTempFile("documento-", ".tmp");
 			long tamanho = copiar(corpo, temp);
 			var mime = detectar(temp, tamanho);
-			var nomeNaApi = antigo.nome() + (mime.equals("application/pdf") ? ".pdf" : ".txt");
+			var nomeNaApi = "documento-" + id + (mime.equals("application/pdf") ? ".pdf" : ".txt");
 			String fileId = na(() -> claude.enviarArquivo(arquivo, nomeNaApi, mime));
 			var atualizado = transacao.execute(s -> gravar(autorId, id, antigo, fileId, mime, tamanho));
 			if (atualizado == null) {
 				apagarSemFalhar(fileId);
+				if (existe(id)) {
+					throw new ErroDeNegocio(HttpStatus.CONFLICT, "documento_conflito", "Envio concorrente.",
+							"Outro envio para esse documento aconteceu ao mesmo tempo. Envie de novo.");
+				}
 				throw naoEncontrado();
 			}
 			if (antigo.fileId() != null) apagarSemFalhar(antigo.fileId());
@@ -105,6 +119,7 @@ public class AdminDeDocumentos {
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		} finally {
+			vagas.release();
 			if (temp != null) {
 				try {
 					Files.deleteIfExists(temp);
@@ -115,10 +130,13 @@ public class AdminDeDocumentos {
 		}
 	}
 
-	/** Ativar confere na Files API que o arquivo ainda existe (409 se sumiu); desativar e local. */
-	public Documento definirAtivo(Long autorId, long id, boolean ativo) {
+	/**
+	 * Renomear e/ou ativar/desativar. Ativar confere na Files API que o arquivo ainda existe (409 se sumiu); o resto e
+	 * local, numa transacao, cada campo que muda auditado.
+	 */
+	public Documento alterar(Long autorId, long id, @Nullable String nome, @Nullable Boolean ativo) {
 		var d = documento(id);
-		if (ativo && !d.ativo()) {
+		if (Boolean.TRUE.equals(ativo) && !d.ativo()) {
 			if (d.fileId() == null) {
 				throw new ErroDeNegocio(HttpStatus.CONFLICT, "documento_sem_arquivo", "Documento sem arquivo.",
 						"Envie o arquivo do documento antes de ativá-lo.");
@@ -129,10 +147,16 @@ public class AdminDeDocumentos {
 			}
 		}
 		return transacao.execute(s -> {
-			if (jdbc.sql("update documento_contexto set ativo = :a, atualizado_em = :em where id = :id and ativo <> :a")
-					.param("a", ativo).param("em", Timestamp.from(relogio.instant())).param("id", id).update() > 0) {
-				auditoria.registrar(autorId, ENTIDADE, String.valueOf(id), Acao.MUDANCA,
-						Map.of("ativo", Map.of("antes", !ativo, "depois", ativo)));
+			var agora = Timestamp.from(relogio.instant());
+			var novoNome = nome == null ? null : nome.strip();
+			if (novoNome != null && !novoNome.equals(d.nome())
+					&& jdbc.sql("update documento_contexto set nome = :n, atualizado_em = :em where id = :id").param("n", novoNome)
+							.param("em", agora).param("id", id).update() > 0) {
+				auditoria.registrar(autorId, ENTIDADE, String.valueOf(id), Acao.MUDANCA, Map.of("nome", Map.of("antes", d.nome(), "depois", novoNome)));
+			}
+			if (ativo != null && jdbc.sql("update documento_contexto set ativo = :a, atualizado_em = :em where id = :id and ativo <> :a")
+					.param("a", ativo).param("em", agora).param("id", id).update() > 0) {
+				auditoria.registrar(autorId, ENTIDADE, String.valueOf(id), Acao.MUDANCA, Map.of("ativo", Map.of("antes", !ativo, "depois", ativo)));
 			}
 			return documento(id);
 		});
@@ -154,8 +178,8 @@ public class AdminDeDocumentos {
 
 	private @Nullable Documento gravar(Long autorId, long id, Documento antigo, String fileId, String mime, long tamanho) {
 		var linhas = jdbc.sql("""
-				update documento_contexto set file_id = :f, mime = :m, tamanho_bytes = :t, atualizado_em = :em where id = :id""")
-				.param("f", fileId).param("m", mime).param("t", tamanho).param("em", Timestamp.from(relogio.instant())).param("id", id)
+				update documento_contexto set file_id = :f, mime = :m, tamanho_bytes = :t, atualizado_em = :em where id = :id and file_id is not distinct from cast(:antigo as text)""")
+				.param("antigo", antigo.fileId()).param("f", fileId).param("m", mime).param("t", tamanho).param("em", Timestamp.from(relogio.instant())).param("id", id)
 				.update();
 		if (linhas == 0) return null;
 		var diff = new LinkedHashMap<String, Object>();
@@ -163,6 +187,15 @@ public class AdminDeDocumentos {
 		diff.put("tamanhoBytes", Map.of("antes", antigo.tamanhoBytes() == null ? 0L : antigo.tamanhoBytes(), "depois", tamanho));
 		auditoria.registrar(autorId, ENTIDADE, String.valueOf(id), Acao.MUDANCA, diff);
 		return documento(id);
+	}
+
+	private boolean existe(long id) {
+		return jdbc.sql("select count(*) from documento_contexto where id = :id").param("id", id).query(Long.class).single() > 0;
+	}
+
+	private static ErroDeNegocio grandeDemais() {
+		return new ErroDeNegocio(HttpStatus.BAD_REQUEST, "documento_grande_demais", "Documento grande demais.",
+				"O documento passa de 100 MB. Envie uma versão menor.");
 	}
 
 	/** Copia contando; passou de 100 MB, 400 na hora. */
@@ -174,8 +207,7 @@ public class AdminDeDocumentos {
 			while ((n = corpo.read(buf)) > 0) {
 				total += n;
 				if (total > MAXIMO) {
-					throw new ErroDeNegocio(HttpStatus.BAD_REQUEST, "documento_grande_demais", "Documento grande demais.",
-							"O documento passa de 100 MB. Envie uma versão menor.");
+					throw grandeDemais();
 				}
 				saida.write(buf, 0, n);
 			}

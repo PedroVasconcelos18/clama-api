@@ -114,7 +114,7 @@ class DocumentosAdminTest {
 		assertThat(d.get("mime").asString()).isEqualTo("application/pdf");
 		assertThat(d.get("tamanhoBytes").asLong()).isEqualTo(pdf.length());
 		CLAUDE.verify(1, postRequestedFor(urlEqualTo("/v1/files")).withRequestBody(containing("Content-Type: application/pdf"))
-				.withRequestBody(containing("%PDF-1.7")));
+				.withRequestBody(containing("%PDF-1.7")).withRequestBody(containing("filename=\"documento-" + id + ".pdf\"")));
 		assertThat(jdbc.queryForObject("select file_id from documento_contexto where id = ?", String.class, id)).isEqualTo("file_pdf");
 	}
 
@@ -141,7 +141,7 @@ class DocumentosAdminTest {
 		byte[] png = { (byte) 0x89, 'P', 'N', 'G', 13, 10, 26, 10, 0, 0, 0, 13, 'I', 'H', 'D', 'R' };
 		byte[] latin1 = "Ação".getBytes(StandardCharsets.ISO_8859_1);
 		for (var corpo : List.of(docx, png, latin1, new byte[0])) {
-			var res = adm.putCru(RAIZ + "/" + id + "/arquivo", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+			var res = adm.putCru(RAIZ + "/" + id + "/arquivo", "application/octet-stream",
 					HttpRequest.BodyPublishers.ofByteArray(corpo));
 			confere(res, 400, "documento_invalido");
 		}
@@ -254,6 +254,7 @@ class DocumentosAdminTest {
 		assertThat(ativos()).isEmpty();
 		assertThat(adm.patch(RAIZ + "/999999", "{\"ativo\": true}").statusCode()).isEqualTo(404);
 		assertThat(adm.patch(RAIZ + "/" + id, "{}").statusCode()).isEqualTo(400);
+		assertThat(adm.patch(RAIZ + "/" + id, "{\"nome\": \" \"}").statusCode()).isEqualTo(400);
 	}
 
 	@Test
@@ -312,6 +313,106 @@ class DocumentosAdminTest {
 		jdbc.update("update documento_contexto set ativo = true where id in (?, ?)", a, b);
 
 		assertThat(documentos.fileIdsAtivos()).containsExactly("file_b", "file_a");
+	}
+
+	@Test
+	void renomearPeloPatchEAuditado() throws Exception {
+		var adm = entrar(Papel.ADMIN);
+		var id = criar(adm, "Antigo");
+
+		var res = adm.patch(RAIZ + "/" + id, "{\"nome\": \"  Novo \"}");
+
+		assertThat(res.statusCode()).as(res.body()).isEqualTo(200);
+		assertThat(Navegador.json(res).get("nome").asString()).isEqualTo("Novo");
+		assertThat(jdbc.queryForObject("select diff -> 'nome' ->> 'depois' from auditoria where entidade = 'documento_contexto' and acao = 'MUDANCA'",
+				String.class)).isEqualTo("Novo");
+		CLAUDE.verify(0, getRequestedFor(anyUrl())); // so renomear nao consulta a Anthropic
+	}
+
+	@Test
+	void contentLengthAcimaDe100MbRecusaSemLerOCorpo() throws Exception {
+		var adm = entrar(Papel.ADMIN);
+		var id = criar(adm, "X");
+		var e = org.junit.jupiter.api.Assertions.assertThrows(me.clama.infra.web.ErroDeNegocio.class,
+				() -> documentos.receberArquivo(1L, id, InputStream.nullInputStream(), CEM_MB + 1));
+		assertThat(e.codigo()).isEqualTo("documento_grande_demais");
+		assertThat(e.status().value()).isEqualTo(400);
+		CLAUDE.verify(0, postRequestedFor(anyUrl()));
+	}
+
+	/** Dois uploads ocupam as vagas (a Anthropic demora); o terceiro recebe 503 na hora e o espaco volta depois. */
+	@Test
+	void terceiroUploadSimultaneoRecebe503() throws Exception {
+		var adm = entrar(Papel.ADMIN);
+		var a = criar(adm, "A");
+		var b = criar(adm, "B");
+		var c = criar(adm, "C");
+		CLAUDE.stubFor(post("/v1/files").inScenario("l").whenScenarioStateIs(com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED)
+				.willReturn(okJson(META.formatted("file_l1", "text/plain")).withFixedDelay(1500)).willSetStateTo("2"));
+		CLAUDE.stubFor(post("/v1/files").inScenario("l").whenScenarioStateIs("2")
+				.willReturn(okJson(META.formatted("file_l2", "text/plain")).withFixedDelay(1500)));
+		var pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+		try {
+			var f1 = pool.submit(() -> entrar(Papel.ADMIN).putCru(RAIZ + "/" + a + "/arquivo", "text/plain", HttpRequest.BodyPublishers.ofString("um")));
+			var f2 = pool.submit(() -> entrar(Papel.ADMIN).putCru(RAIZ + "/" + b + "/arquivo", "text/plain", HttpRequest.BodyPublishers.ofString("dois")));
+			org.awaitility.Awaitility.await().atMost(java.time.Duration.ofSeconds(5)).until(() -> CLAUDE.findAll(postRequestedFor(urlEqualTo("/v1/files"))).size() == 2);
+
+			confere(adm.putCru(RAIZ + "/" + c + "/arquivo", "text/plain", HttpRequest.BodyPublishers.ofString("tres")), 503, "documento_upload_ocupado");
+			f1.get();
+			f2.get();
+		} finally {
+			pool.shutdownNow();
+		}
+		CLAUDE.resetScenarios();
+		CLAUDE.stubFor(post("/v1/files").willReturn(okJson(META.formatted("file_c", "text/plain"))));
+		assertThat(adm.putCru(RAIZ + "/" + c + "/arquivo", "text/plain", HttpRequest.BodyPublishers.ofString("tres")).statusCode()).isEqualTo(200);
+	}
+
+	/** Dois PUTs no mesmo documento: um grava, o outro apaga o arquivo que subiu e recebe 409 (nada orfao na Anthropic). */
+	@Test
+	void dois_uploadsConcorrentesNoMesmoDocumentoDeixamUmSo() throws Exception {
+		var adm = entrar(Papel.ADMIN);
+		var id = criar(adm, "Corrida");
+		CLAUDE.stubFor(post("/v1/files").inScenario("c").whenScenarioStateIs(com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED)
+				.willReturn(okJson(META.formatted("file_1", "text/plain")).withFixedDelay(800)).willSetStateTo("2"));
+		CLAUDE.stubFor(post("/v1/files").inScenario("c").whenScenarioStateIs("2")
+				.willReturn(okJson(META.formatted("file_2", "text/plain")).withFixedDelay(800)));
+		CLAUDE.stubFor(delete(urlPathMatching("/v1/files/file_[12]")).willReturn(okJson("{\"id\": \"x\", \"type\": \"file_deleted\"}")));
+		var pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+		List<Integer> status = new ArrayList<>();
+		try {
+			var n1 = entrar(Papel.ADMIN);
+			var n2 = entrar(Papel.ADMIN);
+			var f1 = pool.submit(() -> n1.putCru(RAIZ + "/" + id + "/arquivo", "text/plain", HttpRequest.BodyPublishers.ofString("um")).statusCode());
+			var f2 = pool.submit(() -> n2.putCru(RAIZ + "/" + id + "/arquivo", "text/plain", HttpRequest.BodyPublishers.ofString("dois")).statusCode());
+			status.add(f1.get());
+			status.add(f2.get());
+		} finally {
+			pool.shutdownNow();
+		}
+
+		assertThat(status).containsExactlyInAnyOrder(200, 409);
+		var ficou = jdbc.queryForObject("select file_id from documento_contexto where id = ?", String.class, id);
+		var perdeu = ficou.equals("file_1") ? "file_2" : "file_1";
+		CLAUDE.verify(1, deleteRequestedFor(urlEqualTo("/v1/files/" + perdeu)));
+		CLAUDE.verify(0, deleteRequestedFor(urlEqualTo("/v1/files/" + ficou)));
+	}
+
+	@Test
+	void multipartNaRotaDoArquivoE415() throws Exception {
+		var adm = entrar(Papel.ADMIN);
+		var id = criar(adm, "X");
+		var res = adm.putArquivo(RAIZ + "/" + id + "/arquivo", "arquivo", "a.txt", "text/plain", "texto".getBytes(StandardCharsets.UTF_8));
+		assertThat(res.statusCode()).as(res.body()).isEqualTo(415);
+		CLAUDE.verify(0, postRequestedFor(anyUrl()));
+	}
+
+	@Test
+	void bancoRecusaFileIdRepetidoEMimeForaDaLista() {
+		comArquivo("file_dup");
+		org.junit.jupiter.api.Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, () -> comArquivo("file_dup"));
+		org.junit.jupiter.api.Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+				() -> jdbc.update("update documento_contexto set mime = 'image/png'"));
 	}
 
 	// ---- apoio

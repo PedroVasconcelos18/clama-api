@@ -3,11 +3,12 @@ package me.clama.oracao.web;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
+import me.clama.infra.web.ErroDeNegocio;
 import me.clama.oracao.interno.AdminDeDocumentos;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.Nullable;
@@ -34,7 +35,8 @@ class DocumentosAdminController {
 
 	record NovoDocumento(@NotBlank @Size(max = 200) String nome) {}
 
-	record MudancaDeAtivo(@NotNull Boolean ativo) {}
+	/** Ao menos um dos dois. */
+	record MudancaDoDocumento(@Nullable @Size(max = 200) @Pattern(regexp = ".*\\S.*") String nome, @Nullable Boolean ativo) {}
 
 	record DocumentoAdmin(long id, String nome, @Nullable String mime, @Nullable Long tamanhoBytes, @Nullable String fileId, boolean ativo,
 			Instant criadoEm, Instant atualizadoEm) {
@@ -66,20 +68,23 @@ class DocumentosAdminController {
 	 * Corpo cru (qualquer Content-Type: o formato sai do conteudo). 400 {@code documento_invalido} ou
 	 * {@code documento_grande_demais}; 404 documento; 502 {@code anthropic_falhou}.
 	 */
-	@PutMapping("/{id}/arquivo")
+	@PutMapping(value = "/{id}/arquivo", consumes = { "application/pdf", "text/plain", "application/octet-stream" })
 	@io.swagger.v3.oas.annotations.parameters.RequestBody(content = {
 			@io.swagger.v3.oas.annotations.media.Content(mediaType = "application/pdf",
 					schema = @io.swagger.v3.oas.annotations.media.Schema(type = "string", format = "binary")),
 			@io.swagger.v3.oas.annotations.media.Content(mediaType = "text/plain",
 					schema = @io.swagger.v3.oas.annotations.media.Schema(type = "string", format = "binary")) })
 	DocumentoAdmin enviarArquivo(@PathVariable long id, HttpServletRequest req, Authentication auth) throws IOException {
-		return DocumentoAdmin.de(servico.receberArquivo(autor(auth), id, req.getInputStream()));
+		return DocumentoAdmin.de(servico.receberArquivo(autor(auth), id, req.getInputStream(), req.getContentLengthLong()));
 	}
 
-	/** Ativar confere o arquivo na Files API: 409 {@code documento_sem_arquivo} ou {@code documento_arquivo_sumiu}. */
+	/** Renomeia e/ou ativa. Ativar confere o arquivo na Files API: 409 {@code documento_sem_arquivo} ou {@code documento_arquivo_sumiu}. */
 	@PatchMapping("/{id}")
-	DocumentoAdmin alterar(@PathVariable long id, @Valid @RequestBody MudancaDeAtivo c, Authentication auth) {
-		return DocumentoAdmin.de(servico.definirAtivo(autor(auth), id, c.ativo()));
+	DocumentoAdmin alterar(@PathVariable long id, @Valid @RequestBody MudancaDoDocumento c, Authentication auth) {
+		if (c.nome() == null && c.ativo() == null) {
+			throw new ErroDeNegocio(HttpStatus.BAD_REQUEST, "dados_invalidos", "Dados inválidos.", "Informe o nome e/ou se está ativo.");
+		}
+		return DocumentoAdmin.de(servico.alterar(autor(auth), id, c.nome(), c.ativo()));
 	}
 
 	/** Apaga na Anthropic primeiro (404 de la conta como apagado); outra falha de la e 502 e a linha fica. */

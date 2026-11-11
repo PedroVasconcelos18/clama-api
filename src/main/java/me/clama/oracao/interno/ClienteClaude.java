@@ -6,6 +6,7 @@ import com.anthropic.errors.AnthropicInvalidDataException;
 import com.anthropic.errors.AnthropicIoException;
 import com.anthropic.errors.AnthropicServiceException;
 import com.anthropic.core.MultipartField;
+import com.anthropic.core.RequestOptions;
 import com.anthropic.errors.NotFoundException;
 import com.anthropic.models.files.FileUploadParams;
 import com.anthropic.models.messages.CacheControlEphemeral;
@@ -58,6 +59,9 @@ public class ClienteClaude {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ClienteClaude.class);
 	static final int TENTATIVAS = 3;
+	/** Files API: o upload de ate 100 MB nao cabe nos 30 s da geracao; so estas chamadas usam estes prazos. */
+	static final Duration PRAZO_UPLOAD = Duration.ofMinutes(5);
+	static final Duration PRAZO_ARQUIVO = Duration.ofSeconds(60);
 	private static final CacheControlEphemeral EFEMERO = CacheControlEphemeral.builder().build();
 
 	/** Resposta inutilizavel ou pedido recusado pela API; tentar de novo igual nao resolve. */
@@ -188,7 +192,7 @@ public class ClienteClaude {
 			return arquivos("upload", () -> {
 				try (InputStream in = Files.newInputStream(arquivo)) {
 					var parte = MultipartField.<InputStream>builder().value(in).filename(nome).contentType(mime).build();
-					return cliente.files().upload(FileUploadParams.builder().file(parte).build()).id();
+					return cliente.files().upload(FileUploadParams.builder().file(parte).build(), prazo(PRAZO_UPLOAD)).id();
 				} catch (IOException e) {
 					throw new UncheckedIOException(e);
 				}
@@ -201,7 +205,7 @@ public class ClienteClaude {
 	/** Apaga na Files API; 404 (ja nao existe) conta como apagado. */
 	public void apagarArquivo(String fileId) {
 		try {
-			arquivos("delete", () -> cliente.files().delete(fileId));
+			arquivos("delete", () -> cliente.files().delete(fileId, prazo(PRAZO_ARQUIVO)));
 		} catch (NaoExiste e) {
 			// ja apagado la
 		}
@@ -210,11 +214,15 @@ public class ClienteClaude {
 	/** Metadados na Files API: {@code false} so no 404; qualquer outra falha lanca. */
 	public boolean arquivoExiste(String fileId) {
 		try {
-			arquivos("metadata", () -> cliente.files().retrieveMetadata(fileId));
+			arquivos("metadata", () -> cliente.files().retrieveMetadata(fileId, prazo(PRAZO_ARQUIVO)));
 			return true;
 		} catch (NaoExiste e) {
 			return false;
 		}
+	}
+
+	private static RequestOptions prazo(Duration d) {
+		return RequestOptions.builder().timeout(d).build();
 	}
 
 	private static final class NaoExiste extends RuntimeException {

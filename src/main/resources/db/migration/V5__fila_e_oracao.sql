@@ -48,9 +48,9 @@ create trigger prompt_versao_imutavel before update of conteudo on prompt_versao
 create table documento_contexto (
   id bigserial primary key,
   nome text not null,
-  mime text,
+  mime text check (mime in ('application/pdf', 'text/plain')),
   tamanho_bytes bigint,
-  file_id text,
+  file_id text unique,
   ativo boolean not null default false,
   criado_em timestamptz not null,
   atualizado_em timestamptz not null,
