@@ -25,6 +25,15 @@ class NomeEReferenciaTest {
 	}
 
 	@Test
+	void nomeComArrobaOuDigitoViraSemNomeParaNaoVazarEmailNemCpf() {
+		assertThat(RelatorioDeRepasse.abreviar("maria@exemplo.com")).isEqualTo("(sem nome)");
+		assertThat(RelatorioDeRepasse.abreviar("52998224725")).isEqualTo("(sem nome)");
+		assertThat(RelatorioDeRepasse.abreviar("529.982.247-25")).isEqualTo("(sem nome)");
+		assertThat(RelatorioDeRepasse.abreviar("Maria maria@exemplo.com")).isEqualTo("(sem nome)");
+		assertThat(RelatorioDeRepasse.abreviar("Maria 52998224725 Silva")).isEqualTo("(sem nome)");
+	}
+
+	@Test
 	void acentoPreservadoEInicialMaiuscula() {
 		assertThat(RelatorioDeRepasse.abreviar("Ágata Éfrem álvares")).isEqualTo("Ágata Á.");
 		assertThat(RelatorioDeRepasse.abreviar("José da Conceição")).isEqualTo("José C.");

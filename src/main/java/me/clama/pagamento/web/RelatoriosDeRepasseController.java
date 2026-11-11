@@ -96,9 +96,9 @@ class RelatoriosDeRepasseController {
 		return csv(PlanilhaCsv.interna(r), "auditoria-INTERNA-repasse", r.instituicao(), r.de(), r.ate());
 	}
 
-	/** O que a previa mostrou: {@code quantidade} confere os pendentes; diferente = 409 {@code recorte_mudou}, sem mudar nada. */
+	/** O que a previa mostrou: {@code quantidade} e {@code totalCentavos} conferem os pendentes; diferente = 409 {@code recorte_mudou}, sem mudar nada. */
 	record QuitacaoEmLote(@NotNull Long instituicaoId, @NotBlank @Size(max = 10) String de, @NotBlank @Size(max = 10) String ate,
-			@NotBlank @Size(max = 120) String comprovante, @NotNull @Min(1) Integer quantidade) {}
+			@NotBlank @Size(max = 120) String comprovante, @NotNull @Min(1) Integer quantidade, @NotNull Long totalCentavos) {}
 
 	record Quitados(int quantidade, long totalCentavos) {}
 
@@ -108,7 +108,7 @@ class RelatoriosDeRepasseController {
 		var ate = FiltrosDeAdmin.dia("ate", corpo.ate());
 		FiltrosDeAdmin.ordemDoPeriodo(de, ate);
 		relatorio.nomeDaInstituicao(corpo.instituicaoId());
-		var q = admin.transferirLote(Long.valueOf(auth.getName()), corpo.instituicaoId(), de, ate, corpo.comprovante(), corpo.quantidade());
+		var q = admin.transferirLote(Long.valueOf(auth.getName()), corpo.instituicaoId(), de, ate, corpo.comprovante(), corpo.quantidade(), corpo.totalCentavos());
 		return new Quitados(q.quantidade(), q.totalCentavos());
 	}
 

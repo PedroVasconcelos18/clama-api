@@ -1,14 +1,17 @@
 package me.clama.infra.fila;
 
 import com.github.kagkarlsson.scheduler.task.ExecutionContext;
+import com.github.kagkarlsson.scheduler.task.FailureHandler;
 import com.github.kagkarlsson.scheduler.task.TaskInstance;
 import com.github.kagkarlsson.scheduler.task.helper.RecurringTask;
 import com.github.kagkarlsson.scheduler.task.schedule.Schedule;
 import com.github.kagkarlsson.scheduler.task.schedule.Schedules;
 import io.sentry.Sentry;
 import io.sentry.SentryLevel;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,13 +63,35 @@ public abstract class TarefaRecorrente extends RecurringTask<Void> implements En
 	private Execucoes execucoes;
 
 	protected TarefaRecorrente(String nome, String cron) {
-		this(nome, cron, Schedules.cron(cron, FUSO));
+		this(nome, cron, s -> new FailureHandler.OnFailureReschedule<>(s));
 	}
 
-	private TarefaRecorrente(String nome, String cron, Schedule agenda) {
-		super(nome, agenda, Void.class);
+	/** {@code falha}: o tratamento de falha do db-scheduler, a partir da agenda (padrao: reagendar pelo cron). Ex.: {@link #retentarFalhaTecnica}. */
+	protected TarefaRecorrente(String nome, String cron, Function<Schedule, FailureHandler<Void>> falha) {
+		this(nome, cron, Schedules.cron(cron, FUSO), falha);
+	}
+
+	private TarefaRecorrente(String nome, String cron, Schedule agenda, Function<Schedule, FailureHandler<Void>> falha) {
+		super(nome, agenda, Void.class, falha.apply(agenda));
 		this.agenda = agenda;
 		this.cron = cron;
+	}
+
+	/**
+	 * Falha tecnica (qualquer excecao que nao seja {@link FalhaParcial}) tenta de novo apos {@code espera}, ate {@code max}
+	 * vezes seguidas; depois disso, e sempre para {@link FalhaParcial}, reagenda pelo cron. So para tarefa idempotente.
+	 * ponytail: o contador do db-scheduler so zera em sucesso; uma falha que chegou ao cron deixa o proximo ciclo sem retentativa.
+	 */
+	protected static Function<Schedule, FailureHandler<Void>> retentarFalhaTecnica(Duration espera, int max) {
+		return agenda -> {
+			var pelaAgenda = new FailureHandler.OnFailureReschedule<Void>(agenda);
+			var depois = new FailureHandler.OnFailureRetryLater<Void>(espera);
+			return (completa, ops) -> {
+				var parcial = completa.getCause().filter(FalhaParcial.class::isInstance).isPresent();
+				if (parcial || completa.getExecution().consecutiveFailures >= max) pelaAgenda.onFailure(completa, ops);
+				else depois.onFailure(completa, ops);
+			};
+		};
 	}
 
 	public String cron() {

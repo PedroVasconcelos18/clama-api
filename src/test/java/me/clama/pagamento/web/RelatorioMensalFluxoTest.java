@@ -51,7 +51,7 @@ class RelatorioMensalFluxoTest extends PagamentoAdminBase {
 		assertThat(e.texto()).contains("Lar Esperança: 2 doações, R$ 12,00 a repassar", "Casa Pela Vida: 1 doação, R$ 6,00 a repassar",
 				"Associação Antiga: 1 doação, R$ 6,00 a repassar", "Mar de Espanha: 0 doações, R$ 0,00 a repassar", "Faltou: Nenhuma.");
 		assertThat(tudo).doesNotContain("Maria", "Joao", "Ana Costa", "Carlos", "Beatriz", "Paulo", "exemplo.com");
-		assertThat(enviados.get(0).chave()).isEqualTo("relatorio-repasse/2026-11-27");
+		assertThat(enviados.get(0).chave()).matches("relatorio-repasse/2026-11-27/[0-9a-f]{12}");
 		assertThat(contar("select count(*) from tarefa_execucao where tarefa = 'relatorio-repasse-mensal' and ok and not manual")).isEqualTo(1);
 
 		relogio.zerar();

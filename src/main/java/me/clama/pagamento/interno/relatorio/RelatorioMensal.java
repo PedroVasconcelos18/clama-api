@@ -2,6 +2,7 @@ package me.clama.pagamento.interno.relatorio;
 
 import java.sql.Timestamp;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -37,6 +38,7 @@ public class RelatorioMensal extends TarefaRecorrente {
 	private static final Logger LOG = LoggerFactory.getLogger(RelatorioMensal.class);
 	private static final DateTimeFormatter DIA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 	static final int MAX_ACHADOS_NO_EMAIL = 20;
+	private static final String SEM_ESTORNOS = "Nenhum.";
 
 	private final CatalogoApi catalogo;
 	private final RelatorioDeRepasse relatorio;
@@ -50,7 +52,7 @@ public class RelatorioMensal extends TarefaRecorrente {
 
 	RelatorioMensal(CatalogoApi catalogo, RelatorioDeRepasse relatorio, RelatoriosMensais resumos, AuditoriaDoLedger auditoria,
 			JdbcClient jdbc, ModelosDeEmail modelos, EnviadorDeEmail enviador, AlertaAoAdmin.Props props, Clock relogio) {
-		super("relatorio-repasse-mensal", "0 0 10 28 * *");
+		super("relatorio-repasse-mensal", "0 0 10 28 * *", retentarFalhaTecnica(Duration.ofMinutes(30), 3));
 		this.catalogo = catalogo;
 		this.relatorio = relatorio;
 		this.resumos = resumos;
@@ -91,12 +93,12 @@ public class RelatorioMensal extends TarefaRecorrente {
 		var estornos = estornos(ciclo);
 
 		var totalRepasse = feitas.stream().mapToLong(Previa::totalRepasseCentavos).sum();
-		var atencao = !faltou.isEmpty() || ledger == null || ledger.criticos() > 0;
+		var atencao = !faltou.isEmpty() || ledger == null || ledger.criticos() > 0 || !estornos.equals(SEM_ESTORNOS);
 		var situacaoDoLedger = ledger == null ? "auditoria não rodou" : ledger.criticos() > 0 ? ledger.criticos() + " crítico(s)" : "ledger ok";
 		var resumo = "ciclo " + periodo + ": " + feitas.size() + " de " + alvos.size() + " instituições, " + Dinheiro.reais(totalRepasse)
 				+ " a repassar; " + situacaoDoLedger + (dryRun ? " (simulação: nada gravado nem enviado)" : "");
 
-		var falha = falha(feitas.size(), alvos.size(), faltou, ledger == null);
+		var falha = falha(faltou, ledger == null);
 		if (dryRun) {
 			LOG.info("relatorio-repasse-mensal (dry-run): {}", resumo);
 			if (falha != null) throw new FalhaParcial(resumo + "; " + falha);
@@ -112,15 +114,24 @@ public class RelatorioMensal extends TarefaRecorrente {
 						"ledger", textoDoLedger(ledger),
 						"estornos", estornos,
 						"link", link));
-		enviador.enviar(email, "relatorio-repasse/" + ciclo.ate());
+		enviador.enviar(email, "relatorio-repasse/" + ciclo.ate() + "/" + hashDoCorpo(email.texto()));
 		LOG.info("relatorio-repasse-mensal: e-mail enviado ({} instituicao(oes), {} faltou)", feitas.size(), faltou.size());
 
 		if (falha != null) throw new FalhaParcial(feitas.size() + " de " + alvos.size() + " instituições, " + falha);
 		return resumo;
 	}
 
+	/** Corpo igual = chave igual (a retentativa deduplica); corpo corrigido = chave nova, a Resend nao o descarta. */
+	private static String hashDoCorpo(String texto) {
+		try {
+			return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(texto.getBytes(java.nio.charset.StandardCharsets.UTF_8))).substring(0, 12);
+		} catch (java.security.NoSuchAlgorithmException e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
 	/** Uma so falha para a execucao ({@code ok=false}), sem PII: o que faltou e/ou a auditoria que nao rodou; nulo se deu tudo certo. */
-	private static String falha(int feitas, int alvos, List<String> faltou, boolean auditoriaNaoRodou) {
+	private static String falha(List<String> faltou, boolean auditoriaNaoRodou) {
 		var partes = new ArrayList<String>();
 		if (!faltou.isEmpty()) partes.add("faltou: " + String.join(", ", faltou));
 		if (auditoriaNaoRodou) partes.add("auditoria do ledger não rodou");
@@ -172,12 +183,13 @@ public class RelatorioMensal extends TarefaRecorrente {
 					select distinct e.motivo, e.pedido_id, r.instituicao_id, r.valor_centavos
 					from pagamento_evento e join repasse r on r.pedido_id = e.pedido_id
 					where e.motivo in ('repasse_transferido', 'estorno_parcial') and e.atualizado_em >= :de and e.atualizado_em < :ate
+					and not exists (select 1 from pagamento_evento a where a.pedido_id = e.pedido_id and a.motivo = e.motivo and a.atualizado_em < :de)
 					order by 2, 1""")
 					.param("de", Timestamp.from(FiltrosDeAdmin.inicio(ciclo.de()))).param("ate", Timestamp.from(FiltrosDeAdmin.fimExclusivo(ciclo.ate())))
 					.query((rs, i) -> new Estorno(rs.getString("motivo"), rs.getObject("pedido_id", UUID.class), rs.getLong("instituicao_id"),
 							rs.getLong("valor_centavos")))
 					.list();
-			if (lista.isEmpty()) return "Nenhum.";
+			if (lista.isEmpty()) return SEM_ESTORNOS;
 			var nomes = catalogo.instituicoes(lista.stream().map(Estorno::instituicao).distinct().toList());
 			return lista.stream().map(e -> {
 				var i = nomes.get(e.instituicao());

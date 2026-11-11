@@ -78,4 +78,11 @@ class PlanilhaCsvTest {
 				StandardCharsets.UTF_8);
 		assertThat(texto).doesNotContain("@").contains("Doador;Referência do pedido;Data da doação;Valor doado (R$);Percentual de repasse;Valor a receber (R$)");
 	}
+
+	@Test
+	void campoQueComecaComFormulaGanhaApostrofo() {
+		var csv = new String(PlanilhaCsv.escrever(List.of(List.of("=1+1", "+55", "-2", "@soma", "ok=", "a;=b"))), StandardCharsets.UTF_8);
+		assertThat(csv).isEqualTo("\uFEFF'=1+1;'+55;'-2;'@soma;ok=;\"a;=b\"\r\n");
+		assertThat(new String(PlanilhaCsv.escrever(List.of(List.of("=a;b"))), StandardCharsets.UTF_8)).isEqualTo("\uFEFF\"'=a;b\"\r\n");
+	}
 }

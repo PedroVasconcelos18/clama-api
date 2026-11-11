@@ -15,9 +15,13 @@ class TransferenciaEmLoteTest extends PagamentoAdminBase {
 
 	static final String ROTA = "/api/admin/repasses/transferencias";
 
+	static String corpo(Long inst, String de, String ate, String comprovante, Object quantidade, long totalCentavos) {
+		return "{\"instituicaoId\": %s, \"de\": \"%s\", \"ate\": \"%s\", \"comprovante\": \"%s\", \"quantidade\": %s, \"totalCentavos\": %d}".formatted(inst, de,
+				ate, comprovante, quantidade, totalCentavos);
+	}
+
 	static String corpo(Long inst, String de, String ate, String comprovante, Object quantidade) {
-		return "{\"instituicaoId\": %s, \"de\": \"%s\", \"ate\": \"%s\", \"comprovante\": \"%s\", \"quantidade\": %s}".formatted(inst, de, ate,
-				comprovante, quantidade);
+		return corpo(inst, de, ate, comprovante, quantidade, 1800);
 	}
 
 	static String ciclo(Long inst, String comprovante, Object quantidade) {
@@ -102,6 +106,20 @@ class TransferenciaEmLoteTest extends PagamentoAdminBase {
 	}
 
 	@Test
+	void mesmaContagemComOutroConjuntoE409PeloTotalENadaMuda() throws Exception {
+		var c = semear();
+		// um estornado (sai) e um novo de valor diferente (entra): continua 3, mas o total nao e mais o da previa
+		jdbc.update("update repasse set status = 'CANCELADO', cancelado_em = now() where id = ?", c.alvo().get(0));
+		var novo = repasseEm(pedido(5000, c.lar()), c.lar(), "REGISTRADO", "2026-11-12T15:00:00Z");
+		jdbc.update("update repasse set valor_centavos = 1000 where id = ?", novo);
+		var res = entrar(Papel.ADMIN).post(ROTA, ciclo(c.lar(), "PIX-1", 3));
+		assertThat(res.statusCode()).isEqualTo(409);
+		assertThat(json(res).get("codigo").asString()).isEqualTo("recorte_mudou");
+		assertThat(contar("select count(*) from repasse where status = 'TRANSFERIDO'")).isEqualTo(1);
+		assertThat(contar("select count(*) from auditoria where entidade in ('repasse', 'repasse_lote')")).isZero();
+	}
+
+	@Test
 	void repetirOLoteQuitadoE409PorqueNaoSobramPendentes() throws Exception {
 		var c = semear();
 		var adm = entrar(Papel.ADMIN);
@@ -119,7 +137,7 @@ class TransferenciaEmLoteTest extends PagamentoAdminBase {
 			var res = adm.post(ROTA, ciclo(c.lar(), ruim, 3));
 			assertThat(res.statusCode()).as("[" + ruim.length() + "]").isEqualTo(400);
 		}
-		assertThat(adm.post(ROTA, "{\"instituicaoId\": %d, \"de\": \"2026-10-28\", \"ate\": \"2026-11-27\", \"quantidade\": 3}".formatted(c.lar())).statusCode())
+		assertThat(adm.post(ROTA, "{\"instituicaoId\": %d, \"de\": \"2026-10-28\", \"ate\": \"2026-11-27\", \"quantidade\": 3, \"totalCentavos\": 1800}".formatted(c.lar())).statusCode())
 				.isEqualTo(400); // sem comprovante
 		assertThat(contar("select count(*) from repasse where status = 'TRANSFERIDO'")).isEqualTo(1);
 		assertThat(contar("select count(*) from auditoria where entidade in ('repasse', 'repasse_lote')")).isZero();
@@ -163,8 +181,8 @@ class TransferenciaEmLoteTest extends PagamentoAdminBase {
 		var largada = new CountDownLatch(1);
 		var pool = Executors.newFixedThreadPool(2);
 		try {
-			var fa = pool.submit(() -> { largada.await(); return a.post(ROTA, ciclo(lar, "PIX-A", 25)).statusCode(); });
-			var fb = pool.submit(() -> { largada.await(); return b.post(ROTA, ciclo(lar, "PIX-B", 25)).statusCode(); });
+			var fa = pool.submit(() -> { largada.await(); return a.post(ROTA, corpo(lar, "2026-10-28", "2026-11-27", "PIX-A", 25, 15000)).statusCode(); });
+			var fb = pool.submit(() -> { largada.await(); return b.post(ROTA, corpo(lar, "2026-10-28", "2026-11-27", "PIX-B", 25, 15000)).statusCode(); });
 			largada.countDown();
 			var codigos = new ArrayList<>(List.of(fa.get(), fb.get()));
 			java.util.Collections.sort(codigos);

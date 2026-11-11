@@ -1477,9 +1477,13 @@
             "format" : "int32",
             "minimum" : 1,
             "type" : "integer"
+          },
+          "totalCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
           }
         },
-        "required" : [ "ate", "comprovante", "de", "instituicaoId", "quantidade" ],
+        "required" : [ "ate", "comprovante", "de", "instituicaoId", "quantidade", "totalCentavos" ],
         "type" : "object"
       },
       "Quitados" : {

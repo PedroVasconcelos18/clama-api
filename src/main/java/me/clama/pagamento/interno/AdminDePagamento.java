@@ -182,12 +182,12 @@ public class AdminDePagamento {
 
 	/**
 	 * Quitacao em lote (D8): os {@code REGISTRADO} da instituicao cujo repasse e do periodo (dias de Sao Paulo, inclusivos).
-	 * {@code quantidade} e a da previa: se agora forem outras, 409 {@code recorte_mudou} e nada muda. As linhas sao travadas
+	 * {@code quantidade} e {@code totalCentavos} sao os da previa: se agora forem outros, 409 {@code recorte_mudou} e nada muda. As linhas sao travadas
 	 * em ordem de id ({@code FOR UPDATE}): um lote concorrente espera, relê o status ja {@code TRANSFERIDO} e acha zero, entao
 	 * cai no 409 em vez de quitar duas vezes. {@code CANCELADO} e {@code TRANSFERIDO} nao entram. Audita cada repasse (como
 	 * o individual) e o lote.
 	 */
-	public Quitacao transferirLote(Long autorId, long instituicaoId, LocalDate de, LocalDate ate, String comprovante, int quantidade) {
+	public Quitacao transferirLote(Long autorId, long instituicaoId, LocalDate de, LocalDate ate, String comprovante, int quantidade, long totalCentavos) {
 		if (comprovante == null || comprovante.isBlank() || comprovante.length() > 120) {
 			throw FiltrosDeAdmin.invalido("comprovante", "Informe o comprovante, com até 120 caracteres.");
 		}
@@ -198,12 +198,12 @@ public class AdminDePagamento {
 					select id from repasse where instituicao_id = :inst and status = 'REGISTRADO' and criado_em >= :de and criado_em < :ate
 					order by id for update""").param("inst", instituicaoId).param("de", Timestamp.from(FiltrosDeAdmin.inicio(de)))
 					.param("ate", Timestamp.from(FiltrosDeAdmin.fimExclusivo(ate))).query(Long.class).list();
-			if (ids.size() != quantidade) {
+			var total = ids.isEmpty() ? 0L : jdbc.sql("select coalesce(sum(valor_centavos), 0) from repasse where id in (:ids)").param("ids", ids).query(Long.class).single();
+			if (ids.size() != quantidade || total != totalCentavos) {
 				throw new ErroDeNegocio(HttpStatus.CONFLICT, "recorte_mudou", "Os repasses do período mudaram desde a prévia.",
 						"Os repasses desse período mudaram desde a prévia. Confira de novo antes de marcar.");
 			}
 			if (ids.isEmpty()) return new Quitacao(0, 0);
-			var total = jdbc.sql("select coalesce(sum(valor_centavos), 0) from repasse where id in (:ids)").param("ids", ids).query(Long.class).single();
 			var mudou = jdbc.sql("update repasse set status = 'TRANSFERIDO', transferido_em = :em, comprovante = :comprovante where id in (:ids) and status = 'REGISTRADO'")
 					.param("em", Timestamp.from(agora)).param("comprovante", comprovante).param("ids", ids).update();
 			if (mudou != ids.size()) throw new IllegalStateException("lote de repasses mudou sob trava");

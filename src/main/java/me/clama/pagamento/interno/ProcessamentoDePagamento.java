@@ -195,7 +195,7 @@ public class ProcessamentoDePagamento {
 		var agora = relogio.instant();
 		cobrancas.registrarPagamento(mpId, agora);
 		repasses.registrar(pedidoId, p.instituicaoId(), p.valorCentavos(), agora);
-		if (!eventos.marcar(eventoId, EventosDePagamento.PROCESSADO, null, pedidoId, agora)) {
+		if (!eventos.marcar(eventoId, EventosDePagamento.PROCESSADO, parcial(pagamento) ? "estorno_parcial" : null, pedidoId, agora)) {
 			LOG.warn("Mercado Pago webhook: evento ja terminal ao marcar processado (evento_id={})", eventoId);
 		}
 		return parcial(pagamento) ? new Decisao(Resultado.OK, "estorno_parcial", estornoParcial(mpId)) : Decisao.de(Resultado.OK);

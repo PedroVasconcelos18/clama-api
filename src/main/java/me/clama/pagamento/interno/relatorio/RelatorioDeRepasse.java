@@ -166,9 +166,9 @@ public class RelatorioDeRepasse {
 		if (nome == null) return SEM_NOME;
 		var partes = java.util.Arrays.stream(nome.split("[\\p{javaWhitespace}\\p{Z}]+")).filter(p -> !p.isEmpty()).toList();
 		if (partes.isEmpty()) return SEM_NOME;
-		if (partes.size() == 1) return partes.get(0);
-		var ultima = partes.get(partes.size() - 1);
-		return partes.get(0) + " " + new String(Character.toChars(ultima.codePointAt(0))).toUpperCase(java.util.Locale.ROOT) + ".";
+		var saida = partes.size() == 1 ? partes.get(0) : partes.get(0) + " " + new String(Character.toChars(partes.get(partes.size() - 1).codePointAt(0))).toUpperCase(java.util.Locale.ROOT) + ".";
+		// quem digita e-mail ou CPF no campo de nome nao pode vazar para a instituicao
+		return nome.chars().anyMatch(c -> c == '@' || Character.isDigit(c)) ? SEM_NOME : saida;
 	}
 
 	/** {@code #a3f2…8b1c}: quatro primeiros e quatro ultimos hex do id, sem PII. */

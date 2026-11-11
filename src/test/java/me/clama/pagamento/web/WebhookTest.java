@@ -524,6 +524,18 @@ class WebhookTest {
 	}
 
 	@Test
+	void estornoParcialJaNaPrimeiraAprovacaoGravaOMotivoEstornoParcial() throws Exception {
+		var id = pedido();
+		cobranca(id, 1, PAG);
+		mp(PAG, "approved", id, "30.01", "BRL", "partially_refunded");
+
+		assertThat(status(notificar(1))).isEqualTo("ok");
+
+		assertThat(evento(1)).isEqualTo("PROCESSADO estorno_parcial");
+		assertThat(jdbc.queryForObject("select status from repasse where pedido_id = ?", String.class, id)).isEqualTo("REGISTRADO");
+	}
+
+	@Test
 	void estornoParcialAlertaSemMexerNoRepasse() throws Exception {
 		var id = pedido();
 		cobranca(id, 1, PAG);

@@ -80,6 +80,7 @@ public final class PlanilhaCsv {
 	}
 
 	private static String campo(String valor) {
+		if (!valor.isEmpty() && "=+-@".indexOf(valor.charAt(0)) >= 0) valor = "'" + valor; // injecao de formula na planilha
 		if (valor.indexOf(';') < 0 && valor.indexOf('"') < 0 && valor.indexOf('\r') < 0 && valor.indexOf('\n') < 0) return valor;
 		return "\"" + valor.replace("\"", "\"\"") + "\"";
 	}

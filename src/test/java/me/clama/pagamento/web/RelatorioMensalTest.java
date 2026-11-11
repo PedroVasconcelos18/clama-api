@@ -52,6 +52,11 @@ class RelatorioMensalTest extends PagamentoAdminBase {
 		return e.assunto() + "\n" + e.texto() + "\n" + e.html();
 	}
 
+	static String ref(java.util.UUID id) {
+		var hex = id.toString().replace("-", "");
+		return "#" + hex.substring(0, 4) + "…" + hex.substring(hex.length() - 4);
+	}
+
 	String texto() {
 		return caixa.para(props.emailAdmin()).get(0).email().texto();
 	}
@@ -197,6 +202,87 @@ class RelatorioMensalTest extends PagamentoAdminBase {
 	}
 
 	@Test
+	void estornoJaListadoEmCicloAnteriorNaoVoltaAParecer() {
+		var a = instituicao("Lar A");
+		var p = pedido("Maria Silva", 3000, a);
+		paga(p, 1);
+		repasseEm(p, a, "TRANSFERIDO", DENTRO);
+		var e1 = evento("e1", "PROCESSADO", "repasse_transferido"); // no ciclo atual
+		var e0 = evento("e0", "PROCESSADO", "repasse_transferido"); // o mesmo estorno, ja listado no ciclo anterior
+		jdbc.update("update pagamento_evento set pedido_id = ?, atualizado_em = ?::timestamptz where id = ?", p, DENTRO, e1);
+		jdbc.update("update pagamento_evento set pedido_id = ?, atualizado_em = ?::timestamptz where id = ?", p, "2026-10-10T15:00:00Z", e0);
+		var novo = pedido("Joao Souza", 3000, a);
+		paga(novo, 2);
+		repasseEm(novo, a, "TRANSFERIDO", DENTRO);
+		var e2 = evento("e2", "PROCESSADO", "repasse_transferido");
+		jdbc.update("update pagamento_evento set pedido_id = ?, atualizado_em = ?::timestamptz where id = ?", novo, DENTRO, e2);
+
+		tarefa.rodar(false, null);
+
+		var t = texto();
+		var estornos = t.substring(t.indexOf("Estornos a acertar:"));
+		assertThat(estornos.lines().filter(l -> l.startsWith("- "))).hasSize(1);
+		assertThat(estornos).contains(ref(novo)).doesNotContain(ref(p));
+	}
+
+	@Test
+	void assuntoViraAtencaoQuandoHaEstornoAAcertar() {
+		var a = instituicao("Lar A");
+		var p = pedido("Maria Silva", 3000, a);
+		paga(p, 1);
+		repasseEm(p, a, "TRANSFERIDO", DENTRO);
+		var e = evento("e1", "PROCESSADO", "repasse_transferido");
+		jdbc.update("update pagamento_evento set pedido_id = ?, atualizado_em = ?::timestamptz where id = ?", p, DENTRO, e);
+
+		tarefa.rodar(false, null);
+
+		assertThat(caixa.para(props.emailAdmin()).get(0).email().assunto()).isEqualTo("Repasse do ciclo 28/10/2026 a 27/11/2026: atenção");
+	}
+
+	@Test
+	void chaveDoEmailLevaOHashDoCorpoCorrigidoNaoEDescartadoEIgualDeduplica() {
+		var a = instituicao("Lar A");
+		doacao("Maria Silva", a, "REGISTRADO", DENTRO, 1);
+		tarefa.rodar(false, null);
+		tarefa.rodar(false, null); // mesma coisa: retentativa
+		doacao("Joao Souza", a, "REGISTRADO", DENTRO, 2);
+		tarefa.rodar(false, null); // corpo corrigido
+
+		var chaves = caixa.enviados().stream().map(x -> x.chave()).toList();
+		assertThat(chaves).hasSize(3).allMatch(c -> c.matches("relatorio-repasse/2026-11-27/[0-9a-f]{12}"));
+		assertThat(chaves.get(0)).isEqualTo(chaves.get(1)).isNotEqualTo(chaves.get(2));
+	}
+
+	/** O handler real da tarefa: falha tecnica tenta de novo em 30 min, ate 3 vezes; a 4a e a FalhaParcial vao ao proximo cron. */
+	@Test
+	void falhaTecnicaRetentaEm30MinutosAte3VezesEDepoisVaiAoCron() {
+		var inicio = java.time.Instant.parse("2026-11-28T13:00:00Z");
+		var fim = inicio.plusSeconds(5);
+		var tecnica = new IllegalStateException("resend fora");
+		for (int falhas = 0; falhas < 4; falhas++) {
+			var execucao = new com.github.kagkarlsson.scheduler.task.Execution(inicio, new com.github.kagkarlsson.scheduler.task.TaskInstance<Void>(
+					tarefa.getName(), "recurring"), true, "x", null, null, falhas, null, 1);
+			var ops = org.mockito.Mockito.mock(com.github.kagkarlsson.scheduler.task.ExecutionOperations.class);
+			tarefa.getFailureHandler().onFailure(com.github.kagkarlsson.scheduler.task.ExecutionComplete.failure(execucao, inicio, fim, tecnica), ops);
+			var quando = org.mockito.ArgumentCaptor.forClass(java.time.Instant.class);
+			org.mockito.Mockito.verify(ops).reschedule(any(), quando.capture());
+			if (falhas < 3) {
+				assertThat(quando.getValue()).as("falha " + (falhas + 1)).isEqualTo(fim.plus(java.time.Duration.ofMinutes(30)));
+			} else {
+				assertThat(quando.getValue()).as("4a falha: cron").isEqualTo(java.time.ZonedDateTime.of(2026, 12, 28, 10, 0, 0, 0, TarefaRecorrente.FUSO).toInstant());
+			}
+		}
+		var parcial = new com.github.kagkarlsson.scheduler.task.Execution(inicio, new com.github.kagkarlsson.scheduler.task.TaskInstance<Void>(
+				tarefa.getName(), "recurring"), true, "x", null, null, 0, null, 1);
+		var ops = org.mockito.Mockito.mock(com.github.kagkarlsson.scheduler.task.ExecutionOperations.class);
+		tarefa.getFailureHandler().onFailure(com.github.kagkarlsson.scheduler.task.ExecutionComplete.failure(parcial, inicio, fim,
+				new TarefaRecorrente.FalhaParcial("faltou 1")), ops);
+		var quando = org.mockito.ArgumentCaptor.forClass(java.time.Instant.class);
+		org.mockito.Mockito.verify(ops).reschedule(any(), quando.capture());
+		assertThat(quando.getValue()).isAfter(fim.plus(java.time.Duration.ofDays(20)));
+	}
+
+	@Test
 	void emailSemNomeNemEmailDeDoadorSemIdDePedidoComLinkEChaveDoCiclo() {
 		var a = instituicao("Lar A");
 		var p = pedido("Maria Silva Santos", 3000, a);
@@ -206,7 +292,7 @@ class RelatorioMensalTest extends PagamentoAdminBase {
 		tarefa.rodar(false, null);
 
 		var enviado = caixa.para(props.emailAdmin()).get(0);
-		assertThat(enviado.chave()).isEqualTo("relatorio-repasse/2026-11-27");
+		assertThat(enviado.chave()).startsWith("relatorio-repasse/2026-11-27/");
 		assertThat(enviado.email().assunto()).isEqualTo("Repasse do ciclo 28/10/2026 a 27/11/2026: relatórios prontos");
 		var tudo = email();
 		assertThat(tudo).doesNotContain("Maria", "Santos", "maria@", "exemplo.com", "52998224725", "Pela família", p.toString())
@@ -256,8 +342,8 @@ class RelatorioMensalTest extends PagamentoAdminBase {
 		assertThat(contar("select count(*) from relatorio_repasse")).isEqualTo(2);
 		assertThat(jdbc.queryForObject("select quantidade from relatorio_repasse where instituicao_id = ?", Integer.class, a)).isEqualTo(2);
 		assertThat(jdbc.queryForObject("select quantidade from relatorio_repasse where instituicao_id = ?", Integer.class, b)).isZero();
-		assertThat(caixa.enviados()).hasSize(2); // a chave do ciclo deixa a Resend descartar o repetido
-		assertThat(caixa.enviados().stream().map(x -> x.chave()).distinct().toList()).containsExactly("relatorio-repasse/2026-11-27");
+		assertThat(caixa.enviados()).hasSize(2); // 
+		assertThat(caixa.enviados().stream().map(x -> x.chave()).distinct().toList()).hasSize(2); // o corpo mudou entre as duas rodadas: chaves diferentes
 	}
 
 	@Test
