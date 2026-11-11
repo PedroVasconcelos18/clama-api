@@ -175,6 +175,10 @@
           "nome" : {
             "type" : "string"
           },
+          "ordem" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
           "valorCentavos" : {
             "format" : "int64",
             "type" : "integer"

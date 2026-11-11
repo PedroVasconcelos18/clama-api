@@ -19,6 +19,7 @@ import me.clama.catalogo.interno.InstituicaoRepository;
 import me.clama.catalogo.interno.Plano;
 import me.clama.catalogo.interno.PlanoRepository;
 import me.clama.infra.seguranca.LimiteDeTaxa;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,7 +46,8 @@ class CatalogoPublicoTest {
 	final HttpClient http = HttpClient.newHttpClient();
 
 	@BeforeEach
-	void limpar() {
+	@AfterEach
+	void limpar() { // o banco e compartilhado: nao deixa linhas para outros testes
 		limite.limpar();
 		jdbc.update("delete from instituicao_logo");
 		jdbc.update("delete from instituicao");
@@ -101,8 +103,9 @@ class CatalogoPublicoTest {
 		assertThat(lista.get(0).get("nome").asString()).isEqualTo("A");
 		assertThat(lista.get(1).get("nome").asString()).isEqualTo("B");
 		assertThat(lista.get(0).propertyNames()).containsExactlyInAnyOrder("id", "nome", "descricao", "valorCentavos",
-				"complexidade");
+				"complexidade", "ordem");
 		assertThat(lista.get(0).get("valorCentavos").asLong()).isEqualTo(2000);
+		assertThat(lista.get(1).get("ordem").asInt()).isEqualTo(2);
 		assertThat(lista.get(1).get("complexidade").asString()).isEqualTo("COM_VERSICULO");
 	}
 
@@ -124,8 +127,20 @@ class CatalogoPublicoTest {
 		assertThat(res.body()).isEmpty();
 		assertThat(res.headers().firstValue("Cache-Control")).hasValue("max-age=60, public, stale-while-revalidate=300");
 
+		assertThat(get("/api/planos", "If-None-Match", "W/" + etag).statusCode()).isEqualTo(304); // validador fraco
 		planos.saveAndFlush(Plano.comum("Novo", "", 4000, Complexidade.SIMPLES, 2));
 		assertThat(get("/api/planos", "If-None-Match", etag).statusCode()).isEqualTo(200); // mudou: ETag novo
+	}
+
+	@Test
+	void metodosDeEscritaSemSessaoDao401EHeadPassa() throws Exception {
+		var post = http.send(HttpRequest.newBuilder(URI.create("http://localhost:" + porta + "/api/planos"))
+				.POST(HttpRequest.BodyPublishers.ofString("{}")).header("Content-Type", "application/json").build(),
+				HttpResponse.BodyHandlers.ofString());
+		assertThat(post.statusCode()).isEqualTo(401);
+		var head = http.send(HttpRequest.newBuilder(URI.create("http://localhost:" + porta + "/api/planos"))
+				.method("HEAD", HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofString());
+		assertThat(head.statusCode()).isEqualTo(200);
 	}
 
 	@Test
@@ -190,13 +205,15 @@ class CatalogoPublicoTest {
 	}
 
 	@Test
-	void sessentaPorMinutoPorIpNasTresRotas() throws Exception {
-		for (int i = 0; i < 20; i++) {
+	void trezentosPorMinutoPorIpNasTresRotas() throws Exception {
+		for (int i = 0; i < 100; i++) {
 			assertThat(get("/api/planos").statusCode()).isEqualTo(200);
 			assertThat(get("/api/instituicoes").statusCode()).isEqualTo(200);
 			assertThat(get("/api/instituicoes/1/logo").statusCode()).isEqualTo(404);
 		}
-		var res = get("/api/planos");
+		// a recarga gradual devolve ~5 fichas por segundo: o teto aparece em poucas chamadas a mais
+		HttpResponse<String> res = get("/api/planos");
+		for (int i = 0; i < 60 && res.statusCode() == 200; i++) res = get("/api/planos");
 		assertThat(res.statusCode()).isEqualTo(429);
 		assertThat(JSON.readTree(res.body()).get("codigo").asString()).isEqualTo("limite_excedido");
 		assertThat(get("/api/instituicoes").statusCode()).isEqualTo(429);

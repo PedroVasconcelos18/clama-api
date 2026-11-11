@@ -53,7 +53,7 @@ class CatalogoPublicoController {
 		limitar(req);
 		var lista = planos.findByTipoAndAtivoTrueOrderByOrdemAscIdAsc(TipoDePlano.COMUM).stream()
 				.map(p -> new PlanoPublico(p.getId(), p.getNome(), p.getDescricao(), p.getValorCentavos(),
-						p.getComplexidade()))
+						p.getComplexidade(), p.getOrdem()))
 				.toList();
 		return ResponseEntity.ok().cacheControl(LISTA).eTag(etag(lista.toString())).body(lista);
 	}
@@ -85,7 +85,7 @@ class CatalogoPublicoController {
 	}
 
 	private void limitar(HttpServletRequest req) {
-		limite.exigir(new Cota("catalogo:ip:" + ClienteIp.de(req), 60, Duration.ofMinutes(1)));
+		limite.exigir(new Cota("catalogo:ip:" + ClienteIp.de(req), 300, Duration.ofMinutes(1)));
 	}
 
 	/** Hash do conteudo serializado (record.toString e enum.name sao estaveis entre execucoes e instancias). */
