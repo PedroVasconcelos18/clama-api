@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Import;
 /** INV:62 sobre tres planos comuns, um inativo e os dois tecnicos da migration (que nunca entram na inferencia). */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({ BancoDeTeste.class, InferenciaDePlano.class })
+@Import({ BancoDeTeste.class, me.clama.CriptoDeTeste.class, InferenciaDePlano.class })
 class InferenciaDePlanoTest {
 
 	@Autowired InferenciaDePlano inferencia;

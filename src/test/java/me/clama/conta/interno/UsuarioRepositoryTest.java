@@ -14,7 +14,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(BancoDeTeste.class)
+@Import({ BancoDeTeste.class, me.clama.CriptoDeTeste.class, me.clama.CriptoDeTeste.class })
 class UsuarioRepositoryTest {
 
 	@Autowired UsuarioRepository repo;

@@ -21,7 +21,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({ BancoDeTeste.class, CatalogoApiImpl.class, InferenciaDePlano.class })
+@Import({ BancoDeTeste.class, me.clama.CriptoDeTeste.class, CatalogoApiImpl.class, InferenciaDePlano.class })
 class CatalogoApiTest {
 
 	@Autowired CatalogoApiImpl api;

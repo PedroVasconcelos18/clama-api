@@ -16,6 +16,13 @@ import me.clama.conta.ContaApi;
 import me.clama.conta.UsuarioResumo;
 import me.clama.conta.interno.LoginServico;
 import me.clama.conta.interno.UsuarioRepository;
+import me.clama.pedido.DadosParaOracao;
+import me.clama.pedido.GeracaoSolicitada;
+import me.clama.pedido.PedidoApi;
+import me.clama.pedido.PedidoCobravel;
+import me.clama.pedido.PedidoResumo;
+import me.clama.pedido.ReenvioSolicitado;
+import me.clama.pedido.StatusPedido;
 import org.junit.jupiter.api.Test;
 import org.springframework.modulith.core.ApplicationModules;
 import org.springframework.modulith.docs.Documenter;
@@ -63,6 +70,24 @@ class ModulosTest {
 			assertThat(catalogo.isExposed(c)).as(c.getSimpleName()).isTrue();
 		assertThat(catalogo.isExposed(me.clama.catalogo.interno.PlanoRepository.class)).isFalse();
 		assertThat(catalogo.isExposed(me.clama.catalogo.interno.Plano.class)).isFalse();
+	}
+
+	@Test
+	void pedidoExpoeSoApiEventosERecords() {
+		var pedido = MODULOS.getModuleByName("pedido").orElseThrow();
+		for (var c : new Class<?>[] { PedidoApi.class, PedidoResumo.class, PedidoCobravel.class, DadosParaOracao.class,
+				StatusPedido.class, GeracaoSolicitada.class, ReenvioSolicitado.class })
+			assertThat(pedido.isExposed(c)).as(c.getSimpleName()).isTrue();
+		assertThat(pedido.isExposed(me.clama.pedido.interno.Pedido.class)).isFalse();
+		assertThat(pedido.isExposed(me.clama.pedido.interno.PedidoRepository.class)).isFalse();
+	}
+
+	/** Pedido so enxerga conta e catalogo: nao conhece pagamento nem oracao (que dependem dele). */
+	@Test
+	void pedidoNaoDependeDePagamentoNemDeOracao() {
+		var pedido = MODULOS.getModuleByName("pedido").orElseThrow();
+		var deps = pedido.getDirectDependencies(MODULOS).stream().map(d -> d.getTargetModule().getIdentifier().toString()).toList();
+		assertThat(deps).doesNotContain("pagamento", "oracao");
 	}
 
 	@Test
