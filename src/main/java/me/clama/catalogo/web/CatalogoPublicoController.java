@@ -6,9 +6,8 @@ import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.HexFormat;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import me.clama.catalogo.TipoDePlano;
+import me.clama.catalogo.interno.CatalogoAdminServico;
 import me.clama.catalogo.interno.InstituicaoLogoRepository;
 import me.clama.catalogo.interno.InstituicaoRepository;
 import me.clama.catalogo.interno.PlanoRepository;
@@ -38,13 +37,15 @@ class CatalogoPublicoController {
 	private final PlanoRepository planos;
 	private final InstituicaoRepository instituicoes;
 	private final InstituicaoLogoRepository logos;
+	private final CatalogoAdminServico admin;
 	private final LimiteDeTaxa limite;
 
 	CatalogoPublicoController(PlanoRepository planos, InstituicaoRepository instituicoes,
-			InstituicaoLogoRepository logos, LimiteDeTaxa limite) {
+			InstituicaoLogoRepository logos, CatalogoAdminServico admin, LimiteDeTaxa limite) {
 		this.planos = planos;
 		this.instituicoes = instituicoes;
 		this.logos = logos;
+		this.admin = admin;
 		this.limite = limite;
 	}
 
@@ -63,8 +64,7 @@ class CatalogoPublicoController {
 		limitar(req);
 		var ativas = instituicoes.findByAtivoTrueOrderByOrdemAscNomeAscIdAsc();
 		// so id e hash: a lista nunca carrega os blobs
-		Map<Long, String> hashes = logos.hashes(ativas.stream().map(i -> i.getId()).toList()).stream()
-				.collect(Collectors.toMap(h -> h.getInstituicaoId(), h -> h.getSha256()));
+		var hashes = admin.hashesDeLogo(ativas.stream().map(i -> i.getId()).toList());
 		var lista = ativas.stream().map(i -> new InstituicaoPublica(i.getId(), i.getNome(),
 				InstituicaoPublica.urlDaLogo(i.getId(), hashes.get(i.getId()))))
 				.toList();

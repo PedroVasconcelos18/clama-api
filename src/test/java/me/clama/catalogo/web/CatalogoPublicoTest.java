@@ -12,6 +12,9 @@ import java.time.Instant;
 import java.util.HexFormat;
 import me.clama.BancoDeTeste;
 import me.clama.catalogo.Complexidade;
+import me.clama.conta.interno.Papel;
+import me.clama.conta.interno.UsuarioRepository;
+import me.clama.conta.web.Navegador;
 import me.clama.catalogo.interno.Instituicao;
 import me.clama.catalogo.interno.InstituicaoLogo;
 import me.clama.catalogo.interno.InstituicaoLogoRepository;
@@ -26,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.jdbc.core.JdbcTemplate;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -42,6 +46,8 @@ class CatalogoPublicoTest {
 	@Autowired InstituicaoRepository instituicoes;
 	@Autowired InstituicaoLogoRepository logos;
 	@Autowired JdbcTemplate jdbc;
+	@Autowired UsuarioRepository usuarios;
+	@Autowired PasswordEncoder encoder;
 	@Autowired LimiteDeTaxa limite;
 	final HttpClient http = HttpClient.newHttpClient();
 
@@ -149,6 +155,22 @@ class CatalogoPublicoTest {
 			var res = get(caminho, "Cookie", "SESSION=invalida");
 			assertThat(res.statusCode()).isEqualTo(200);
 			assertThat(res.headers().allValues("Set-Cookie")).isEmpty();
+		}
+	}
+
+	@Test
+	void requisicaoAutenticadaNaoTrazSetCookieEMantemCachePublico() throws Exception {
+		planos.saveAndFlush(Plano.comum("A", "", 2000, Complexidade.SIMPLES, 1));
+		var u = Navegador.usuario(usuarios, encoder, Navegador.emailUnico(), "senha-forte-123", Papel.CLIENTE);
+		try {
+			var nav = new Navegador(porta);
+			assertThat(nav.login(u.getEmail(), "senha-forte-123").statusCode()).isEqualTo(200);
+			var res = nav.get("/api/planos");
+			assertThat(res.statusCode()).isEqualTo(200);
+			assertCacheDaLista(res);
+		} finally {
+			jdbc.update("delete from auditoria where autor_id = ?", u.getId());
+			jdbc.update("delete from usuario where id = ?", u.getId());
 		}
 	}
 

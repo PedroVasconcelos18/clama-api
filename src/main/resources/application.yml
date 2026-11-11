@@ -40,6 +40,7 @@ spring:
     multipart:
       max-file-size: 300KB # logo: o validador recusa >250 KB com texto proprio; isto e so a trava de rede
       max-request-size: 400KB
+      file-size-threshold: 300KB # partes ficam em memoria: sem depender do diretorio temporario
   lifecycle:
     timeout-per-shutdown-phase: 15s
   jpa:

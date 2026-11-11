@@ -80,11 +80,6 @@ public class Plano {
 		this.ordem = ordem;
 	}
 
-	/** O tipo nasce com o plano; so existe para recusar com mensagem clara. */
-	public void alterarTipo(TipoDePlano novo) {
-		if (novo != tipo) throw new PlanoTecnicoException("O tipo do plano nao muda.");
-	}
-
 	public void ativar() {
 		this.ativo = true;
 	}

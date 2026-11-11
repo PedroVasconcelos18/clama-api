@@ -32,7 +32,6 @@ class PlanoTest {
 		assertEquals(3000, p.getValorCentavos());
 		assertEquals(5, p.getOrdem());
 		assertTrue(p.isAtivo());
-		assertThrows(PlanoTecnicoException.class, () -> p.alterarTipo(TipoDePlano.GRATUITO));
 	}
 
 	@Test
@@ -43,7 +42,6 @@ class PlanoTest {
 		assertThrows(PlanoTecnicoException.class, p::desativar);
 		assertThrows(PlanoTecnicoException.class, () -> p.alterarValor(5));
 		assertThrows(PlanoTecnicoException.class, () -> p.reordenar(5));
-		assertThrows(PlanoTecnicoException.class, () -> p.alterarTipo(TipoDePlano.COMUM));
 		assertThrows(PlanoTecnicoException.class, () -> p.alterarComplexidade(COM_VERSICULO));
 	}
 
