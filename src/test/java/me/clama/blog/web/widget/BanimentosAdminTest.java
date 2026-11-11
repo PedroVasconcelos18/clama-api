@@ -46,6 +46,17 @@ class BanimentosAdminTest extends WidgetTeste {
 	}
 
 	@Test
+	void banimentoSemAutorListaSemConsultarOId0() throws Exception {
+		var admin = logado("Admin Um", Papel.ADMIN);
+		var alvo = logado();
+		jdbc.update("insert into blog_banimento (usuario_id, motivo, banido_por_id, banido_em) values (?, 'sem autor', null, now())", alvo.id());
+		var res = admin.nav().get("/api/admin/blog/banimentos");
+		assertThat(res.statusCode()).isEqualTo(200);
+		assertThat(json(res).get("content").get(0).get("motivo").asString()).isEqualTo("sem autor");
+		org.mockito.Mockito.verify(conta, org.mockito.Mockito.never()).resumos(org.mockito.ArgumentMatchers.argThat(ids -> ids.contains(0L)));
+	}
+
+	@Test
 	void banir201ComAuditoriaEDeNovo200SemMudarOMotivo() throws Exception {
 		var admin = logado("Admin Um", Papel.ADMIN);
 		var alvo = logado("Ana Maria de Souza", Papel.CLIENTE);

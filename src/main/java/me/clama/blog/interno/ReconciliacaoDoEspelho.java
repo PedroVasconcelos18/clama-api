@@ -41,6 +41,7 @@ class ReconciliacaoDoEspelho extends TarefaRecorrente {
 
 	@Override
 	protected void executar(boolean dryRun) {
+		var inicioDaLeitura = relogio.instant();
 		List<PostWp> lista;
 		try {
 			lista = lerTudo();
@@ -61,7 +62,7 @@ class ReconciliacaoDoEspelho extends TarefaRecorrente {
 		}
 		transacao.executeWithoutResult(s -> {
 			mudados.forEach(espelho::gravar);
-			if (!sumidos.isEmpty()) posts.despublicar(sumidos, relogio.instant());
+			if (!sumidos.isEmpty()) posts.despublicar(sumidos, relogio.instant(), inicioDaLeitura);
 		});
 		LOG.info("reconciliar-espelho: {} post(s) criados ou atualizados, {} deixaram de estar publicados", mudados.size(), sumidos.size());
 	}

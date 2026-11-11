@@ -30,6 +30,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 	/** Post que sumiu da lista publica: deixa de aceitar interacao. So grava os que estavam publicados. */
 	@Transactional
 	@Modifying(flushAutomatically = true, clearAutomatically = true)
-	@Query("update Post p set p.publicado = false, p.atualizadoEm = :agora where p.publicado = true and p.wpId in :ids")
-	int despublicar(java.util.Collection<Long> ids, Instant agora);
+	@Query("update Post p set p.publicado = false, p.atualizadoEm = :agora where p.publicado = true and p.wpId in :ids and p.atualizadoEm < :inicioDaLeitura")
+	int despublicar(java.util.Collection<Long> ids, Instant agora, Instant inicioDaLeitura);
 }

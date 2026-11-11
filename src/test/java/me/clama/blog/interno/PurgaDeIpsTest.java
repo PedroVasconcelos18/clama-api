@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import me.clama.BancoDeTeste;
+import me.clama.infra.fila.TarefaRecorrente;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,7 +21,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
-/** {@code purgar-ips} (D12): 180 dias + 1 s purga, exatamente 180 fica, nulo nao conta, dry-run so conta. */
+/** {@code purgar-ips} (D12): 6 meses de calendario (SP) + 1 s purga, exatamente 6 meses fica, nulo nao conta, dry-run so conta. */
 @SpringBootTest
 @Import(BancoDeTeste.class)
 @ExtendWith(OutputCaptureExtension.class)
@@ -52,8 +53,12 @@ class PurgaDeIpsTest {
 	}
 
 	long comentario(Duration idade, String ip) {
+		return comentarioEm(AGORA.minus(idade), ip);
+	}
+
+	long comentarioEm(Instant quando, String ip) {
 		return jdbc.queryForObject("insert into blog_comentario (post_id, usuario_id, conteudo, suspeito, ip_cifrado, criado_em) values (7, ?, 'texto', false, ?, ?) returning id",
-				Long.class, usuario, ip, OffsetDateTime.ofInstant(AGORA.minus(idade), ZoneOffset.UTC));
+				Long.class, usuario, ip, OffsetDateTime.ofInstant(quando, ZoneOffset.UTC));
 	}
 
 	String ip(long id) {
@@ -67,9 +72,10 @@ class PurgaDeIpsTest {
 	}
 
 	@Test
-	void cento_e_oitentaDiasMaisUmSegundoPurgaEExatamenteCentoEOitentaFica(CapturedOutput log) {
-		var velho = comentario(Duration.ofDays(180).plusSeconds(1), "cifrado-1");
-		var borda = comentario(Duration.ofDays(180), "cifrado-2");
+	void seisMesesMaisUmSegundoPurgaEExatamenteSeisMesesFica(CapturedOutput log) {
+		var seisMeses = AGORA.atZone(TarefaRecorrente.FUSO).minusMonths(6).toInstant(); // 2026-05-12T08:00-03:00
+		var velho = comentarioEm(seisMeses.minusSeconds(1), "cifrado-1");
+		var borda = comentarioEm(seisMeses, "cifrado-2");
 		var novo = comentario(Duration.ofDays(1), "cifrado-3");
 		tarefa.executar(false);
 		assertThat(ip(velho)).isNull();

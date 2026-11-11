@@ -140,8 +140,7 @@ public class Banimentos {
 	private record Linha(Long usuarioId, String motivo, Long porId, Instant em) {}
 
 	private static Linha linha(ResultSet rs) throws java.sql.SQLException {
-		var por = rs.getLong("banido_por_id");
-		return new Linha(rs.getLong("usuario_id"), rs.getString("motivo"), rs.wasNull() ? null : por,
+		return new Linha(rs.getLong("usuario_id"), rs.getString("motivo"), rs.getObject("banido_por_id", Long.class),
 				rs.getObject("banido_em", OffsetDateTime.class).toInstant());
 	}
 }

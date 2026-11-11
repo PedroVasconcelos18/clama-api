@@ -105,6 +105,16 @@ class ReconciliacaoDoEspelhoTest {
 		assertThat(atualizadoEm(3)).isEqualTo(antes3);
 	}
 
+	@Test
+	void linhaAtualizadaDepoisDoInicioDaLeituraNaoEDespublicada() {
+		// um POST espelhou o post entre a leitura da lista e o findAll: a lista velha nao o conhece, mas ele e novo
+		var inicio = Instant.parse("2026-11-12T10:00:00Z");
+		posts.upsert(1, "antigo", "T", "https://blog.exemplo/antigo/", true, inicio, inicio.minusSeconds(60));
+		posts.upsert(2, "novo", "T", "https://blog.exemplo/novo/", true, inicio, inicio.plusSeconds(1));
+		assertThat(posts.despublicar(List.of(1L, 2L), inicio.plusSeconds(5), inicio)).isEqualTo(1);
+		assertThat(jdbc.queryForList("select wp_id from blog_post where publicado", Long.class)).containsExactly(2L);
+	}
+
 	void abortaSemGravar() {
 		assertThat(linhas()).isEqualTo(2);
 		assertThat(jdbc.queryForList("select wp_id from blog_post where publicado order by wp_id", Long.class)).containsExactly(1L, 2L);

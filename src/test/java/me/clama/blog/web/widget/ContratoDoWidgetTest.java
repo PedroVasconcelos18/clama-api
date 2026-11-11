@@ -1,6 +1,7 @@
 package me.clama.blog.web.widget;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 
@@ -71,6 +72,25 @@ class ContratoDoWidgetTest extends WidgetTeste {
 		assertThat(res.headers().firstValue("Cache-Control")).hasValue("public, max-age=10");
 		assertThat(res.headers().allValues("Set-Cookie")).isEmpty();
 		assertThat(WP.getAllServeEvents()).isEmpty();
+	}
+
+	@Test
+	void getDeNavegadorLogadoNaoSetaCookie() throws Exception {
+		var l = logado();
+		var res = l.nav().get("/api/blog/posts/inexistente/comments/");
+		assertThat(res.statusCode()).isEqualTo(200);
+		assertThat(res.headers().allValues("Set-Cookie")).isEmpty();
+	}
+
+	@org.springframework.beans.factory.annotation.Autowired me.clama.blog.interno.Comentarios comentarios;
+
+	@Test
+	void limiteDoGetDoWidgetNaoDivideMemoriaComOLimiteGeral() {
+		var ip = "203.0.113.9";
+		for (int i = 0; i < 300; i++) comentarios.listar("fe", ip);
+		assertThatThrownBy(() -> comentarios.listar("fe", ip)).isInstanceOf(me.clama.infra.web.ErroDeNegocio.class);
+		// o limitador geral (login etc.) nao viu nada disso: mesma chave, balde novo
+		limite.exigir(new me.clama.infra.seguranca.LimiteDeTaxa.Cota("blog:leitura:ip:" + ip, 1, java.time.Duration.ofMinutes(1)));
 	}
 
 	@Test

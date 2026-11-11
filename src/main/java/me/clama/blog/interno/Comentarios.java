@@ -39,6 +39,8 @@ public class Comentarios {
 	private final Banimentos banimentos;
 	private final ContaApi conta;
 	private final LimiteDeTaxa limite;
+	// leitura publica com memoria propria: inundar o GET com IPs falsos nao despeja os contadores do login
+	private final LimiteDeTaxa limiteDeLeitura = new LimiteDeTaxa();
 	private final Clock relogio;
 
 	Comentarios(Espelho espelho, PostRepository posts, ComentarioRepository comentarios, Banimentos banimentos,
@@ -54,7 +56,7 @@ public class Comentarios {
 
 	/** Leitura publica: so o banco, nunca o WordPress. Slug sem espelho (ou nao publicado) = lista vazia. */
 	public Lista listar(String slug, String ip) {
-		limite.exigir(new Cota("blog:leitura:ip:" + ip, 300, Duration.ofMinutes(1)));
+		limiteDeLeitura.exigir(new Cota("blog:leitura:ip:" + ip, 300, Duration.ofMinutes(1)));
 		var post = posts.findFirstBySlugOrderByPublicadoDescPublicadoEmDescWpIdDesc(slug).filter(Post::isPublicado);
 		if (post.isEmpty()) return new Lista(0, List.of());
 		var id = post.get().getWpId();

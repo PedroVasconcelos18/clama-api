@@ -1,9 +1,7 @@
 package me.clama.blog.interno;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import me.clama.infra.fila.TarefaRecorrente;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,14 +9,15 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
 /**
- * {@code purgar-ips} (D12), as 03:00: o IP so existe pelo Marco Civil, e o prazo da Politica e de 6 meses. Um {@code UPDATE}
- * so, sem decifrar nada: comentario com mais de 180 dias (exatamente 180 fica) perde o {@code ip_cifrado}.
+ * {@code purgar-ips} (D12), as 03:00: o IP so existe pelo Marco Civil, e o Marco Civil (art. 15) manda guardar por no minimo 6 meses.
+ * Um {@code UPDATE} so, sem decifrar nada: comentario com mais de 6 meses de calendario (fuso de Sao Paulo; exatamente 6 meses
+ * fica) perde o {@code ip_cifrado}. Meses, nao 180 dias: 180 dias apagaria alguns dias antes do prazo.
  */
 @Component
 class PurgaDeIps extends TarefaRecorrente {
 
 	private static final Logger LOG = LoggerFactory.getLogger(PurgaDeIps.class);
-	static final Duration RETENCAO = Duration.ofDays(180);
+	static final int RETENCAO_EM_MESES = 6;
 
 	private final JdbcClient jdbc;
 	private final Clock relogio;
@@ -31,7 +30,7 @@ class PurgaDeIps extends TarefaRecorrente {
 
 	@Override
 	protected void executar(boolean dryRun) {
-		var corte = OffsetDateTime.ofInstant(relogio.instant().minus(RETENCAO), ZoneOffset.UTC);
+		var corte = relogio.instant().atZone(FUSO).minusMonths(RETENCAO_EM_MESES).toOffsetDateTime();
 		var onde = " from blog_comentario where criado_em < :corte and ip_cifrado is not null";
 		if (dryRun) {
 			var n = jdbc.sql("select count(*)" + onde).param("corte", corte).query(Long.class).single();
