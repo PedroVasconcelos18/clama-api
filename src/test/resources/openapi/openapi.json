@@ -179,6 +179,36 @@
         },
         "type" : "object"
       },
+      "EstadoDoPedido" : {
+        "properties" : {
+          "atualizadoEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "gratuito" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "jaEmAndamento" : {
+            "type" : "boolean"
+          },
+          "status" : {
+            "enum" : [ "AGUARDANDO_PAGAMENTO", "PAGO", "GERANDO_ORACAO", "ORACAO_GERADA", "ENVIADA", "AGUARDANDO_NOVA_TENTATIVA", "ERRO" ],
+            "type" : "string"
+          },
+          "ultimoErro" : {
+            "type" : [ "string", "null" ]
+          },
+          "valorCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "EventoDoPedido" : {
         "properties" : {
           "id" : {
@@ -1834,6 +1864,84 @@
           }
         },
         "tags" : [ "pedidos-admin-controller" ]
+      }
+    },
+    "/api/admin/pedidos/{id}/gratuidade" : {
+      "post" : {
+        "operationId" : "gratuidade",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EstadoDoPedido"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "acoes-de-pedido-admin-controller" ]
+      }
+    },
+    "/api/admin/pedidos/{id}/reenvio" : {
+      "post" : {
+        "operationId" : "reenvio",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EstadoDoPedido"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "acoes-de-pedido-admin-controller" ]
+      }
+    },
+    "/api/admin/pedidos/{id}/regeneracao" : {
+      "post" : {
+        "operationId" : "regeneracao",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EstadoDoPedido"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "acoes-de-pedido-admin-controller" ]
       }
     },
     "/api/admin/planos" : {
