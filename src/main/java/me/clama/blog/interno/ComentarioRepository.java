@@ -7,6 +7,14 @@ public interface ComentarioRepository extends JpaRepository<Comentario, Long> {
 
 	long countByPostId(Long postId);
 
-	/** Os 20 mais novos do post (o widget nao pagina). */
-	List<Comentario> findTop20ByPostIdOrderByCriadoEmDescIdDesc(Long postId);
+	/** Os 20 mais novos do post (o widget nao pagina), numa projecao: a coluna do IP nem e lida, quanto menos decifrada. */
+	<T> List<T> findTop20ByPostIdOrderByCriadoEmDescIdDesc(Long postId, Class<T> projecao);
+
+	/** So o que a lista publica mostra. */
+	interface Linha {
+		Long getId();
+		Long getUsuarioId();
+		String getConteudo();
+		java.time.Instant getCriadoEm();
+	}
 }

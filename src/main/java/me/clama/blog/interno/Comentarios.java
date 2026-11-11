@@ -58,8 +58,8 @@ public class Comentarios {
 		var post = posts.findFirstBySlugOrderByPublicadoDescPublicadoEmDescWpIdDesc(slug).filter(Post::isPublicado);
 		if (post.isEmpty()) return new Lista(0, List.of());
 		var id = post.get().getWpId();
-		var novos = comentarios.findTop20ByPostIdOrderByCriadoEmDescIdDesc(id);
-		var nomes = conta.resumos(novos.stream().map(Comentario::getUsuarioId).distinct().toList());
+		var novos = comentarios.findTop20ByPostIdOrderByCriadoEmDescIdDesc(id, ComentarioRepository.Linha.class);
+		var nomes = conta.resumos(novos.stream().map(ComentarioRepository.Linha::getUsuarioId).distinct().toList());
 		return new Lista(comentarios.countByPostId(id), novos.stream().map(c -> publico(c, nomes)).toList());
 	}
 
@@ -83,7 +83,7 @@ public class Comentarios {
 		var post = espelho.resolver(slug); // fora de transacao: pode ir ao WordPress
 		var salvo = comentarios.save(new Comentario(post.getWpId(), usuarioId, texto, Moderacao.ehSuspeito(texto), ipLiteral(ip),
 				relogio.instant().truncatedTo(ChronoUnit.MICROS)));
-		return publico(salvo, conta.resumos(List.of(usuarioId)));
+		return publico(linha(salvo), conta.resumos(List.of(usuarioId)));
 	}
 
 	/**
@@ -98,13 +98,22 @@ public class Comentarios {
 		}
 	}
 
+	private static ComentarioRepository.Linha linha(Comentario c) {
+		return new ComentarioRepository.Linha() {
+			public Long getId() { return c.getId(); }
+			public Long getUsuarioId() { return c.getUsuarioId(); }
+			public String getConteudo() { return c.getConteudo(); }
+			public Instant getCriadoEm() { return c.getCriadoEm(); }
+		};
+	}
+
 	static void exigirLivre(Banimentos banimentos, long usuarioId) {
 		if (banimentos.estaBanido(usuarioId)) {
 			throw new ErroDeNegocio(HttpStatus.CONFLICT, "comentarios_suspensos", "Conta banida no blog", SUSPENSA);
 		}
 	}
 
-	private static Publico publico(Comentario c, java.util.Map<Long, me.clama.conta.UsuarioResumo> nomes) {
+	private static Publico publico(ComentarioRepository.Linha c, java.util.Map<Long, me.clama.conta.UsuarioResumo> nomes) {
 		var autor = nomes.get(c.getUsuarioId());
 		return new Publico(c.getId(), autor == null ? "" : autor.nomePublico(), c.getConteudo(), c.getCriadoEm());
 	}

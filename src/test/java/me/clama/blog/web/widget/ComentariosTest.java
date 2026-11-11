@@ -1,6 +1,7 @@
 package me.clama.blog.web.widget;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 
@@ -98,6 +99,19 @@ class ComentariosTest extends WidgetTeste {
 			assertThat(json(res).get("code").asString()).isEqualTo("comentarios_suspensos");
 		}
 		assertThat(quantos("blog_comentario")).isZero();
+	}
+
+	/** A lista publica nao le (e nao decifra) o IP: com a coluna ilegivel ela continua funcionando. */
+	@Test
+	void listaPublicaNaoTocaAColunaDoIp() throws Exception {
+		semear(7, "fe", true);
+		var l = logado();
+		assertThat(comentarTexto(l.nav(), "fe", "Belo texto").statusCode()).isEqualTo(201);
+		jdbc.update("update blog_comentario set ip_cifrado = 'nao-decifra'");
+		assertThatThrownBy(() -> comentarios.findAll().getFirst().getIp()).isNotNull(); // a entidade inteira quebraria
+		var res = new me.clama.conta.web.Navegador(porta).get("/api/blog/posts/fe/comments/");
+		assertThat(res.statusCode()).isEqualTo(200);
+		assertThat(json(res).get("results").get(0).get("conteudo").asString()).isEqualTo("Belo texto");
 	}
 
 	@Test

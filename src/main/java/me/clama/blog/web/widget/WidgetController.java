@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -91,8 +90,8 @@ class WidgetController {
 		byte[] bruto;
 		try {
 			bruto = req.getInputStream().readNBytes(MAX_CORPO + 1);
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
+		} catch (IOException e) { // cliente que abortou no meio do corpo: 400 plano, sem Sentry
+			throw new ErroDeNegocio(HttpStatus.BAD_REQUEST, "corpo_invalido", "Corpo nao lido", ErrosDoWidget.PASTORAL_GENERICA);
 		}
 		if (bruto.length > MAX_CORPO) throw new ErroDeNegocio(HttpStatus.BAD_REQUEST, "comentario_longo", "Corpo grande demais", Comentarios.LONGO);
 		if (bruto.length == 0) return null;

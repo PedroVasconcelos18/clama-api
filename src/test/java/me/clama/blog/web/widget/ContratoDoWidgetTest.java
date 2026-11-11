@@ -235,6 +235,12 @@ class ContratoDoWidgetTest extends WidgetTeste {
 		assertThat(res.body()).doesNotContain("dado pessoal");
 	}
 
+	@Test
+	void acceptNaoAtendidoE406PlanoENaoUm500() throws Exception {
+		var res = new Navegador(porta).get("/api/blog/posts/fe/comments/", "Accept", "text/html");
+		erro(res, 406, "requisicao_invalida", GENERICA);
+	}
+
 	// --- o advice nao vaza ---
 
 	@Test
