@@ -21,6 +21,9 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID> {
 
 	List<Pedido> findByEmailHmac(String emailHmac);
 
+	/** Pedidos do usuario no intervalo (inclusivo), mais recentes primeiro. */
+	List<Pedido> findByUsuarioIdAndCriadoEmBetweenOrderByCriadoEmDesc(Long usuarioId, Instant de, Instant ate);
+
 	@Query("""
 			select p.id from Pedido p where p.status in (me.clama.pedido.StatusPedido.PAGO, me.clama.pedido.StatusPedido.GERANDO_ORACAO,
 			me.clama.pedido.StatusPedido.ORACAO_GERADA, me.clama.pedido.StatusPedido.AGUARDANDO_NOVA_TENTATIVA)

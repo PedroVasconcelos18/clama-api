@@ -95,6 +95,9 @@ clama:
     # A chave do HMAC e outra, de proposito. Gerar: openssl rand -base64 32
     chave: ${CLAMA_CRIPTO_CHAVE:}
     chave-hmac: ${CLAMA_HMAC_CHAVE:}
+  pagamento:
+    # piso do checkout (R$ 1,00); o pedido confere na criacao e o pagamento repete na cobranca
+    valor-minimo-centavos: 100
   turnstile:
     url: https://challenges.cloudflare.com/turnstile/v0/siteverify
     secret: ${TURNSTILE_SECRET_KEY:}

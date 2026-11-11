@@ -89,6 +89,21 @@ class LoginTest {
 		assertThat(json(eu).get("email").asString()).isEqualTo(email);
 	}
 
+	/** D20: o doador entra pelo e-mail que digitou no pedido (variante do Gmail) quando o exato nao acha. */
+	@Test
+	void gmailCanonicoEntraPorQualquerVariante() throws Exception {
+		var local = "pessoa" + System.nanoTime();
+		var u = usuario(local + "@gmail.com", "senha-forte-123", Papel.CLIENTE);
+		var variante = local.substring(0, 3) + "." + local.substring(3) + "+x@Gmail.com";
+
+		var res = new Navegador(porta).login(variante, "senha-forte-123");
+
+		assertThat(res.statusCode()).isEqualTo(200);
+		assertThat(json(res).get("id").asLong()).isEqualTo(u.getId());
+		var errada = new Navegador(porta).login(variante, "outra-senha-456");
+		assertThat(errada.statusCode()).isEqualTo(401);
+	}
+
 	@Test
 	void senhaErradaInativoSemSenhaDao401Generico() throws Exception {
 		var errada = emailUnico();

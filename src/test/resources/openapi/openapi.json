@@ -207,6 +207,76 @@
         "required" : [ "senha" ],
         "type" : "object"
       },
+      "NovoPedido" : {
+        "properties" : {
+          "consentAceito" : {
+            "type" : "boolean"
+          },
+          "cpfCnpj" : {
+            "maxLength" : 18,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "deviceHash" : {
+            "maxLength" : 128,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "email" : {
+            "format" : "email",
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "idade" : {
+            "format" : "int32",
+            "maximum" : 120,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "instituicao" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "nome" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "pedidoOracao" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "plano" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "sexo" : {
+            "maxLength" : 20,
+            "minLength" : 0,
+            "pattern" : "feminino|masculino|nao_informado|",
+            "type" : "string"
+          },
+          "telefone" : {
+            "maxLength" : 20,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "turnstileToken" : {
+            "maxLength" : 2048,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "valorCentavos" : {
+            "format" : "int64",
+            "maximum" : 2147483647,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "consentAceito", "cpfCnpj", "email", "nome" ],
+        "type" : "object"
+      },
       "NovoPlano" : {
         "properties" : {
           "complexidade" : {
@@ -274,6 +344,61 @@
           }
         },
         "required" : [ "content", "page" ],
+        "type" : "object"
+      },
+      "PedidoCriado" : {
+        "properties" : {
+          "criadoEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "instituicao" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "status" : {
+            "enum" : [ "AGUARDANDO_PAGAMENTO", "PAGO", "GERANDO_ORACAO", "ORACAO_GERADA", "ENVIADA", "AGUARDANDO_NOVA_TENTATIVA", "ERRO" ],
+            "type" : "string"
+          },
+          "valorCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PedidoDaConta" : {
+        "properties" : {
+          "criadoEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "gratuito" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "oracaoGerada" : {
+            "type" : "string"
+          },
+          "plano" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "AGUARDANDO_PAGAMENTO", "PAGO", "GERANDO_ORACAO", "ORACAO_GERADA", "ENVIADA", "AGUARDANDO_NOVA_TENTATIVA", "ERRO" ],
+            "type" : "string"
+          },
+          "valorCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
         "type" : "object"
       },
       "PedidoDeLink" : {
@@ -401,6 +526,40 @@
           }
         },
         "required" : [ "novaSenha", "token" ],
+        "type" : "object"
+      },
+      "StatusPublico" : {
+        "properties" : {
+          "criadoEm" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "instituicao" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "mensagemPastoral" : {
+            "type" : "string"
+          },
+          "oracaoGerada" : {
+            "type" : "string"
+          },
+          "plano" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "AGUARDANDO_PAGAMENTO", "PAGO", "GERANDO_ORACAO", "ORACAO_GERADA", "ENVIADA", "AGUARDANDO_NOVA_TENTATIVA", "ERRO" ],
+            "type" : "string"
+          },
+          "valorCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
         "type" : "object"
       },
       "TrocaDeSenha" : {
@@ -784,7 +943,7 @@
         "tags" : [ "usuarios-admin-controller" ]
       },
       "post" : {
-        "operationId" : "criar",
+        "operationId" : "criar_1",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -1068,6 +1227,42 @@
         "tags" : [ "conta-controller" ]
       }
     },
+    "/api/conta/pedidos" : {
+      "get" : {
+        "operationId" : "daConta",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "from",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/PedidoDaConta"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "pedidos-controller" ]
+      }
+    },
     "/api/conta/senha" : {
       "post" : {
         "operationId" : "trocarSenha",
@@ -1094,6 +1289,34 @@
           }
         },
         "tags" : [ "conta-controller" ]
+      }
+    },
+    "/api/doacoes" : {
+      "post" : {
+        "operationId" : "doar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/NovoPedido"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PedidoCriado"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "pedidos-controller" ]
       }
     },
     "/api/instituicoes" : {
@@ -1143,6 +1366,88 @@
           }
         },
         "tags" : [ "catalogo-publico-controller" ]
+      }
+    },
+    "/api/pedidos" : {
+      "post" : {
+        "operationId" : "criar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/NovoPedido"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PedidoCriado"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "pedidos-controller" ]
+      }
+    },
+    "/api/pedidos/gratuito" : {
+      "post" : {
+        "operationId" : "criarGratuito",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/NovoPedido"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PedidoCriado"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "pedidos-controller" ]
+      }
+    },
+    "/api/pedidos/{id}" : {
+      "get" : {
+        "operationId" : "status",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StatusPublico"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "pedidos-controller" ]
       }
     },
     "/api/planos" : {

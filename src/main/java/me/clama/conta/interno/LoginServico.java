@@ -39,10 +39,12 @@ public class LoginServico {
 
 	public Usuario autenticar(String email, String senha, String ip) {
 		var emailMinusculo = email.strip().toLowerCase(Locale.ROOT);
-		limite.exigir(new Cota("login:email:" + emailMinusculo, 5, Duration.ofMinutes(15)),
+		// chave canonica: variantes do Gmail (pontos, +tag) nao dao tentativas extras contra a mesma conta
+		limite.exigir(new Cota("login:email:" + EmailCanonico.de(emailMinusculo), 5, Duration.ofMinutes(15)),
 				new Cota("login:ip:" + ip, 30, Duration.ofMinutes(1)));
 
-		var usuario = usuarios.findByEmail(emailMinusculo).filter(Usuario::temSenha); // leitura curta, sem transacao aberta
+		var usuario = usuarios.findByEmail(emailMinusculo)
+				.or(() -> usuarios.findByEmailCanonico(EmailCanonico.de(emailMinusculo))).filter(Usuario::temSenha); // leitura curta, sem transacao aberta
 		// sem conta ou sem senha tambem gasta um hash: o tempo de resposta nao denuncia quem existe
 		var hash = usuario.map(Usuario::getSenha).orElse(hashFicticio);
 		var novoHash = vagas.comVaga(() -> {
