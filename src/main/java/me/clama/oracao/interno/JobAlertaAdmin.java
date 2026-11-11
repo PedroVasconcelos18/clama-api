@@ -1,6 +1,7 @@
 package me.clama.oracao.interno;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
@@ -10,6 +11,7 @@ import me.clama.infra.alerta.AlertaAoAdmin;
 import me.clama.infra.fila.Fila;
 import me.clama.infra.fila.TipoDeJob;
 import me.clama.pedido.PedidoApi;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -33,8 +35,8 @@ class JobAlertaAdmin extends TipoDeJob<JobAlertaAdmin.Aviso> {
 	private final Clock relogio;
 
 	JobAlertaAdmin(@Lazy Fila fila, AlertaAoAdmin alerta, PedidoApi pedidos, CatalogoApi catalogo,
-			AdminDeDocumentos documentos, Clock relogio) {
-		super("alerta-admin", Aviso.class, Retentativas.NENHUMA);
+			AdminDeDocumentos documentos, Clock relogio, @Value("${clama.oracao.espera-alerta:2m}") Duration espera) {
+		super("alerta-admin", Aviso.class, new Retentativas(5, espera, 2.0));
 		this.fila = fila;
 		this.alerta = alerta;
 		this.pedidos = pedidos;
@@ -45,7 +47,7 @@ class JobAlertaAdmin extends TipoDeJob<JobAlertaAdmin.Aviso> {
 
 	/** Exige a transacao da mudanca de status; ja na fila para este pedido = no-op. */
 	void enfileirar(UUID id, String motivo) {
-		fila.enfileirar(this, instancia(id), new Aviso(id, motivo), relogio.instant());
+		fila.enfileirar(this, instancia(id + "/" + motivo), new Aviso(id, motivo), relogio.instant());
 	}
 
 	@Override
@@ -55,7 +57,7 @@ class JobAlertaAdmin extends TipoDeJob<JobAlertaAdmin.Aviso> {
 		PlanoResumo plano = r == null || r.planoId() == null ? null : catalogo.planos(List.of(r.planoId())).get(r.planoId());
 		alerta.enviarAgora(new AlertaAoAdmin.Alerta(a.motivo(), detalhe(a.motivo()), id, r == null ? null : r.status().name(),
 				plano == null ? null : plano.nome(), r == null ? null : r.valorCentavos()),
-				id + "/" + relogio.instant().truncatedTo(ChronoUnit.HOURS));
+				id + "/" + a.motivo() + "/" + relogio.instant().truncatedTo(ChronoUnit.HOURS));
 	}
 
 	private String detalhe(String motivo) {

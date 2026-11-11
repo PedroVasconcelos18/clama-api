@@ -95,6 +95,10 @@ class JobGerarOracao extends TipoDeJob<UUID> {
 			LOG.warn("gerar-oracao: Claude indisponivel, a fila retenta (pedido_id={}, tentativa={})", id, tentativa + 1);
 			throw e;
 		} catch (ClienteClaude.Falha e) {
+			if (!documentos.fileIdsAtivos().equals(fileIds)) { // o admin trocou ou apagou um documento no meio: a fila retenta com os novos
+				LOG.warn("gerar-oracao: documentos ativos mudaram durante a chamada, a fila retenta (pedido_id={})", id);
+				throw new IllegalStateException("documentos de contexto mudaram durante a geracao", e);
+			}
 			LOG.error("gerar-oracao: Claude recusou o pedido (pedido_id={}, documentos={})", id, fileIds.size(), e);
 			falhar(id, "falha_geracao");
 			return;

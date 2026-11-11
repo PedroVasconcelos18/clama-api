@@ -59,7 +59,7 @@ public class ClienteClaude {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ClienteClaude.class);
 	static final int TENTATIVAS = 3;
-	/** Files API: o upload de ate 100 MB nao cabe nos 30 s da geracao; so estas chamadas usam estes prazos. */
+	/** Files API: o upload de ate 32 MB nao cabe nos 30 s da geracao; so estas chamadas usam estes prazos. */
 	static final Duration PRAZO_UPLOAD = Duration.ofMinutes(5);
 	static final Duration PRAZO_ARQUIVO = Duration.ofSeconds(60);
 	private static final CacheControlEphemeral EFEMERO = CacheControlEphemeral.builder().build();

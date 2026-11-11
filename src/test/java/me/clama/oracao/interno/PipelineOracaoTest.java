@@ -70,6 +70,7 @@ class PipelineOracaoTest {
 		r.add("clama.oracao.espera-geracao", () -> "100ms");
 		r.add("clama.oracao.espera-nova-tentativa", () -> "500ms");
 		r.add("clama.oracao.espera-envio", () -> "100ms");
+		r.add("clama.oracao.espera-alerta", () -> "100ms");
 	}
 
 	@LocalServerPort int porta;
@@ -147,7 +148,7 @@ class PipelineOracaoTest {
 		assertThat(enviados).hasSize(1);
 		var a = enviados.getFirst();
 		var hora = Instant.now().truncatedTo(ChronoUnit.HOURS);
-		assertThat(a.chave()).isIn("alerta/" + id + "/" + hora, "alerta/" + id + "/" + hora.minus(Duration.ofHours(1)));
+		assertThat(a.chave()).matches("alerta/" + id + "/[a-z_]+/(" + hora + "|" + hora.minus(Duration.ofHours(1)) + ")");
 		assertThat(a.email().texto() + a.email().html() + a.email().assunto()).doesNotContain("Maria", "maria@", "52998224725",
 				"Pela família", "11999990000");
 		assertThat(a.email().texto()).contains(id.toString(), "/admin/pedidos?id=" + id);
@@ -289,6 +290,55 @@ class PipelineOracaoTest {
 	}
 
 	@Test
+	void documentoTrocadoNoMeioDaChamadaRetentaEmVezDeFalharOPedido() throws Exception {
+		jdbc.update("""
+				insert into documento_contexto (nome, mime, tamanho_bytes, file_id, ativo, criado_em, atualizado_em)
+				values ('Catecismo', 'application/pdf', 10, 'file_velho', true, now(), now())""");
+		CLAUDE.stubFor(post("/v1/messages").willReturn(aResponse().withStatus(404).withFixedDelay(600).withHeader("Content-Type", "application/json")
+				.withBody("""
+						{"type": "error", "error": {"type": "not_found_error", "message": "File not found"}}""")));
+		var id = pedidoPago();
+		Thread.sleep(300); // a chamada ja saiu com o arquivo antigo e segue presa no atraso do stub
+		jdbc.update("update documento_contexto set file_id = 'file_novo'"); // o admin trocou o arquivo durante a chamada
+
+		aguardarStatus(id, StatusPedido.ERRO);
+
+		assertThat(chamadasAClaude()).isEqualTo(2); // 1a com o antigo, a retentativa com o novo; ai sim e falha de verdade
+		CLAUDE.verify(1, postRequestedFor(urlEqualTo("/v1/messages"))
+				.withRequestBody(matchingJsonPath("$.messages[0].content[0].source.file_id", equalTo("file_novo"))));
+		assertThat(alerta(id)).contains("falha_geracao");
+	}
+
+	@Test
+	void alertaRetentaQuandoAResendEstaForaEChegaQuandoVolta() throws Exception {
+		var id = pedido();
+		caixa.falhar(true);
+
+		tx.executeWithoutResult(s -> alertaAdmin.enfileirar(id, "falha_envio"));
+		semMudarPor(Duration.ofMillis(500));
+		assertThat(caixa.para(ADMIN)).isEmpty();
+		caixa.falhar(false);
+
+		assertThat(alerta(id)).contains("falha_envio");
+	}
+
+	@Test
+	void motivosDiferentesNaMesmaHoraTemChavesDiferentesEOMesmoMotivoAMesma() throws Exception {
+		var id = pedido();
+
+		for (var motivo : new String[] { "credit_balance", "falha_geracao", "falha_geracao" }) {
+			tx.executeWithoutResult(s -> alertaAdmin.enfileirar(id, motivo));
+			for (int i = 0; i < 300 && fila.existePendente(alertaAdmin.getName(), alertaAdmin.instancia(id + "/" + motivo)); i++) Thread.sleep(10);
+		}
+		semMudarPor(Duration.ofMillis(500));
+
+		// a caixa de teste nao deduplica como a Resend: o que conta e a chave (igual = descartado la)
+		var chaves = caixa.para(ADMIN).stream().map(CaixaDeSaidaEmMemoria.Enviado::chave).distinct().toList();
+		assertThat(chaves).hasSize(2);
+		assertThat(chaves).anyMatch(c -> c.contains("/credit_balance/")).anyMatch(c -> c.contains("/falha_geracao/"));
+	}
+
+	@Test
 	void falhaPassageiraRetentaReagendaEDepoisVaiParaErroComAlerta() throws Exception {
 		claude(500, """
 				{"type": "error", "error": {"type": "api_error", "message": "Internal server error"}}""");
@@ -411,7 +461,7 @@ class PipelineOracaoTest {
 			assertThat(caixa.para(ADMIN)).as("antes do commit").isEmpty();
 		});
 		assertThat(alerta(id)).contains("pedido_preso", "AGUARDANDO_PAGAMENTO", "Oração Simples", "R$");
-		assertThat(fila.existePendente(alertaAdmin.getName(), alertaAdmin.instancia(id))).isFalse();
+		assertThat(fila.existePendente(alertaAdmin.getName(), alertaAdmin.instancia(id + "/pedido_preso"))).isFalse();
 		assertThat(jdbc.queryForObject("select count(*) from scheduled_tasks", Integer.class)).isZero();
 	}
 

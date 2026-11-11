@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Admin dos documentos de contexto (D14; ADMIN pela cadeia padrao). O arquivo vai no corpo cru do PUT (PDF ou TXT, ate
- * 100 MB), nao em multipart: os limites globais de multipart (300 KB) nao se aplicam, e o Tomcat nao limita corpo cru
+ * 32 MB), nao em multipart: os limites globais de multipart (300 KB) nao se aplicam, e o Tomcat nao limita corpo cru
  * que nao seja formulario. Escritas auditadas.
  */
 @RestController

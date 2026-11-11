@@ -31,7 +31,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * Documentos de contexto (D14). A Files API da Anthropic e a fonte da verdade; o banco guarda so os metadados
  * ({@code documento_contexto}), e nada fica em disco alem do arquivo temporario do upload, apagado no fim. So PDF
  * ({@code %PDF-}) e TXT (UTF-8 valido, sem NUL), detectados pelo conteudo e nunca pelo Content-Type ou pela extensao;
- * ate 100 MB, contados enquanto o corpo chega. As chamadas a Anthropic ficam fora das transacoes (o upload leva
+ * ate 32 MB (limite de request da Claude), contados enquanto o corpo chega. As chamadas a Anthropic ficam fora das transacoes (o upload leva
  * segundos); cada escrita local e auditada.
  */
 @Component
@@ -39,12 +39,13 @@ public class AdminDeDocumentos {
 
 	private static final Logger LOG = LoggerFactory.getLogger(AdminDeDocumentos.class);
 	static final String ENTIDADE = "documento_contexto";
-	public static final long MAXIMO = 100L * 1024 * 1024;
+	public static final int MAXIMO_ATIVOS = 5;
+	public static final long MAXIMO = 32L * 1024 * 1024;
 
 	public record Documento(long id, String nome, @Nullable String mime, @Nullable Long tamanhoBytes, @Nullable String fileId,
 			boolean ativo, Instant criadoEm, Instant atualizadoEm) {}
 
-	/** Uploads ao mesmo tempo: cada um segura um temporario de ate 100 MB e uma conexao longa com a Anthropic. */
+	/** Uploads ao mesmo tempo: cada um segura um temporario de ate 32 MB (limite de request da Claude) e uma conexao longa com a Anthropic. */
 	private final Semaphore vagas = new Semaphore(2);
 	private final JdbcClient jdbc;
 	private final Auditoria auditoria;
@@ -87,7 +88,7 @@ public class AdminDeDocumentos {
 
 	/**
 	 * Recebe o corpo cru: recusa na hora pelo Content-Length (-1 = desconhecido) e quando ja ha 2 uploads (503), grava num
-	 * temporario contando os bytes (acima de 100 MB, 400 sem ler o resto), valida o formato, sobe para a Files API e guarda o
+	 * temporario contando os bytes (acima de 32 MB, 400 sem ler o resto), valida o formato, sobe para a Files API e guarda o
 	 * {@code file_id} com compare-and-set sobre o antigo: quem perde a corrida apaga o arquivo novo la e recebe 409. Se ja
 	 * havia outro arquivo, apaga o antigo la depois (falha so avisa).
 	 */
@@ -147,6 +148,11 @@ public class AdminDeDocumentos {
 			}
 		}
 		return transacao.execute(s -> {
+			if (Boolean.TRUE.equals(ativo) && !d.ativo()
+					&& jdbc.sql("select count(*) from documento_contexto where ativo").query(Long.class).single() >= MAXIMO_ATIVOS) {
+				throw new ErroDeNegocio(HttpStatus.CONFLICT, "limite_documentos_ativos", "Limite de documentos ativos.",
+						"Já há " + MAXIMO_ATIVOS + " documentos ativos. Desative um antes de ativar outro.");
+			}
 			var agora = Timestamp.from(relogio.instant());
 			var novoNome = nome == null ? null : nome.strip();
 			if (novoNome != null && !novoNome.equals(d.nome())
@@ -195,10 +201,10 @@ public class AdminDeDocumentos {
 
 	private static ErroDeNegocio grandeDemais() {
 		return new ErroDeNegocio(HttpStatus.BAD_REQUEST, "documento_grande_demais", "Documento grande demais.",
-				"O documento passa de 100 MB. Envie uma versão menor.");
+				"O documento passa de 32 MB. Envie uma versão menor.");
 	}
 
-	/** Copia contando; passou de 100 MB, 400 na hora. */
+	/** Copia contando; passou de 32 MB, 400 na hora. */
 	private static long copiar(InputStream corpo, Path destino) throws IOException {
 		long total = 0;
 		var buf = new byte[64 * 1024];

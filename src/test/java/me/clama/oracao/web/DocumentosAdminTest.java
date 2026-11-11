@@ -33,7 +33,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import tools.jackson.databind.JsonNode;
 
-/** Admin de documentos de contexto (D14): metadados no banco, arquivo na Files API (WireMock), corpo cru ate 100 MB. */
+/** Admin de documentos de contexto (D14): metadados no banco, arquivo na Files API (WireMock), corpo cru ate 32 MB. */
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @Import({ BancoDeTeste.class, EmailDeTeste.class })
 @ActiveProfiles("test")
@@ -41,7 +41,7 @@ class DocumentosAdminTest {
 
 	static final WireMockServer CLAUDE = new WireMockServer(WireMockConfiguration.options().dynamicPort());
 	static final String RAIZ = "/api/admin/documentos";
-	static final long CEM_MB = 100L * 1024 * 1024;
+	static final long LIMITE = 32L * 1024 * 1024;
 	static final String META = """
 			{"id": "%s", "type": "file", "filename": "x", "mime_type": "%s", "size_bytes": 10,
 			 "created_at": "2026-11-12T10:00:00Z", "downloadable": false}""";
@@ -155,7 +155,7 @@ class DocumentosAdminTest {
 				404, "documento_nao_encontrado");
 	}
 
-	/** Corpo cru acima do multipart (300 KB) e de 2 MB passa: nenhum limite do Tomcat/Spring corta antes dos 100 MB. */
+	/** Corpo cru acima do multipart (300 KB) e de 2 MB passa: nenhum limite do Tomcat/Spring corta antes dos 32 MB. */
 	@Test
 	void arquivoDeVariosMegabytesPassa() throws Exception {
 		var adm = entrar(Papel.ADMIN);
@@ -169,20 +169,20 @@ class DocumentosAdminTest {
 	}
 
 	@Test
-	void exatamente100MbPassaE100MbMais1ViraRecusado() throws Exception {
+	void exatamente32MbPassaE32MbMais1ViraRecusado() throws Exception {
 		var adm = entrar(Papel.ADMIN);
 		var id = criar(adm, "Limite");
-		CLAUDE.stubFor(post("/v1/files").willReturn(okJson(META.formatted("file_100", "text/plain"))));
+		CLAUDE.stubFor(post("/v1/files").willReturn(okJson(META.formatted("file_32", "text/plain"))));
 
-		var acima = adm.putCru(RAIZ + "/" + id + "/arquivo", "text/plain", gerado(CEM_MB + 1, 'a'));
+		var acima = adm.putCru(RAIZ + "/" + id + "/arquivo", "text/plain", gerado(LIMITE + 1, 'a'));
 
 		confere(acima, 400, "documento_grande_demais");
 		CLAUDE.verify(0, postRequestedFor(anyUrl()));
 		assertThat(jdbc.queryForObject("select file_id from documento_contexto where id = ?", String.class, id)).isNull();
 
-		var no_limite = adm.putCru(RAIZ + "/" + id + "/arquivo", "text/plain", gerado(CEM_MB, 'a'));
+		var no_limite = adm.putCru(RAIZ + "/" + id + "/arquivo", "text/plain", gerado(LIMITE, 'a'));
 		assertThat(no_limite.statusCode()).as(no_limite.body()).isEqualTo(200);
-		assertThat(Navegador.json(no_limite).get("tamanhoBytes").asLong()).isEqualTo(CEM_MB);
+		assertThat(Navegador.json(no_limite).get("tamanhoBytes").asLong()).isEqualTo(LIMITE);
 	}
 
 	@Test
@@ -230,6 +230,24 @@ class DocumentosAdminTest {
 		var off = adm.patch(RAIZ + "/" + id, "{\"ativo\": false}");
 		assertThat(Navegador.json(off).get("ativo").asBoolean()).isFalse();
 		CLAUDE.verify(1, getRequestedFor(urlEqualTo("/v1/files/file_ok"))); // desativar nao consulta
+	}
+
+	@Test
+	void sextoDocumentoAtivoE409ComCodigoELimiteNaoAfetaDesativar() throws Exception {
+		var adm = entrar(Papel.ADMIN);
+		for (int i = 0; i < 5; i++) {
+			var id = comArquivo("file_" + i);
+			CLAUDE.stubFor(get("/v1/files/file_" + i).willReturn(okJson(META.formatted("file_" + i, "text/plain"))));
+			assertThat(adm.patch(RAIZ + "/" + id, "{\"ativo\": true}").statusCode()).isEqualTo(200);
+		}
+		var sexto = comArquivo("file_6");
+		CLAUDE.stubFor(get("/v1/files/file_6").willReturn(okJson(META.formatted("file_6", "text/plain"))));
+
+		confere(adm.patch(RAIZ + "/" + sexto, "{\"ativo\": true}"), 409, "limite_documentos_ativos");
+		assertThat(ativos()).hasSize(5);
+
+		assertThat(adm.patch(RAIZ + "/" + ativos().getFirst(), "{\"ativo\": false}").statusCode()).isEqualTo(200);
+		assertThat(adm.patch(RAIZ + "/" + sexto, "{\"ativo\": true}").statusCode()).isEqualTo(200);
 	}
 
 	@Test
@@ -330,11 +348,11 @@ class DocumentosAdminTest {
 	}
 
 	@Test
-	void contentLengthAcimaDe100MbRecusaSemLerOCorpo() throws Exception {
+	void contentLengthAcimaDe32MbRecusaSemLerOCorpo() throws Exception {
 		var adm = entrar(Papel.ADMIN);
 		var id = criar(adm, "X");
 		var e = org.junit.jupiter.api.Assertions.assertThrows(me.clama.infra.web.ErroDeNegocio.class,
-				() -> documentos.receberArquivo(1L, id, InputStream.nullInputStream(), CEM_MB + 1));
+				() -> documentos.receberArquivo(1L, id, InputStream.nullInputStream(), LIMITE + 1));
 		assertThat(e.codigo()).isEqualTo("documento_grande_demais");
 		assertThat(e.status().value()).isEqualTo(400);
 		CLAUDE.verify(0, postRequestedFor(anyUrl()));

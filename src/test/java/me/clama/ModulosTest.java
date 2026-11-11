@@ -121,6 +121,17 @@ class ModulosTest {
 		}
 	}
 
+	/** Pagamento e infra ficam abaixo da oracao: nenhum dos dois a conhece. */
+	@Test
+	void pagamentoEInfraNaoDependemDeOracao() {
+		var pagamento = MODULOS.getModuleByName("pagamento").orElseThrow();
+		assertThat(pagamento.getDirectDependencies(MODULOS).stream().map(d -> d.getTargetModule().getIdentifier().toString()))
+				.doesNotContain("oracao");
+		var classes = new ClassFileImporter().withImportOption(new ImportOption.DoNotIncludeTests()).importPackages("me.clama");
+		ArchRuleDefinition.noClasses().that().resideInAPackage("me.clama.infra..").should().dependOnClassesThat()
+				.resideInAPackage("me.clama.oracao..").check(classes);
+	}
+
 	@Test
 	void documentacao() {
 		new Documenter(MODULOS).writeDocumentation();
