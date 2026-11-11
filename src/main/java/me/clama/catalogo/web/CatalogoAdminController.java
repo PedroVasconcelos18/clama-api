@@ -35,7 +35,7 @@ class CatalogoAdminController {
 
 	/** Nulo = deixa como esta. */
 	record MudancaDePlano(@Size(max = 80) @Pattern(regexp = SO_BRANCOS) String nome, @Size(max = 2000) String descricao,
-			@Min(1) @Max(Integer.MAX_VALUE) Long valorCentavos, Complexidade complexidade,
+			@Min(0) @Max(Integer.MAX_VALUE) Long valorCentavos, Complexidade complexidade,
 			@Min(0) @Max(32767) Integer ordem, Boolean ativo) {}
 
 	record NovaInstituicao(@NotBlank @Size(max = 120) String nome, @Min(0) @Max(32767) Integer ordem) {}

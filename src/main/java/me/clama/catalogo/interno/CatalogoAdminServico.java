@@ -27,6 +27,7 @@ public class CatalogoAdminServico {
 
 	static final String NOME_DUPLICADO_PLANO = "Já existe um plano ativo com este nome.";
 	static final String NOME_DUPLICADO_INSTITUICAO = "Já existe uma instituição ativa com este nome.";
+	private static final String MIN_VALOR = "O valor precisa ser de pelo menos 1 centavo.";
 	private static final String PASTORAL_NAO_ENCONTRADO = "Não encontramos esse item.";
 	private static final String PASTORAL_TECNICO = "Este plano é usado pelo sistema e só aceita mudanças de nome e descrição.";
 
@@ -94,6 +95,10 @@ public class CatalogoAdminServico {
 					if (!p.getDescricao().equals(descricaoAntes)) diff.put("descricao", mudanca(descricaoAntes, p.getDescricao()));
 				}
 				if (valorCentavos != null && valorCentavos != p.getValorCentavos()) {
+					if (valorCentavos < 1 && !p.isTecnico()) {
+						throw new ErroDeNegocio(HttpStatus.BAD_REQUEST, "dados_invalidos", "Dados inválidos.",
+								MIN_VALOR, List.of(new ErroDeCampo("valorCentavos", MIN_VALOR)));
+					}
 					var antes = p.getValorCentavos();
 					p.alterarValor(valorCentavos);
 					diff.put("valorCentavos", mudanca(antes, valorCentavos));
@@ -165,10 +170,18 @@ public class CatalogoAdminServico {
 		try {
 			return transacao.execute(s -> escrita.get());
 		} catch (DataIntegrityViolationException e) {
-			if (!String.valueOf(e.getMostSpecificCause().getMessage()).contains("_nome_ativo_ux")) throw e;
+			if (!violaNomeAtivo(e)) throw e;
 			throw new ErroDeNegocio(HttpStatus.BAD_REQUEST, "dados_invalidos", "Dados inválidos.", mensagemDuplicado,
 					List.of(new ErroDeCampo("nome", mensagemDuplicado)));
 		}
+	}
+
+	private static boolean violaNomeAtivo(Throwable e) {
+		for (var c = e; c != null; c = c.getCause()) {
+			if (c instanceof org.hibernate.exception.ConstraintViolationException v && v.getConstraintName() != null
+					&& v.getConstraintName().endsWith("_nome_ativo_ux")) return true;
+		}
+		return false;
 	}
 
 	private static Map<String, Object> mudanca(Object antes, Object depois) {

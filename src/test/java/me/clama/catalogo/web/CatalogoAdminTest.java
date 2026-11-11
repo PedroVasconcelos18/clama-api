@@ -143,7 +143,7 @@ class CatalogoAdminTest {
 			assertThat(admin.post("/api/admin/planos", corpo).statusCode()).as(corpo).isEqualTo(400);
 		}
 		var id = id(admin.post("/api/admin/planos", plano("Bom", 3000)));
-		for (var corpo : List.of("{\"valorCentavos\":0}", "{\"nome\":\"   \"}", "{\"complexidade\":\"simples\"}")) {
+		for (var corpo : List.of("{\"valorCentavos\":0}", "{\"valorCentavos\":-1}", "{\"nome\":\"   \"}", "{\"complexidade\":\"simples\"}")) {
 			assertThat(admin.patch("/api/admin/planos/" + id, corpo).statusCode()).as(corpo).isEqualTo(400);
 		}
 	}
@@ -215,17 +215,39 @@ class CatalogoAdminTest {
 		// mudanca recusada nao leva junto o nome do mesmo PATCH
 		assertThat(admin.patch("/api/admin/planos/" + gratuito, "{\"nome\":\"Cortesia\",\"ativo\":false}").statusCode()).isEqualTo(400);
 		assertThat(jdbc.sql("select nome from plano where id = :id").param("id", gratuito).query(String.class).single()).isEqualTo("Gratuito");
-		// mesmo valor e ativo=true nao sao mudanca; nome e descricao passam
-		var ok = admin.patch("/api/admin/planos/" + gratuito, "{\"nome\":\"Cortesia\",\"descricao\":\"nova\",\"valorCentavos\":0,\"ativo\":true}");
-		assertThat(ok.statusCode()).isEqualTo(400); // valor 0 nao passa na validacao de entrada (>= 1)
+		// formulario inteiro do front: valor 0 igual ao atual e no-op, so a descricao muda
+		var ok = admin.patch("/api/admin/planos/" + gratuito, "{\"nome\":\"Gratuito\",\"descricao\":\"outra\",\"valorCentavos\":0,\"complexidade\":\"SIMPLES\",\"ordem\":1000,\"ativo\":true}");
+		assertThat(ok.statusCode()).isEqualTo(200);
+		var d = Navegador.JSON.readTree(jdbc.sql("select diff::text from auditoria where entidade = 'plano' and entidade_id = :id").param("id", Long.toString(gratuito)).query(String.class).single());
+		assertThat(d.propertyNames()).containsExactly("descricao");
+		assertThat(admin.patch("/api/admin/planos/" + gratuito, "{\"valorCentavos\":5}").statusCode()).isEqualTo(400);
 		ok = admin.patch("/api/admin/planos/" + gratuito, "{\"nome\":\"Cortesia\",\"descricao\":\"nova\",\"ativo\":true}");
 		assertThat(ok.statusCode()).isEqualTo(200);
 		assertThat(json(ok).get("nome").asString()).isEqualTo("Cortesia");
 		assertThat(json(ok).get("tipo").asString()).isEqualTo("GRATUITO");
-		assertThat(auditorias("plano", gratuito, "MUDANCA")).isEqualTo(1);
+		assertThat(auditorias("plano", gratuito, "MUDANCA")).isEqualTo(2);
 		var livre = tecnico("VALOR_LIVRE");
 		assertThat(admin.patch("/api/admin/planos/" + livre, "{\"valorCentavos\":1}").statusCode()).isEqualTo(200); // igual ao atual
 		assertThat(admin.patch("/api/admin/planos/" + livre, "{\"valorCentavos\":2}").statusCode()).isEqualTo(400);
+	}
+
+	@Test
+	void planoComumComValorZeroNoPatchEh400NoCampoValor() throws Exception {
+		var admin = entrar(Papel.ADMIN);
+		var id = id(admin.post("/api/admin/planos", plano("Bom", 3000)));
+		var res = admin.patch("/api/admin/planos/" + id, "{\"valorCentavos\":0}");
+		assertThat(res.statusCode()).isEqualTo(400);
+		assertThat(json(res).get("codigo").asString()).isEqualTo("dados_invalidos");
+		assertThat(json(res).get("erros").get(0).get("campo").asString()).isEqualTo("valorCentavos");
+	}
+
+	@Test
+	void complexidadeInvalidaEhErroNoCampoComOTextoAntigo() throws Exception {
+		var res = entrar(Papel.ADMIN).post("/api/admin/planos", "{\"nome\":\"X\",\"valorCentavos\":100,\"complexidade\":\"xyz\"}");
+		assertThat(res.statusCode()).isEqualTo(400);
+		assertThat(json(res).get("codigo").asString()).isEqualTo("dados_invalidos");
+		assertThat(json(res).get("erros").get(0).get("campo").asString()).isEqualTo("complexidade");
+		assertThat(json(res).get("erros").get(0).get("mensagem").asString()).isEqualTo("\"xyz\" não é uma escolha válida.");
 	}
 
 	@Test

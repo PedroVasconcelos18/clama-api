@@ -71,6 +71,16 @@ public class TratadorDeErros extends ResponseEntityExceptionHandler {
     @Override
     protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException e,
             HttpHeaders headers, HttpStatusCode status, WebRequest req) {
+        for (Throwable c = e; c != null; c = c.getCause()) {
+            // valor fora do enum: erro no campo, com o texto do sistema antigo (INV:60)
+            if (c instanceof tools.jackson.databind.exc.InvalidFormatException f && f.getTargetType() != null
+                    && f.getTargetType().isEnum() && !f.getPath().isEmpty()
+                    && f.getPath().get(f.getPath().size() - 1).getPropertyName() != null) {
+                var campo = f.getPath().get(f.getPath().size() - 1).getPropertyName();
+                return resposta(e, HttpStatus.BAD_REQUEST, "dados_invalidos", "Dados inválidos.", null,
+                        List.of(new ErroDeCampo(campo, "\"" + f.getValue() + "\" não é uma escolha válida.")), req);
+            }
+        }
         return resposta(e, HttpStatus.BAD_REQUEST, "corpo_invalido", "Corpo da requisição inválido.", null, null, req);
     }
 

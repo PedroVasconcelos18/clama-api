@@ -71,6 +71,7 @@ public class Plano {
 
 	public void alterarValor(long valorCentavos) {
 		exigirComum("valor");
+		if (valorCentavos < 1) throw new IllegalArgumentException("Plano comum exige valor de pelo menos 1 centavo.");
 		this.valorCentavos = valorCentavos;
 	}
 
