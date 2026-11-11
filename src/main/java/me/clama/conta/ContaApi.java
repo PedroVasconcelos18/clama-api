@@ -1,9 +1,15 @@
 package me.clama.conta;
 
 import java.time.Clock;
+import java.util.Collection;
 import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 import me.clama.conta.interno.ContaCriada;
 import me.clama.conta.interno.EmailCanonico;
+import me.clama.conta.interno.NomePublico;
+import me.clama.conta.interno.Papel;
+import me.clama.conta.interno.Usuario;
 import me.clama.conta.interno.UsuarioRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -47,6 +53,17 @@ public class ContaApi {
 			if (criou) eventos.publishEvent(new ContaCriada(existente.orElseThrow().getId()));
 		}
 		var u = existente.orElseThrow();
-		return new UsuarioResumo(u.getId(), u.getEmail(), u.getNomeCompleto());
+		return resumo(u);
+	}
+
+	private static UsuarioResumo resumo(Usuario u) {
+		return new UsuarioResumo(u.getId(), u.getEmail(), u.getNomeCompleto(), NomePublico.de(u), u.getPapel() != Papel.CLIENTE);
+	}
+
+	/** Uma consulta so; id inexistente fica fora do mapa. */
+	@Transactional(readOnly = true)
+	public Map<Long, UsuarioResumo> resumos(Collection<Long> ids) {
+		if (ids.isEmpty()) return Map.of();
+		return usuarios.findAllById(ids).stream().collect(Collectors.toMap(Usuario::getId, ContaApi::resumo));
 	}
 }

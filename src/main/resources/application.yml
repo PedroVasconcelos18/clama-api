@@ -133,6 +133,10 @@ clama:
     janela-pendente: 24h # pedido aguardando confirmacao impede outro so enquanto o link vale
     frontend-url: ${FRONTEND_URL:http://localhost:5173}
     espera-email: 30s # 1a retentativa do job do e-mail (30, 60, 120 s)
+  blog:
+    # API REST publica do WordPress (sem credencial); vazio = indisponivel (o POST do blog responde 503)
+    wordpress-url: ${WORDPRESS_API_URL:}
+    timeout: 10s
   turnstile:
     url: https://challenges.cloudflare.com/turnstile/v0/siteverify
     secret: ${TURNSTILE_SECRET_KEY:}
