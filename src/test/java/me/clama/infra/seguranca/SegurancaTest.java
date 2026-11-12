@@ -61,6 +61,12 @@ class SegurancaTest {
 	int porta;
 
 	@Test
+	void hostForaDaListaLeva421MasOHealthcheckPassaComQualquerHost() throws Exception {
+		mvc.perform(get("/api/admin/x").header("Host", "x.up.railway.app")).andExpect(status().isMisdirectedRequest());
+		mvc.perform(get("/actuator/health/readiness").header("Host", "healthcheck.railway.app")).andExpect(status().isOk());
+	}
+
+	@Test
 	void rejeicaoDoFirewallDa400Nunca401() throws Exception {
 		// MockMvc nao passa pelo container: so um cliente real exercita o dispatch de ERROR
 		var res = HttpClient.newHttpClient().send(

@@ -15,6 +15,7 @@ springdoc:
     enabled: true
 
 clama:
+  hosts-permitidos: api.clama.me,localhost,127.0.0.1
   cripto:
     # chaves so de desenvolvimento (publicas no repositorio); CLAMA_CRIPTO_CHAVE e CLAMA_HMAC_CHAVE, se definidas, valem mais
     chave: ${CLAMA_CRIPTO_CHAVE:AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=}

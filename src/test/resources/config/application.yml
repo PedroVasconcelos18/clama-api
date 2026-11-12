@@ -1,10 +1,18 @@
 # chaves fixas so de teste (o application.yml de producao nao tem default: sem variavel o boot falha)
 clama:
+  hosts-permitidos: api.clama.me,localhost,127.0.0.1
   cripto:
     chave: AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
     chave-hmac: ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=
   pagamento:
     webhook-segredo: segredo-do-webhook-de-teste
+    mercadopago-token: token-de-teste # INV:26: sem perfil local/test, estas quatro barram o boot
+  oracao:
+    anthropic-api-key: chave-de-teste
+  turnstile:
+    secret: segredo-de-teste
+  email:
+    resend-api-key: chave-de-teste
   fila:
     iniciar: false # so os testes com @FilaLigada executam jobs
 # polling curto para os testes com a fila ligada

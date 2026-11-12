@@ -94,6 +94,8 @@ sentry:
   send-default-pii: false
 
 clama:
+  # Hosts aceitos (INV:20); local e testes acrescentam localhost. Variavel: CLAMA_HOSTS_PERMITIDOS
+  hosts-permitidos: api.clama.me
   tarefas:
     purgar-pedidos-de-oracao:
       # IRREVERSIVEL (apaga o texto do pedido 30 dias apos o envio; a oracao fica). So conta e loga ate o Pedro confirmar:
