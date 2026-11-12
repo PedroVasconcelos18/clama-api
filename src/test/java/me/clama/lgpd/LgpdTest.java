@@ -2,6 +2,10 @@ package me.clama.lgpd;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+
 import java.util.List;
 import java.util.UUID;
 import me.clama.conta.interno.Papel;
@@ -323,6 +327,54 @@ class LgpdTest extends LgpdBase {
 		assertThat(contar("select count(*) from auditoria where diff::text like ?", "%" + RASTRO + "%")).isZero();
 		assertThat(out.getAll()).doesNotContain(email).doesNotContain(RASTRO);
 		assertThat(previa(super_, email).get("pedidoIds")).isEmpty();
+	}
+
+	/**
+	 * Carry da T2 (M1): uma falha no ULTIMO passo (a auditoria da exclusao, depois de anonimizar, apagar, redigir o motivo
+	 * do ban e excluir a conta com as sessoes) desfaz tudo; a unica excecao e a sessao do titular (ver o achado abaixo).
+	 */
+	@Test
+	void falhaNoUltimoPassoDesfazTudoMenosASessao() throws Exception {
+		var email = "titular-" + unico() + "@exemplo.com";
+		var conta = conta(email, Papel.CLIENTE);
+		var sessao = entrar(email);
+		var adminConta = conta("adm-" + unico() + "@exemplo.com", Papel.ADMIN);
+		var plano = plano();
+		var pago = pedido(email, conta.getId(), plano, null);
+		enviado(pago);
+		paga(pago, 4001);
+		var semPagamento = pedido(email, conta.getId(), plano, null);
+		blog(conta.getId(), 31);
+		banimentos.banir(adminConta.getId(), conta.getId(), "motivo livre " + RASTRO);
+		var super_ = logado(Papel.SUPERUSUARIO);
+		var previa = previa(super_, email);
+		int sessoesAntes = contar("select count(*) from spring_session where principal_name = ?", conta.getId().toString());
+		assertThat(sessoesAntes).isEqualTo(1);
+		// o proxy transacional da Auditoria (MANDATORY) exige transacao ate para programar o espiao
+		transacao.executeWithoutResult(t -> doThrow(new IllegalStateException("falha forcada")).when(auditoria).registrar(any(), eq("lgpd"), any(), any(), any()));
+
+		var res = super_.post(EXCLUSAO, exclusao(email, email, previa));
+
+		assertThat(res.statusCode()).as(res.body()).isEqualTo(500);
+		var p = pedidos.findById(pago).orElseThrow();
+		assertThat(p.getNome()).contains(RASTRO);
+		assertThat(p.getEmail()).isEqualTo(email);
+		assertThat(p.getEmailHmac()).isNotEmpty();
+		assertThat(p.getOracao()).contains(RASTRO);
+		assertThat(p.getUsuarioId()).isEqualTo(conta.getId());
+		assertThat(pedidos.findById(semPagamento)).isPresent();
+		assertThat(usuarios.findById(conta.getId())).isPresent();
+		assertThat(contar("select count(*) from blog_comentario")).isEqualTo(1);
+		assertThat(contar("select count(*) from blog_banimento where usuario_id = ?", conta.getId())).isEqualTo(1);
+		var motivos = jdbc.queryForList("select diff->>'motivo' from auditoria where entidade = 'banimento' and entidade_id = ?", String.class,
+				String.valueOf(conta.getId()));
+		assertThat(motivos).isNotEmpty().noneMatch(m -> m.equals("[removido na exclusão LGPD]")).anyMatch(m -> m.contains(RASTRO));
+		assertThat(contar("select count(*) from auditoria where entidade = 'usuario' and entidade_id = ? and acao = 'EXCLUSAO'", String.valueOf(conta.getId()))).isZero();
+		assertThat(contar("select count(*) from auditoria where entidade = 'lgpd'")).isZero();
+		// ACHADO (T3): a sessao NAO volta. O Spring Session JDBC apaga em transacao propria (REQUIRES_NEW) e ela ja commitou;
+		// o titular so precisa entrar de novo, e nenhum dado fica errado. Ver task-3-report.md.
+		assertThat(contar("select count(*) from spring_session where principal_name = ?", conta.getId().toString())).as("sessao do titular").isZero();
+		assertThat(sessao.get("/api/auth/eu").statusCode()).isEqualTo(401);
 	}
 
 	@Test

@@ -94,6 +94,11 @@ sentry:
   send-default-pii: false
 
 clama:
+  tarefas:
+    purgar-pedidos-de-oracao:
+      # IRREVERSIVEL (apaga o texto do pedido 30 dias apos o envio; a oracao fica). So conta e loga ate o Pedro confirmar:
+      # ligar de verdade = trocar para false (ou apagar a linha).
+      dry-run: true
   conta:
     frontend-url: ${FRONTEND_URL:http://localhost:5173}
     admin-resgate-email: ${CLAMA_ADMIN_RESGATE_EMAIL:}

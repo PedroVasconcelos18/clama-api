@@ -21,6 +21,9 @@ public class RespostasDeSeguranca implements AuthenticationEntryPoint, AccessDen
 
 	public static final String CODIGO_NAO_AUTENTICADO = "nao_autenticado";
 	public static final String PASTORAL_NAO_AUTENTICADO = "Entre na sua conta para continuar.";
+	/** Atributo da requisicao posto pelo filtro do limite absoluto de sessao (D15): o 401 troca a mensagem (INV:17). */
+	public static final String ATRIBUTO_SESSAO_EXPIRADA = RespostasDeSeguranca.class.getName() + ".sessaoExpirada";
+	public static final String PASTORAL_SESSAO_EXPIRADA = "Sua sessão expirou. Faça login pra continuar.";
 	public static final String CODIGO_SEM_PERMISSAO = "sem_permissao";
 	public static final String PASTORAL_SEM_PERMISSAO = "Você não tem acesso a esta área.";
 	public static final String CODIGO_CSRF_INVALIDO = "csrf_invalido";
@@ -32,7 +35,8 @@ public class RespostasDeSeguranca implements AuthenticationEntryPoint, AccessDen
 	@Override
 	public void commence(HttpServletRequest req, HttpServletResponse res, AuthenticationException e)
 			throws IOException {
-		escrever(res, HttpStatus.UNAUTHORIZED, CODIGO_NAO_AUTENTICADO, PASTORAL_NAO_AUTENTICADO);
+		escrever(res, HttpStatus.UNAUTHORIZED, CODIGO_NAO_AUTENTICADO,
+				req.getAttribute(ATRIBUTO_SESSAO_EXPIRADA) != null ? PASTORAL_SESSAO_EXPIRADA : PASTORAL_NAO_AUTENTICADO);
 	}
 
 	@Override

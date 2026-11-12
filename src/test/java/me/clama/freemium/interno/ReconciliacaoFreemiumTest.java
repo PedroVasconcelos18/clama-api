@@ -88,6 +88,45 @@ class ReconciliacaoFreemiumTest {
 		assertThat(log.getAll()).contains("reconciliar-freemium (dry-run): 1 pedido(s) expirariam");
 	}
 
+	/** Link de confirmacao com validade ja vencida ha {@code vencidoHa}. */
+	void linkVencido(UUID pedido, Duration vencidoHa) {
+		FreemiumDeTeste.link(jdbc, pedido, Instant.now().minus(vencidoHa));
+	}
+
+	int links() {
+		return jdbc.queryForObject("select count(*) from freemium_confirmacao", Integer.class);
+	}
+
+	/** D15: o link vencido ha mais de 7 dias some; o pedido nao muda por causa disso. */
+	@Test
+	void linksVencidosHaMaisDeSeteDiasSomemEOPedidoNaoMuda() {
+		var velho = pendente(Duration.ofHours(60));
+		linkVencido(velho, Duration.ofDays(7).plusSeconds(1));
+		var recente = pendente(Duration.ofHours(1));
+		linkVencido(recente, Duration.ofDays(7).minusSeconds(1));
+		var ativo = pendente(Duration.ofHours(1));
+		FreemiumDeTeste.link(jdbc, ativo, Instant.now().plus(Duration.ofHours(1)));
+		int antes = links();
+
+		assertThat(tarefa.executar(false)).isEqualTo("1 pedido(s) expirados; 1 link(s) apagados");
+
+		assertThat(antes - links()).isEqualTo(1);
+		assertThat(jdbc.queryForObject("select count(*) from freemium_confirmacao where pedido_id = ?", Integer.class, velho)).isZero();
+		assertThat(status(velho)).isEqualTo(StatusPedido.CONFIRMACAO_EXPIRADA);
+		assertThat(status(recente)).isEqualTo(StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL);
+		assertThat(status(ativo)).isEqualTo(StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL);
+		assertThat(pedidos.resumo(velho)).isPresent(); // o pedido continua
+	}
+
+	@Test
+	void dryRunNaoApagaLink() {
+		var velho = pendente(Duration.ofHours(60));
+		linkVencido(velho, Duration.ofDays(9));
+		int antes = links();
+		assertThat(tarefa.executar(true)).isEqualTo("1 pedido(s) expirariam (simulação); 1 link(s) seriam apagados");
+		assertThat(links()).isEqualTo(antes);
+	}
+
 	@Test
 	void umWarnAgregadoSemAlertaPorPedidoNemPii(CapturedOutput log) throws Exception {
 		var a = pendente(Duration.ofHours(60));

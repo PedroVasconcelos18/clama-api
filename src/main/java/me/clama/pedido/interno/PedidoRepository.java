@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.QueryHints;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface PedidoRepository extends JpaRepository<Pedido, UUID>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<Pedido> {
 
@@ -77,6 +78,15 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID>, org.sprin
 
 	@Query("select count(p) > 0 from Pedido p where p.cpfHmac = :cpfHmac and p.usuarioId is not null")
 	boolean cpfTemDono(String cpfHmac);
+
+	@Query("select count(p) from Pedido p where p.enviadaEm < :antesDe and p.pedidoOracao is not null")
+	int contarTextosParaPurgar(Instant antesDe);
+
+	/** Zera o texto do pedido (a oracao fica). Irreversivel. */
+	@Transactional
+	@Modifying(flushAutomatically = true, clearAutomatically = true)
+	@Query("update Pedido p set p.pedidoOracao = null where p.enviadaEm < :antesDe and p.pedidoOracao is not null")
+	int purgarTextos(Instant antesDe);
 
 	@Query("select count(p) from Pedido p where p.status = me.clama.pedido.StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL and p.criadoEm < :antesDe")
 	int contarPendentesAntes(Instant antesDe);

@@ -8,6 +8,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 
 @WebMvcTest(RotasDeTeste.class)
@@ -19,6 +20,10 @@ class TratadorDeErrosTest {
 
     @Autowired
     MockMvcTester mvc;
+
+    /** O slice varre o filtro do limite de sessao (conta.web), que pede o relogio. */
+    @MockitoBean
+    java.time.Clock relogio;
 
     @Test
     void erroDeNegocio() {

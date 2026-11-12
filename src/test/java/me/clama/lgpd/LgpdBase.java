@@ -12,6 +12,7 @@ import me.clama.conta.interno.Papel;
 import me.clama.conta.interno.Usuario;
 import me.clama.conta.interno.UsuarioRepository;
 import me.clama.conta.web.Navegador;
+import me.clama.infra.auditoria.Auditoria;
 import me.clama.infra.cripto.Cifra;
 import me.clama.infra.cripto.HmacDeIdentificador;
 import me.clama.infra.seguranca.LimiteDeTaxa;
@@ -26,6 +27,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import tools.jackson.databind.JsonNode;
 
 /** Base dos testes da LGPD: banco limpo antes e depois, contas logadas e fixtures de pedido, cobranca, repasse e blog. */
@@ -48,6 +50,9 @@ abstract class LgpdBase {
 	@Autowired Cifra cifra;
 	@Autowired LimiteDeTaxa limite;
 	@Autowired Banimentos banimentos;
+	@Autowired org.springframework.transaction.support.TransactionTemplate transacao;
+	/** Espiao (so age quando um teste o programa): permite forcar uma falha no meio da exclusao. */
+	@MockitoSpyBean Auditoria auditoria;
 
 	@BeforeEach
 	@AfterEach

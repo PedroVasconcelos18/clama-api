@@ -384,7 +384,7 @@ class UsuariosAdminTest {
 		var su = entrar(conta(Papel.SUPERUSUARIO));
 		var alvo = conta(Papel.CLIENTE);
 		for (var nav : java.util.List.of(su, entrar(conta(Papel.ADMIN)))) {
-			assertThat(nav.delete("/api/admin/usuarios/" + alvo.getId()).statusCode()).isIn(404, 405);
+			assertThat(nav.delete("/api/admin/usuarios/" + alvo.getId()).statusCode()).isEqualTo(405);
 		}
 		assertThat(usuarios.findById(alvo.getId())).isPresent();
 	}

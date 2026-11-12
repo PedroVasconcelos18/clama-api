@@ -5,7 +5,17 @@ import jakarta.persistence.PersistenceContext;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.Set;
 import java.util.List;
 import java.util.Optional;
@@ -27,6 +37,7 @@ import me.clama.pedido.PedidoResumo;
 import me.clama.pedido.ReenvioSolicitado;
 import me.clama.pedido.StatusPedido;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,12 +57,12 @@ class PedidoApiImpl implements PedidoApi {
 	private final HmacDeIdentificador hmac;
 	private final CatalogoApi catalogo;
 	/** Preguicoso: a Fila traz o scheduler, que traz os jobs, que dependem de PedidoApi (ciclo). */
-	private final org.springframework.beans.factory.ObjectProvider<Fila> fila;
+	private final Fila fila;
 	@PersistenceContext
 	private EntityManager em;
 
 	PedidoApiImpl(PedidoRepository pedidos, CriacaoDePedido criacao, ContaApi conta, ApplicationEventPublisher eventos, Clock relogio,
-			HmacDeIdentificador hmac, CatalogoApi catalogo, org.springframework.beans.factory.ObjectProvider<Fila> fila) {
+			HmacDeIdentificador hmac, CatalogoApi catalogo, @Lazy Fila fila) {
 		this.hmac = hmac;
 		this.catalogo = catalogo;
 		this.fila = fila;
@@ -120,30 +131,30 @@ class PedidoApiImpl implements PedidoApi {
 	/** Ids por consulta: o driver aceita 32767 parametros, e a auditoria do ledger passa todo pedido pago sem repasse. */
 	static final int LOTE = 5_000;
 
-	private static <T> java.util.List<T> emLotes(java.util.Collection<UUID> ids, java.util.function.Function<java.util.List<UUID>, java.util.List<T>> consulta) {
-		var todos = new java.util.ArrayList<UUID>(ids);
-		var saida = new java.util.ArrayList<T>();
+	private static <T> List<T> emLotes(Collection<UUID> ids, Function<List<UUID>, List<T>> consulta) {
+		var todos = new ArrayList<UUID>(ids);
+		var saida = new ArrayList<T>();
 		for (int i = 0; i < todos.size(); i += LOTE) saida.addAll(consulta.apply(todos.subList(i, Math.min(i + LOTE, todos.size()))));
 		return saida;
 	}
 
 	@Override
 	@Transactional(readOnly = true)
-	public java.util.Map<UUID, PedidoResumo> resumos(java.util.Collection<UUID> ids) {
-		return emLotes(ids, pedidos::resumos).stream().collect(java.util.stream.Collectors.toMap(PedidoResumo::id, r -> r));
+	public Map<UUID, PedidoResumo> resumos(Collection<UUID> ids) {
+		return emLotes(ids, pedidos::resumos).stream().collect(Collectors.toMap(PedidoResumo::id, r -> r));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
-	public java.util.Map<UUID, me.clama.pedido.Doador> doadores(java.util.Collection<UUID> ids) {
-		return emLotes(ids, pedidos::doadores).stream().collect(java.util.stream.Collectors.toMap(PedidoRepository.NomeEEmail::id,
+	public Map<UUID, me.clama.pedido.Doador> doadores(Collection<UUID> ids) {
+		return emLotes(ids, pedidos::doadores).stream().collect(Collectors.toMap(PedidoRepository.NomeEEmail::id,
 				d -> new me.clama.pedido.Doador(d.nome(), d.email())));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
-	public java.util.Map<UUID, String> nomes(java.util.Collection<UUID> ids) {
-		var mapa = new java.util.HashMap<UUID, String>();
+	public Map<UUID, String> nomes(Collection<UUID> ids) {
+		var mapa = new HashMap<UUID, String>();
 		emLotes(ids, pedidos::nomes).forEach(n -> mapa.put(n.id(), n.nome()));
 		return mapa;
 	}
@@ -244,26 +255,26 @@ class PedidoApiImpl implements PedidoApi {
 
 	@Override
 	@Transactional(readOnly = true)
-	public List<UUID> doTitular(String email, java.util.Collection<Long> contas) {
+	public List<UUID> doTitular(String email, Collection<Long> contas) {
 		var donos = contas.isEmpty() ? List.of(-1L) : contas; // IN () nao existe: -1 nao e id de ninguem
 		return pedidos.doTitular(hmac.email(email), donos);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
-	public Set<String> cpfHmacs(java.util.Collection<UUID> ids) {
-		return ids.isEmpty() ? Set.of() : new java.util.HashSet<>(pedidos.cpfHmacs(ids));
+	public Set<String> cpfHmacs(Collection<UUID> ids) {
+		return ids.isEmpty() ? Set.of() : new HashSet<>(pedidos.cpfHmacs(ids));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
-	public List<java.util.Map<String, Object>> exportar(java.util.Collection<UUID> ids) {
+	public List<Map<String, Object>> exportar(Collection<UUID> ids) {
 		if (ids.isEmpty()) return List.of();
-		var todos = pedidos.findAllById(ids).stream().sorted(java.util.Comparator.comparing(Pedido::getCriadoEm).thenComparing(Pedido::getId)).toList();
+		var todos = pedidos.findAllById(ids).stream().sorted(Comparator.comparing(Pedido::getCriadoEm).thenComparing(Pedido::getId)).toList();
 		var planos = catalogo.planos(todos.stream().map(Pedido::getPlanoId).distinct().toList());
-		var instituicoes = catalogo.instituicoes(todos.stream().map(Pedido::getInstituicaoId).filter(java.util.Objects::nonNull).distinct().toList());
+		var instituicoes = catalogo.instituicoes(todos.stream().map(Pedido::getInstituicaoId).filter(Objects::nonNull).distinct().toList());
 		return todos.stream().map(p -> {
-			var m = new java.util.LinkedHashMap<String, Object>();
+			var m = new LinkedHashMap<String, Object>();
 			m.put("id", p.getId());
 			m.put("criadoEm", p.getCriadoEm());
 			m.put("status", p.getStatus().name());
@@ -281,35 +292,35 @@ class PedidoApiImpl implements PedidoApi {
 			m.put("sexo", p.getSexo());
 			m.put("pedidoOracao", p.getPedidoOracao());
 			m.put("oracao", p.getOracao());
-			var consentimento = new java.util.LinkedHashMap<String, Object>();
+			var consentimento = new LinkedHashMap<String, Object>();
 			consentimento.put("em", p.getConsentidoEm());
 			consentimento.put("versao", p.getConsentimentoVersao());
 			consentimento.put("ip", p.getConsentimentoIp());
 			m.put("consentimento", consentimento);
-			return (java.util.Map<String, Object>) m;
+			return (Map<String, Object>) m;
 		}).toList();
 	}
 
 	@Override
 	@Transactional(propagation = Propagation.MANDATORY)
-	public List<UUID> emProcessamento(java.util.Collection<UUID> ids) {
-		var ocupados = new java.util.ArrayList<UUID>();
+	public List<UUID> emProcessamento(Collection<UUID> ids) {
+		var ocupados = new ArrayList<UUID>();
 		for (var id : ids) {
 			var p = travado(id);
-			if (EM_ANDAMENTO.contains(p.getStatus()) || fila.getObject().existePendenteCitando(id)) ocupados.add(id);
+			if (EM_ANDAMENTO.contains(p.getStatus()) || fila.existePendenteCitando(id)) ocupados.add(id);
 		}
 		return ocupados;
 	}
 
 	@Override
 	@Transactional(propagation = Propagation.MANDATORY)
-	public void anonimizar(java.util.Collection<UUID> ids) {
+	public void anonimizar(Collection<UUID> ids) {
 		for (var id : ids) travado(id).anonimizar();
 	}
 
 	@Override
 	@Transactional(propagation = Propagation.MANDATORY)
-	public void apagar(java.util.Collection<UUID> ids) {
+	public void apagar(Collection<UUID> ids) {
 		if (!ids.isEmpty()) pedidos.apagar(ids);
 	}
 }

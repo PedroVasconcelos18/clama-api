@@ -88,6 +88,9 @@ public class AcoesDoAdminSobreOracao {
 	public Resultado regenerar(Long autorId, UUID id) {
 		return transacao.execute(s -> {
 			var d = pedidos.dadosParaOracao(id);
+			if (d.email().isBlank()) { // anonimizado pela LGPD: gerariam com dados vazios
+				throw conflito("regeneracao_indisponivel", "Esse pedido teve os dados removidos (LGPD).");
+			}
 			if (d.status() != StatusPedido.ERRO || d.oracao() != null) {
 				throw conflito("regeneracao_indisponivel", d.oracao() != null
 						? "Essa oração já foi gerada; use o reenvio."

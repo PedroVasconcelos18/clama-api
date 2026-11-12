@@ -321,6 +321,25 @@ class AcoesDePedidoAdminTest {
 
 	// --- regeneracao ---
 
+	/** Carry da T2: pedido anonimizado pela LGPD em ERRO geraria uma oracao com dados vazios. */
+	@Test
+	void regeneracaoDePedidoAnonimizadoDa409SemMudarNada() throws Exception {
+		var id = erroSemOracao();
+		var p = pedidos.findById(id).orElseThrow();
+		p.anonimizar();
+		pedidos.saveAndFlush(p);
+
+		var res = entrar(Papel.ADMIN).post(url(id, "regeneracao"), "");
+
+		assertThat(res.statusCode()).as(res.body()).isEqualTo(409);
+		var corpo = Navegador.json(res);
+		assertThat(corpo.get("codigo").asString()).isEqualTo("regeneracao_indisponivel");
+		assertThat(corpo.get("mensagemPastoral").asString()).isEqualTo("Esse pedido teve os dados removidos (LGPD).");
+		assertThat(status(id)).isEqualTo("ERRO");
+		assertThat(jobs("gerar-oracao", id)).isZero();
+		assertThat(auditorias(id, "regeneracao")).isZero();
+	}
+
 	@Test
 	void regeneracaoDeErroSemOracaoVoltaAPagoZeraEEnfileira() throws Exception {
 		var id = erroSemOracao();
