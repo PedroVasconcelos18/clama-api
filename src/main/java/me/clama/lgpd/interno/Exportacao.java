@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Exporta tudo do titular, decifrado (D11). A auditoria leva so as contagens: o e-mail nunca vai para ela, para o log
+ * Exporta tudo do titular, decifrado (D11). A auditoria leva as contagens e os ids (conta, pedido): o e-mail nunca vai para ela, para o log
  * nem para o Sentry. Nunca logar o resultado.
  */
 @Service
@@ -105,6 +105,8 @@ public class Exportacao {
 		contagens.put("pedidos", pedidos.size());
 		contagens.put("comentarios", comentarios);
 		contagens.put("curtidas", curtidas);
+		contagens.put("contaIds", achado.contaIds());
+		contagens.put("pedidoIds", achado.pedidos());
 		auditoria.registrar(autorId, "lgpd_exportacao", UUID.randomUUID().toString(), Acao.ADICAO, contagens);
 		return corpo;
 	}

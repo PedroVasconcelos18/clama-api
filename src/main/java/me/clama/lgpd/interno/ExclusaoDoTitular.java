@@ -98,6 +98,8 @@ public class ExclusaoDoTitular {
 		diff.put("contasExcluidas", r.contasExcluidas());
 		diff.put("comentarios", comentarios);
 		diff.put("curtidas", curtidas);
+		diff.put("contaIds", achado.contaIds());
+		diff.put("pedidoIds", achado.pedidos());
 		auditoria.registrar(autorId, "lgpd", UUID.randomUUID().toString(), Acao.EXCLUSAO, diff);
 		LOG.info("Exclusao LGPD (event=lgpd_exclusao, pedidos_apagados={}, pedidos_anonimizados={}, contas={})",
 				r.pedidosApagados(), r.pedidosAnonimizados(), r.contasExcluidas());
@@ -114,6 +116,7 @@ public class ExclusaoDoTitular {
 		var diff = new LinkedHashMap<String, Object>();
 		diff.put("comentarios", n.comentarios());
 		diff.put("curtidas", n.curtidas());
+		diff.put("contaIds", List.of(c.id()));
 		auditoria.registrar(autorId, "lgpd_blog", UUID.randomUUID().toString(), Acao.EXCLUSAO, diff);
 		return new BlogApagado(n.comentarios(), n.curtidas());
 	}

@@ -43,6 +43,14 @@ class EventosDePagamento {
 				(rs, n) -> new Evento(rs.getLong(1), rs.getString(2)), idExterno);
 	}
 
+	/** Dos pedidos dados, os que tem evento PROCESSADO (o pagamento aprovado que o confirmou). */
+	java.util.Set<UUID> pedidosComEventoProcessado(java.util.Collection<UUID> pedidoIds) {
+		var marcas = String.join(",", java.util.Collections.nCopies(pedidoIds.size(), "?"));
+		return new java.util.HashSet<>(jdbc.queryForList(
+				"SELECT DISTINCT pedido_id FROM pagamento_evento WHERE status = 'PROCESSADO' AND pedido_id IN (" + marcas + ")", UUID.class,
+				pedidoIds.toArray()));
+	}
+
 	record Pendente(long id, String tipo, String mpPagamentoId) {}
 
 	/**

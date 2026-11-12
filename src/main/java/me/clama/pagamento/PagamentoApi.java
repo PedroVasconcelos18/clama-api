@@ -19,7 +19,7 @@ public interface PagamentoApi {
 	/** O pagamento que confirmou o pedido: quando e o id no Mercado Pago. */
 	record Pagamento(Instant confirmadoEm, long mpPagamentoId) {}
 
-	/** Dos pedidos dados, os que tem cobranca paga ou repasse: registro contabil que a exclusao LGPD anonimiza em vez de apagar. */
+	/** Dos pedidos dados, os que tem qualquer cobranca (paga ou nao: o valor_divergente recebe sem marcar paga_em), evento aprovado processado ou repasse: registro contabil que a exclusao LGPD anonimiza em vez de apagar. */
 	Set<UUID> pedidosComPagamento(Collection<UUID> pedidoIds);
 
 	/** O pagamento confirmado de cada pedido que tem um (para a exportacao LGPD); os demais ficam fora do mapa. */

@@ -34,7 +34,6 @@ class LgpdFluxoTest extends LgpdBase {
 		paga(anonimoPago, 9002);
 		repasse(anonimoPago, lar);
 		var anonimoSemPagamento = pedido(variante, null, plano, lar);
-		cobranca(anonimoSemPagamento, 9003);
 		var deOutraPessoa = pedido("outra-" + sufixo + "@exemplo.com", null, plano, lar);
 		blog(conta.getId(), 31);
 		banimentos.banir(adminConta.getId(), conta.getId(), "ofendeu outra pessoa " + RASTRO);

@@ -112,8 +112,12 @@ class TarefasAdminController {
 	@ResponseStatus(HttpStatus.ACCEPTED)
 	@Transactional
 	void rodarTarefa(@PathVariable String nome, @RequestBody(required = false) Pedido corpo, Authentication auth) {
-		existente(nome);
+		var tarefa = existente(nome);
 		var simulacao = corpo == null || corpo.simulacao() == null || corpo.simulacao();
+		if (!simulacao && tarefa.simulacaoConfigurada()) {
+			throw new ErroDeNegocio(HttpStatus.CONFLICT, "tarefa_em_modo_simulado", "Tarefa em modo simulado.",
+					"Essa tarefa está em modo simulado na configuração.");
+		}
 		var autor = Long.valueOf(auth.getName());
 		if (!fila.enfileirar(job, job.instancia(nome), new JobRodarTarefa.Disparo(nome, simulacao, autor), relogio.instant())) {
 			throw new ErroDeNegocio(HttpStatus.CONFLICT, "tarefa_na_fila", "Tarefa já está na fila.", "Essa tarefa já está na fila para rodar.");
@@ -121,9 +125,8 @@ class TarefasAdminController {
 		if (!simulacao) auditoria.registrar(autor, "tarefa", nome, Acao.ADICAO, Map.of("execucao", "real"));
 	}
 
-	private void existente(String nome) {
-		if (tarefas.stream().noneMatch(t -> t.getName().equals(nome))) {
-			throw new ErroDeNegocio(HttpStatus.NOT_FOUND, "tarefa_inexistente", "Tarefa inexistente.", "Essa tarefa não existe.");
-		}
+	private TarefaRecorrente existente(String nome) {
+		return tarefas.stream().filter(t -> t.getName().equals(nome)).findFirst().orElseThrow(
+				() -> new ErroDeNegocio(HttpStatus.NOT_FOUND, "tarefa_inexistente", "Tarefa inexistente.", "Essa tarefa não existe."));
 	}
 }

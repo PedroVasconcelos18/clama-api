@@ -34,6 +34,7 @@ class TarefasAdminTest {
 
 	static final String OK = "tarefa-teste-ok";
 	static final String FALHA = "tarefa-teste-falha";
+	static final String SIMULADA = "tarefa-teste-simulada";
 
 	/** Tarefa programavel: o resumo mostra o modo em que rodou. */
 	static class Teste extends TarefaRecorrente {
@@ -55,6 +56,17 @@ class TarefasAdminTest {
 		@Bean
 		Teste tarefaOk() {
 			return new Teste(OK, dry -> "fez 3 coisas (" + (dry ? "simulacao" : "real") + ")");
+		}
+
+		/** Configurada em dry-run (como a purga irreversivel, ate o Pedro confirmar). */
+		@Bean
+		Teste tarefaSimulada() {
+			return new Teste(SIMULADA, dry -> "simulada") {
+				@Override
+				public boolean simulacaoConfigurada() {
+					return true;
+				}
+			};
 		}
 
 		@Bean
@@ -218,6 +230,18 @@ class TarefasAdminTest {
 		assertThat(a.get("acao")).isEqualTo("ADICAO");
 		assertThat(a.get("autor_id")).isNotNull();
 		assertThat(a.get("diff").toString()).contains("real");
+	}
+
+	@Test
+	void rodarDeVerdadeTarefaEmModoSimuladoEh409SemFilaNemAuditoriaESimulacaoPassa() throws Exception {
+		var admin = entrar(Papel.ADMIN);
+		var res = admin.post("/api/admin/tarefas/" + SIMULADA + "/execucoes", "{\"simulacao\": false}");
+		assertThat(res.statusCode()).isEqualTo(409);
+		assertThat(res.body()).contains("tarefa_em_modo_simulado").contains("Essa tarefa está em modo simulado na configuração.");
+		assertThat(jdbc.queryForObject("select count(*) from scheduled_tasks", Integer.class)).isZero();
+		assertThat(jdbc.queryForObject("select count(*) from auditoria where entidade = 'tarefa'", Integer.class)).isZero();
+
+		assertThat(admin.post("/api/admin/tarefas/" + SIMULADA + "/execucoes", "{\"simulacao\": true}").statusCode()).isEqualTo(202);
 	}
 
 	@Test

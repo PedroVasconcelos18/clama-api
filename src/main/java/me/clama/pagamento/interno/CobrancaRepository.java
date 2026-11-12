@@ -18,4 +18,6 @@ interface CobrancaRepository extends JpaRepository<Cobranca, Long> {
 	Optional<Cobranca> findByMpPagamentoId(long mpPagamentoId);
 
 	List<Cobranca> findByPedidoIdInAndPagaEmIsNotNull(Collection<UUID> pedidoIds);
+
+	List<Cobranca> findByPedidoIdIn(Collection<UUID> pedidoIds);
 }

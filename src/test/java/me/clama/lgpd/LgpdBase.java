@@ -67,6 +67,7 @@ abstract class LgpdBase {
 		jdbc.update("delete from freemium_bloqueio");
 		jdbc.update("delete from repasse");
 		jdbc.update("delete from cobranca");
+		jdbc.update("delete from pagamento_evento where id_externo like 'ev-%'");
 		jdbc.update(BancoDeTeste.LIMPAR_FILA);
 		jdbc.update("delete from pedido");
 		jdbc.update("delete from usuario where email like '%@exemplo.com' or email like '%@gmail.com'");

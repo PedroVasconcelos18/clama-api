@@ -208,7 +208,8 @@ class LgpdTest extends LgpdBase {
 		assertThat(j.get("compartilhamento")).extracting(n -> n.get("destinatario").asString()).containsExactly("Mercado Pago", "Anthropic", "Resend");
 
 		var diff = jdbc.queryForObject("select diff::text from auditoria where entidade = 'lgpd_exportacao' and acao = 'ADICAO'", String.class);
-		assertThat(diff).contains("\"pedidos\": 1", "\"comentarios\": 1").doesNotContain("@").doesNotContain(email);
+		assertThat(diff).contains("\"pedidos\": 1", "\"comentarios\": 1", "\"contaIds\": [" + conta.getId() + "]", pedido.toString())
+				.doesNotContain("@").doesNotContain(email).doesNotContain(hmac.email(email));
 		assertThat(out.getAll()).doesNotContain(email).doesNotContain(RASTRO).doesNotContain(IP_COMENTARIO);
 	}
 
@@ -260,7 +261,6 @@ class LgpdTest extends LgpdBase {
 		enviado(comRepasse);
 		repasse(comRepasse, instituicao);
 		var semPagamento = pedido(email, null, plano, instituicao);
-		cobranca(semPagamento, 2003);
 		var freemium = pedido(email, null, plano, null);
 		status(freemium, "AGUARDANDO_CONFIRMACAO_EMAIL");
 		jdbc.update("insert into freemium_confirmacao (pedido_id, hash, criado_em, expira_em) values (?, ?, now(), now() + interval '1 day')", freemium, "b".repeat(64));
@@ -323,6 +323,8 @@ class LgpdTest extends LgpdBase {
 		assertThat(motivos).isNotEmpty().containsOnly("[removido na exclusão LGPD]");
 		var diff = jdbc.queryForObject("select diff::text from auditoria where entidade = 'lgpd' and acao = 'EXCLUSAO'", String.class);
 		assertThat(diff).contains("\"pedidosApagados\": 2", "\"pedidosAnonimizados\": 2", "\"contasExcluidas\": 1").doesNotContain("@");
+		assertThat(diff).contains("\"contaIds\": [" + conta.getId() + "]", pago.toString(), comRepasse.toString(), semPagamento.toString(), freemium.toString())
+				.doesNotContain(alheio.toString());
 		assertThat(contar("select count(*) from auditoria where entidade = 'usuario' and entidade_id = ? and acao = 'EXCLUSAO'", String.valueOf(conta.getId()))).isEqualTo(1);
 		assertThat(contar("select count(*) from auditoria where diff::text like ?", "%" + RASTRO + "%")).isZero();
 		assertThat(out.getAll()).doesNotContain(email).doesNotContain(RASTRO);
@@ -528,7 +530,7 @@ class LgpdTest extends LgpdBase {
 		assertThat(p.getUsuarioId()).isEqualTo(conta.getId());
 		assertThat(contar("select count(*) from cobranca where pedido_id = ?", pedido)).isEqualTo(1);
 		var diff = jdbc.queryForObject("select diff::text from auditoria where entidade = 'lgpd_blog' and acao = 'EXCLUSAO'", String.class);
-		assertThat(diff).contains("\"comentarios\": 1", "\"curtidas\": 1").doesNotContain("@");
+		assertThat(diff).contains("\"comentarios\": 1", "\"curtidas\": 1", "\"contaIds\": [" + conta.getId() + "]").doesNotContain("@");
 		assertThat(jdbc.queryForObject("select diff->>'motivo' from auditoria where entidade = 'banimento' and entidade_id = ?", String.class,
 				String.valueOf(conta.getId()))).isEqualTo("motivo do ban"); // o ban e o historico ficam como estavam
 	}
@@ -543,5 +545,33 @@ class LgpdTest extends LgpdBase {
 		var sem = "ninguem-" + unico() + "@exemplo.com";
 		assertThat(admin.post(DO_BLOG, "{\"email\":\"" + sem + "\",\"confirmacao\":\"" + sem + "\"}").statusCode()).isEqualTo(404);
 		assertThat(contar("select count(*) from auditoria where entidade = 'lgpd_blog'")).isZero();
+	}
+
+	/** M4: dinheiro entrou mas paga_em nunca foi marcado (valor_divergente) e/ou ha evento aprovado: anonimiza, nao apaga. */
+	@Test
+	void pedidoComCobrancaSemPagaEmOuComEventoProcessadoEhAnonimizadoEMantemACobranca() throws Exception {
+		var email = "titular-" + unico() + "@exemplo.com";
+		var plano = plano();
+		var divergente = pedido(email, null, plano, null);
+		cobranca(divergente, 7001); // sem paga_em
+		jdbc.update("""
+				insert into pagamento_evento (id_externo, tipo, mp_pagamento_id, payload, status, motivo, pedido_id, recebido_em, atualizado_em)
+				values (?, 'payment', '7001', '{}'::jsonb, 'IGNORADO', 'valor_divergente', ?, now(), now())""", "ev-" + unico(), divergente);
+		var comEvento = pedido(email, null, plano, null);
+		jdbc.update("""
+				insert into pagamento_evento (id_externo, tipo, mp_pagamento_id, payload, status, pedido_id, recebido_em, atualizado_em)
+				values (?, 'payment', '7002', '{}'::jsonb, 'PROCESSADO', ?, now(), now())""", "ev-" + unico(), comEvento);
+		var semNada = pedido(email, null, plano, null);
+		var super_ = logado(Papel.SUPERUSUARIO);
+
+		var res = super_.post(EXCLUSAO, exclusao(email, email, previa(super_, email)));
+
+		assertThat(res.statusCode()).as(res.body()).isEqualTo(200);
+		assertThat(json(res).get("pedidosApagados").asInt()).isEqualTo(1);
+		assertThat(json(res).get("pedidosAnonimizados").asInt()).isEqualTo(2);
+		assertThat(pedidos.findById(divergente).orElseThrow().getEmail()).isEmpty();
+		assertThat(pedidos.findById(comEvento).orElseThrow().getEmail()).isEmpty();
+		assertThat(pedidos.findById(semNada)).isEmpty();
+		assertThat(contar("select count(*) from cobranca where pedido_id = ?", divergente)).isEqualTo(1);
 	}
 }

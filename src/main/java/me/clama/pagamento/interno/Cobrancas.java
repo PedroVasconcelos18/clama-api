@@ -47,9 +47,11 @@ public class Cobrancas implements PagamentoApi {
 	private final PagamentoProps props;
 	private final Clock relogio;
 	private final Repasses repasses;
+	private final EventosDePagamento eventos;
 
 	Cobrancas(PedidoApi pedidos, CobrancaRepository cobrancas, MercadoPago mercadoPago, PagamentoProps props, Clock relogio,
-			Repasses repasses) {
+			Repasses repasses, EventosDePagamento eventos) {
+		this.eventos = eventos;
 		this.repasses = repasses;
 		this.pedidos = pedidos;
 		this.cobrancas = cobrancas;
@@ -113,7 +115,10 @@ public class Cobrancas implements PagamentoApi {
 	@Transactional(readOnly = true)
 	public Set<UUID> pedidosComPagamento(Collection<UUID> pedidoIds) {
 		if (pedidoIds.isEmpty()) return Set.of();
+		// qualquer cobranca (o Pix existe no MP e pode ter entrado dinheiro sem paga_em, como no valor_divergente) ou evento processado
 		var ids = new HashSet<>(pagamentos(pedidoIds).keySet());
+		cobrancas.findByPedidoIdIn(pedidoIds).forEach(c -> ids.add(c.getPedidoId()));
+		ids.addAll(eventos.pedidosComEventoProcessado(pedidoIds));
 		ids.addAll(repasses.pedidosComRepasse(pedidoIds));
 		return ids;
 	}
