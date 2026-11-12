@@ -67,6 +67,20 @@ class OpenApiTest {
 		assertThat(nomes).contains("page", "size").doesNotContain("pagina");
 	}
 
+	/** D12: o DELETE de usuario saiu; a LGPD entrou, com o e-mail sempre no corpo (POST), nunca na URL. */
+	@Test
+	void lgpdEntrouEODeleteDeUsuarioSaiu() throws Exception {
+		var doc = JSON.readTree(Files.readString(ARQUIVO));
+		assertThat(doc.at("/paths/~1api~1admin~1usuarios~1{id}").propertyNames()).doesNotContain("delete");
+		for (var rota : new String[] { "busca", "exportacao", "exclusao", "exclusao-do-blog" }) {
+			var caminho = doc.at("/paths/~1api~1admin~1lgpd~1" + rota);
+			assertThat(caminho.propertyNames()).as(rota).containsExactly("post");
+			assertThat(caminho.at("/post/requestBody").isMissingNode()).as(rota).isFalse();
+			assertThat(caminho.at("/post/parameters").isMissingNode()).as(rota).isTrue();
+		}
+		assertThat(doc.at("/paths/~1api~1admin~1lgpd~1exportacao/post/responses/200/content").propertyNames()).containsExactly("application/json");
+	}
+
 	/** Chaves em ordem alfabetica (deterministico) e sem {@code servers}, que traz a porta aleatoria do teste. */
 	static String normalizar(String json) {
 		@SuppressWarnings("unchecked")

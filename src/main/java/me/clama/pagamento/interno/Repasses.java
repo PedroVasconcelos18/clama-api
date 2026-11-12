@@ -58,6 +58,13 @@ public class Repasses {
 				? TRANSFERIDO : SEM_REPASSE;
 	}
 
+	/** Dos pedidos dados, os que tem repasse (qualquer status). */
+	java.util.Set<UUID> pedidosComRepasse(java.util.Collection<UUID> pedidoIds) {
+		var marcas = String.join(",", java.util.Collections.nCopies(pedidoIds.size(), "?"));
+		return new java.util.HashSet<>(jdbc.queryForList("SELECT pedido_id FROM repasse WHERE pedido_id IN (" + marcas + ")", UUID.class,
+				pedidoIds.toArray()));
+	}
+
 	long valorCentavos(UUID pedidoId) {
 		return jdbc.queryForObject("SELECT valor_centavos FROM repasse WHERE pedido_id = ?", Long.class, pedidoId);
 	}

@@ -92,4 +92,31 @@ public interface PedidoApi {
 	 * (a varredura lista sem trava; nesse intervalo o pedido pode ter andado). {@code motivo} e um codigo curto.
 	 */
 	boolean falharSeParado(UUID id, Instant antesDe, String motivo);
+
+	// --- LGPD: busca, exportacao e exclusao do titular ---
+
+	/** Ids dos pedidos do titular: {@code email_hmac} do e-mail canonico (Gmail com ponto ou +tag, doacao anonima) ou {@code usuario_id} nas contas. */
+	List<UUID> doTitular(String email, Collection<Long> contas);
+
+	/** HMACs de CPF/CNPJ desses pedidos (so os que tem), para a consulta do bloqueio do freemium. */
+	java.util.Set<String> cpfHmacs(Collection<UUID> ids);
+
+	/**
+	 * Tudo decifrado de cada pedido, em maps (camelCase, datas {@code Instant}): id, criadoEm, status, plano,
+	 * instituicao, valorCentavos, gratuito, nome, email, cpfCnpj, telefone, idade, sexo, pedidoOracao, oracao e
+	 * consentimento {em, versao, ip}. Nunca logar o resultado.
+	 */
+	List<Map<String, Object>> exportar(Collection<UUID> ids);
+
+	/**
+	 * Dos pedidos dados, os que nao podem ser mexidos agora: com a linha travada ate o fim da transacao, status PAGO,
+	 * GERANDO_ORACAO, ORACAO_GERADA ou AGUARDANDO_NOVA_TENTATIVA, ou job pendente na fila para o pedido. Exige transacao.
+	 */
+	List<UUID> emProcessamento(Collection<UUID> ids);
+
+	/** Zera a PII, o texto, a oracao, o IP e o dono; o pedido (valor, plano, instituicao, datas, cobranca) fica. Exige transacao. */
+	void anonimizar(Collection<UUID> ids);
+
+	/** Apaga os pedidos; a cobranca e as confirmacoes do freemium vao em {@code CASCADE}. Exige transacao. */
+	void apagar(Collection<UUID> ids);
 }

@@ -1,4 +1,4 @@
-/** Blog: espelho dos posts do WordPress, comentarios, curtidas e banimento. Depende de conta e infra; ninguem depende dele. */
+/** Blog: espelho dos posts do WordPress, comentarios, curtidas e banimento. Depende de conta e infra; so o lgpd depende dele. */
 @ApplicationModule(allowedDependencies = { "conta", "infra" })
 package me.clama.blog;
 

@@ -58,6 +58,17 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID>, org.sprin
 
 	List<Pedido> findByEmailHmac(String emailHmac);
 
+	/** Ids do titular (LGPD): pelo HMAC do e-mail canonico ou pelo dono; {@code donos} nunca vazio (lista com um id impossivel). */
+	@Query("select p.id from Pedido p where p.emailHmac = :emailHmac or p.usuarioId in :donos order by p.criadoEm, p.id")
+	List<UUID> doTitular(String emailHmac, java.util.Collection<Long> donos);
+
+	@Query("select distinct p.cpfHmac from Pedido p where p.id in :ids and p.cpfHmac is not null")
+	List<String> cpfHmacs(java.util.Collection<UUID> ids);
+
+	@Modifying(flushAutomatically = true, clearAutomatically = true)
+	@Query("delete from Pedido p where p.id in :ids")
+	int apagar(java.util.Collection<UUID> ids);
+
 	/** Pedidos do usuario no intervalo (inclusivo), mais recentes primeiro. */
 	List<Pedido> findByUsuarioIdAndCriadoEmBetweenOrderByCriadoEmDesc(Long usuarioId, Instant de, Instant ate);
 

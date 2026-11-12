@@ -72,6 +72,35 @@
         "required" : [ "motivo", "usuarioId" ],
         "type" : "object"
       },
+      "BlogApagado" : {
+        "properties" : {
+          "comentarios" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "curtidas" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "BlogDaPrevia" : {
+        "properties" : {
+          "banido" : {
+            "type" : "boolean"
+          },
+          "comentarios" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "curtidas" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "BloqueioAdmin" : {
         "properties" : {
           "cpfHmacCurto" : {
@@ -107,6 +136,17 @@
             "type" : "string"
           }
         },
+        "type" : "object"
+      },
+      "BuscaLgpd" : {
+        "properties" : {
+          "email" : {
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "email" ],
         "type" : "object"
       },
       "CobrancaDoPedido" : {
@@ -150,6 +190,18 @@
           }
         },
         "required" : [ "token" ],
+        "type" : "object"
+      },
+      "ContaDaPrevia" : {
+        "properties" : {
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "papel" : {
+            "type" : "string"
+          }
+        },
         "type" : "object"
       },
       "CorrecaoDoPedido" : {
@@ -412,6 +464,56 @@
             "type" : "string"
           }
         },
+        "type" : "object"
+      },
+      "ExclusaoDoBlogLgpd" : {
+        "properties" : {
+          "confirmacao" : {
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "email" : {
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "confirmacao", "email" ],
+        "type" : "object"
+      },
+      "ExclusaoLgpd" : {
+        "properties" : {
+          "confirmacao" : {
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "contaIds" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "maxItems" : 100,
+            "minItems" : 0,
+            "type" : "array"
+          },
+          "email" : {
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "pedidoIds" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "maxItems" : 10000,
+            "minItems" : 0,
+            "type" : "array"
+          }
+        },
+        "required" : [ "confirmacao", "contaIds", "email", "pedidoIds" ],
         "type" : "object"
       },
       "ExecucaoAdmin" : {
@@ -1233,6 +1335,27 @@
         },
         "type" : "object"
       },
+      "PedidosDaPrevia" : {
+        "properties" : {
+          "aAnonimizar" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "aApagar" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "emProcessamento" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "PixDoPedido" : {
         "properties" : {
           "copiaECola" : {
@@ -1379,6 +1502,40 @@
           "totalRepasseCentavos" : {
             "format" : "int64",
             "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "PreviaDoTitular" : {
+        "properties" : {
+          "blog" : {
+            "$ref" : "#/components/schemas/BlogDaPrevia"
+          },
+          "contaIds" : {
+            "items" : {
+              "format" : "int64",
+              "type" : "integer"
+            },
+            "type" : "array"
+          },
+          "contas" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ContaDaPrevia"
+            },
+            "type" : "array"
+          },
+          "freemiumBloqueado" : {
+            "type" : "boolean"
+          },
+          "pedidoIds" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "pedidos" : {
+            "$ref" : "#/components/schemas/PedidosDaPrevia"
           }
         },
         "type" : "object"
@@ -1611,6 +1768,23 @@
         "properties" : {
           "status" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ResultadoDaExclusao" : {
+        "properties" : {
+          "contasExcluidas" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "pedidosAnonimizados" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "pedidosApagados" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -2412,7 +2586,7 @@
     },
     "/api/admin/freemium/bloqueios/{id}" : {
       "delete" : {
-        "operationId" : "excluir_1",
+        "operationId" : "excluir",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -2572,6 +2746,119 @@
           }
         },
         "tags" : [ "catalogo-admin-controller" ]
+      }
+    },
+    "/api/admin/lgpd/busca" : {
+      "post" : {
+        "operationId" : "buscarTitular",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BuscaLgpd"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PreviaDoTitular"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "lgpd-admin-controller" ]
+      }
+    },
+    "/api/admin/lgpd/exclusao" : {
+      "post" : {
+        "operationId" : "excluirTitular",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ExclusaoLgpd"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResultadoDaExclusao"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "lgpd-admin-controller" ]
+      }
+    },
+    "/api/admin/lgpd/exclusao-do-blog" : {
+      "post" : {
+        "operationId" : "excluirBlogDoTitular",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ExclusaoDoBlogLgpd"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlogApagado"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "lgpd-admin-controller" ]
+      }
+    },
+    "/api/admin/lgpd/exportacao" : {
+      "post" : {
+        "operationId" : "exportarTitular",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BuscaLgpd"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "lgpd-admin-controller" ]
       }
     },
     "/api/admin/metricas/oracao" : {
@@ -3686,24 +3973,6 @@
       }
     },
     "/api/admin/usuarios/{id}" : {
-      "delete" : {
-        "operationId" : "excluir",
-        "parameters" : [ {
-          "in" : "path",
-          "name" : "id",
-          "required" : true,
-          "schema" : {
-            "format" : "int64",
-            "type" : "integer"
-          }
-        } ],
-        "responses" : {
-          "204" : {
-            "description" : "No Content"
-          }
-        },
-        "tags" : [ "usuarios-admin-controller" ]
-      },
       "get" : {
         "operationId" : "detalhar",
         "parameters" : [ {

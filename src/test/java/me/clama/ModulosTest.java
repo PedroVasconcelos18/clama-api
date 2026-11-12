@@ -23,6 +23,7 @@ import me.clama.pedido.PedidoCobravel;
 import me.clama.pedido.PedidoResumo;
 import me.clama.pedido.ReenvioSolicitado;
 import me.clama.pedido.StatusPedido;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.modulith.core.ApplicationModules;
 import org.springframework.modulith.docs.Documenter;
@@ -133,13 +134,13 @@ class ModulosTest {
 				.resideInAPackage("me.clama.oracao..").check(classes);
 	}
 
-	/** freemium usa pedido, conta e catalogo; ninguem o conhece. */
+	/** freemium usa pedido, conta e catalogo; so o lgpd o conhece. */
 	@Test
 	void freemiumDependeDePedidoContaECatalogoENinguemDependeDele() {
 		var freemium = MODULOS.getModuleByName("freemium").orElseThrow();
 		assertThat(freemium.getDirectDependencies(MODULOS).stream().map(d -> d.getTargetModule().getIdentifier().toString()))
 				.contains("pedido", "conta", "catalogo");
-		MODULOS.stream().filter(m -> !m.getIdentifier().toString().equals("freemium")).forEach(m ->
+		MODULOS.stream().filter(m -> !Set.of("freemium", "lgpd").contains(m.getIdentifier().toString())).forEach(m ->
 				assertThat(m.getDirectDependencies(MODULOS).stream().map(d -> d.getTargetModule().getIdentifier().toString()))
 						.as(m.getIdentifier().toString()).doesNotContain("freemium"));
 		var classes = new ClassFileImporter().withImportOption(new ImportOption.DoNotIncludeTests()).importPackages("me.clama");
@@ -161,13 +162,13 @@ class ModulosTest {
 		}
 	}
 
-	/** blog usa conta (e so o que ela expoe); ninguem o conhece, nem a infra. */
+	/** blog usa conta (e so o que ela expoe); so o lgpd o conhece, nem a infra. */
 	@Test
 	void blogDependeDeContaENinguemDependeDele() {
 		var blog = MODULOS.getModuleByName("blog").orElseThrow();
 		assertThat(blog.getDirectDependencies(MODULOS).stream().map(d -> d.getTargetModule().getIdentifier().toString()).distinct())
 				.contains("conta").isSubsetOf("conta", "infra");
-		MODULOS.stream().filter(m -> !m.getIdentifier().toString().equals("blog")).forEach(m ->
+		MODULOS.stream().filter(m -> !Set.of("blog", "lgpd").contains(m.getIdentifier().toString())).forEach(m ->
 				assertThat(m.getDirectDependencies(MODULOS).stream().map(d -> d.getTargetModule().getIdentifier().toString()))
 						.as(m.getIdentifier().toString()).doesNotContain("blog"));
 		var classes = new ClassFileImporter().withImportOption(new ImportOption.DoNotIncludeTests()).importPackages("me.clama");
@@ -184,6 +185,39 @@ class ModulosTest {
 				.resideInAPackage("me.clama.pedido.interno..").check(classes);
 		var sql = java.util.regex.Pattern.compile("(?i)\\b(from|join|into|update|delete\\s+from)\\s+pedido\\b");
 		try (var arquivos = java.nio.file.Files.walk(java.nio.file.Path.of("src/main/java/me/clama/pagamento"))) {
+			for (var f : arquivos.filter(p -> p.toString().endsWith(".java")).toList()) {
+				assertThat(sql.matcher(java.nio.file.Files.readString(f)).find()).as(f.toString()).isFalse();
+			}
+		}
+	}
+
+	/** O lgpd so conhece as APIs (e records) dos cinco modulos e a infra; ninguem depende dele, nem a infra. */
+	@Test
+	void lgpdUsaSoAsApisENinguemDependeDele() {
+		var lgpd = MODULOS.getModuleByName("lgpd").orElseThrow();
+		assertThat(lgpd.getDirectDependencies(MODULOS).stream().map(d -> d.getTargetModule().getIdentifier().toString()).distinct())
+				.contains("conta", "pedido", "pagamento", "blog", "freemium").isSubsetOf("conta", "pedido", "pagamento", "blog", "freemium", "infra");
+		MODULOS.stream().filter(m -> !m.getIdentifier().toString().equals("lgpd")).forEach(m ->
+				assertThat(m.getDirectDependencies(MODULOS).stream().map(d -> d.getTargetModule().getIdentifier().toString()))
+						.as(m.getIdentifier().toString()).doesNotContain("lgpd"));
+		var classes = new ClassFileImporter().withImportOption(new ImportOption.DoNotIncludeTests()).importPackages("me.clama");
+		ArchRuleDefinition.noClasses().that().resideInAPackage("me.clama.infra..").should().dependOnClassesThat()
+				.resideInAPackage("me.clama.lgpd..").check(classes);
+		for (var api : new Class<?>[] { me.clama.blog.BlogApi.class, me.clama.freemium.FreemiumApi.class })
+			assertThat(MODULOS.getModuleByName(api.getPackageName().substring("me.clama.".length())).orElseThrow().isExposed(api)).isTrue();
+	}
+
+	/** O lgpd nao tem SQL: nao toca em JDBC, JPA nem nas classes internas dos outros modulos, e nenhum texto dele parece SQL. */
+	@Test
+	void lgpdNaoTemSql() throws Exception {
+		var classes = new ClassFileImporter().withImportOption(new ImportOption.DoNotIncludeTests()).importPackages("me.clama");
+		ArchRuleDefinition.noClasses().that().resideInAPackage("me.clama.lgpd..").should().dependOnClassesThat()
+				.resideInAnyPackage("org.springframework.jdbc..", "jakarta.persistence..", "org.springframework.data..",
+						"me.clama.conta.interno..", "me.clama.pedido.interno..", "me.clama.pagamento.interno..", "me.clama.blog.interno..",
+						"me.clama.freemium.interno..")
+				.check(classes);
+		var sql = java.util.regex.Pattern.compile("(?i)\\b(select\\s.+\\sfrom|insert\\s+into|delete\\s+from|update\\s+\\w+\\s+set)\\b");
+		try (var arquivos = java.nio.file.Files.walk(java.nio.file.Path.of("src/main/java/me/clama/lgpd"))) {
 			for (var f : arquivos.filter(p -> p.toString().endsWith(".java")).toList()) {
 				assertThat(sql.matcher(java.nio.file.Files.readString(f)).find()).as(f.toString()).isFalse();
 			}

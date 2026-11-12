@@ -6,7 +6,11 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.UUID;
 import me.clama.infra.formato.Dinheiro;
 import me.clama.infra.web.ErroDeNegocio;
@@ -42,8 +46,11 @@ public class Cobrancas implements PagamentoApi {
 	private final MercadoPago mercadoPago;
 	private final PagamentoProps props;
 	private final Clock relogio;
+	private final Repasses repasses;
 
-	Cobrancas(PedidoApi pedidos, CobrancaRepository cobrancas, MercadoPago mercadoPago, PagamentoProps props, Clock relogio) {
+	Cobrancas(PedidoApi pedidos, CobrancaRepository cobrancas, MercadoPago mercadoPago, PagamentoProps props, Clock relogio,
+			Repasses repasses) {
+		this.repasses = repasses;
 		this.pedidos = pedidos;
 		this.cobrancas = cobrancas;
 		this.mercadoPago = mercadoPago;
@@ -92,6 +99,23 @@ public class Cobrancas implements PagamentoApi {
 	@Transactional
 	public void registrarPagamento(long mpPagamentoId, Instant agora) {
 		cobrancas.findByMpPagamentoId(mpPagamentoId).orElseThrow().pagar(agora);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public Map<UUID, Pagamento> pagamentos(Collection<UUID> pedidoIds) {
+		if (pedidoIds.isEmpty()) return Map.of();
+		return cobrancas.findByPedidoIdInAndPagaEmIsNotNull(pedidoIds).stream()
+				.collect(Collectors.toMap(Cobranca::getPedidoId, c -> new Pagamento(c.getPagaEm(), c.getMpPagamentoId())));
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public Set<UUID> pedidosComPagamento(Collection<UUID> pedidoIds) {
+		if (pedidoIds.isEmpty()) return Set.of();
+		var ids = new HashSet<>(pagamentos(pedidoIds).keySet());
+		ids.addAll(repasses.pedidosComRepasse(pedidoIds));
+		return ids;
 	}
 
 	/** Marca a cobranca mais recente como cancelada (a linha fica: historico e n nunca recomecam). */

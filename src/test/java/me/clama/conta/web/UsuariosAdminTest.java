@@ -12,6 +12,7 @@ import me.clama.conta.interno.Papel;
 import me.clama.conta.interno.Usuario;
 import me.clama.conta.interno.UsuarioRepository;
 import me.clama.infra.seguranca.LimiteDeTaxa;
+import me.clama.infra.web.ErroDeNegocio;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,7 @@ class UsuariosAdminTest {
 	@Autowired PasswordEncoder encoder;
 	@Autowired LimiteDeTaxa limite;
 	@Autowired JdbcClient jdbc;
+	@Autowired me.clama.conta.interno.AdminDeUsuariosServico servico;
 
 	@BeforeEach
 	void isolar() {
@@ -70,8 +72,7 @@ class UsuariosAdminTest {
 		for (var res : java.util.List.of(
 				admin.post("/api/admin/usuarios", "{\"email\":\"" + emailUnico() + "\",\"nomeCompleto\":\"X\",\"senha\":\"" + SENHA + "\"}"),
 				admin.patch("/api/admin/usuarios/" + alvo.getId(), "{\"ativo\":false}"),
-				admin.post("/api/admin/usuarios/" + alvo.getId() + "/senha", "{\"senha\":\"" + NOVA + "\"}"),
-				admin.delete("/api/admin/usuarios/" + alvo.getId()))) {
+				admin.post("/api/admin/usuarios/" + alvo.getId() + "/senha", "{\"senha\":\"" + NOVA + "\"}"))) {
 			assertThat(res.statusCode()).isEqualTo(403);
 			assertThat(json(res).get("codigo").asString()).isEqualTo("sem_permissao");
 			assertThat(json(res).get("mensagemPastoral").asString()).isEqualTo("Só o superusuário gerencia usuários.");
@@ -253,11 +254,12 @@ class UsuariosAdminTest {
 		eu.promover(Papel.ADMIN); // a sessao ainda diz SUPERUSUARIO: o outro superusuario e o ultimo de verdade
 		usuarios.save(eu);
 		for (var res : java.util.List.of(nav.patch("/api/admin/usuarios/" + unico.getId(), papel(Papel.ADMIN)),
-				nav.patch("/api/admin/usuarios/" + unico.getId(), "{\"ativo\":false}"),
-				nav.delete("/api/admin/usuarios/" + unico.getId()))) {
+				nav.patch("/api/admin/usuarios/" + unico.getId(), "{\"ativo\":false}"))) {
 			assertThat(res.statusCode()).isEqualTo(409);
 			assertThat(json(res).get("codigo").asString()).isEqualTo("ultimo_superusuario");
 		}
+		assertThat(org.junit.jupiter.api.Assertions.assertThrows(ErroDeNegocio.class, () -> servico.excluir(eu.getId(), unico.getId()))
+				.codigo()).isEqualTo("ultimo_superusuario");
 		var depois = usuarios.findById(unico.getId()).orElseThrow();
 		assertThat(depois.getPapel()).isEqualTo(Papel.SUPERUSUARIO);
 		assertThat(depois.isAtivo()).isTrue();
@@ -376,26 +378,39 @@ class UsuariosAdminTest {
 
 	// --- excluir ---
 
+	/** D12: toda exclusao de conta passa pela LGPD; a rota DELETE deixou de existir (405: o caminho ainda tem GET). */
 	@Test
-	void naoExcluiASiMesmo() throws Exception {
+	void deleteDeUsuarioNaoExisteMais() throws Exception {
+		var su = entrar(conta(Papel.SUPERUSUARIO));
+		var alvo = conta(Papel.CLIENTE);
+		for (var nav : java.util.List.of(su, entrar(conta(Papel.ADMIN)))) {
+			assertThat(nav.delete("/api/admin/usuarios/" + alvo.getId()).statusCode()).isIn(404, 405);
+		}
+		assertThat(usuarios.findById(alvo.getId())).isPresent();
+	}
+
+	// o metodo interno, que a LGPD chama (ContaApi.excluir), mantem as guardas
+
+	@Test
+	void naoExcluiASiMesmo() {
 		var eu = conta(Papel.SUPERUSUARIO);
-		var res = entrar(eu).delete("/api/admin/usuarios/" + eu.getId());
-		assertThat(res.statusCode()).isEqualTo(409);
-		assertThat(json(res).get("codigo").asString()).isEqualTo("nao_pode_excluir_a_si_mesmo");
+		var erro = org.junit.jupiter.api.Assertions.assertThrows(ErroDeNegocio.class, () -> servico.excluir(eu.getId(), eu.getId()));
+		assertThat(erro.status().value()).isEqualTo(409);
+		assertThat(erro.codigo()).isEqualTo("nao_pode_excluir_a_si_mesmo");
 	}
 
 	@Test
 	void excluiDerrubaSessoesApagaTokensEMantemATrilha() throws Exception {
-		var su = entrar(conta(Papel.SUPERUSUARIO));
+		var su = conta(Papel.SUPERUSUARIO);
 		var alvo = conta(Papel.ADMIN);
 		var alvoNav = entrar(alvo);
 		linkPendente(alvo);
-		var res = su.delete("/api/admin/usuarios/" + alvo.getId());
-		assertThat(res.statusCode()).isEqualTo(204);
+		servico.excluir(su.getId(), alvo.getId());
 		assertThat(usuarios.findById(alvo.getId())).isEmpty();
 		assertThat(alvoNav.get("/api/auth/eu").statusCode()).isEqualTo(401);
 		assertThat(jdbc.sql("select count(*) from token_de_senha where usuario_id = :u").param("u", alvo.getId()).query(Long.class).single()).isZero();
 		assertThat(auditorias(alvo.getId(), "EXCLUSAO")).isEqualTo(1);
-		assertThat(su.delete("/api/admin/usuarios/" + alvo.getId()).statusCode()).isEqualTo(404);
+		assertThat(org.junit.jupiter.api.Assertions.assertThrows(ErroDeNegocio.class, () -> servico.excluir(su.getId(), alvo.getId()))
+				.status().value()).isEqualTo(404);
 	}
 }

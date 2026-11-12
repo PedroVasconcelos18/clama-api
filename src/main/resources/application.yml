@@ -126,12 +126,13 @@ clama:
     modelo: claude-sonnet-4-6 # o que roda hoje (mapa §3.2); trocar e decisao a parte (custo e prompt)
     max-tokens: 1500
     timeout: 30s # por tentativa; 3 tentativas (esperas 1 e 2 s) so em rede/timeout e 529
-    # USD por milhao de tokens (claude-sonnet-4-6, pagina oficial de precos); faltando um, o custo estimado fica nulo
-    preco-por-milhao:
-      entrada: 3.00
-      saida: 15.00
-      cache-escrita: 3.75
-      cache-leitura: 0.30
+    # USD por milhao de tokens, por id de modelo (pagina oficial de precos); modelo sem preco completo = custo estimado nulo
+    precos:
+      claude-sonnet-4-6:
+        entrada: 3.00
+        saida: 15.00
+        cache-escrita: 3.75
+        cache-leitura: 0.30
   freemium:
     limiar-ip: 3 # bloqueios do mesmo IP na janela (inclusivo) barram o submit
     janela-ip: 1h

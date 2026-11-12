@@ -19,7 +19,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -84,13 +83,6 @@ class UsuariosAdminController {
 	MensagemPastoral definirSenha(@PathVariable Long id, @Valid @RequestBody NovaSenhaDoAdmin corpo, Authentication auth) {
 		servico.definirSenha(autor(auth), id, corpo.senha());
 		return new MensagemPastoral("Senha definida. A pessoa precisa entrar de novo.");
-	}
-
-	@DeleteMapping("/{id}")
-	@PreAuthorize("hasRole('SUPERUSUARIO')")
-	@ResponseStatus(HttpStatus.NO_CONTENT)
-	void excluir(@PathVariable Long id, Authentication auth) {
-		servico.excluir(autor(auth), id);
 	}
 
 	/** Aqui o 403 so pode ser de papel (a cadeia ja barrou anonimo e cliente): a mensagem diz o motivo. */

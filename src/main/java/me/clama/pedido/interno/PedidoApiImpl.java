@@ -11,7 +11,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
+import me.clama.catalogo.CatalogoApi;
 import me.clama.conta.ContaApi;
+import me.clama.infra.fila.Fila;
 import me.clama.infra.cripto.HmacDeIdentificador;
 import me.clama.pedido.CorrecaoDeDados;
 import me.clama.pedido.DadosParaOracao;
@@ -42,12 +44,17 @@ class PedidoApiImpl implements PedidoApi {
 	private final ApplicationEventPublisher eventos;
 	private final Clock relogio;
 	private final HmacDeIdentificador hmac;
+	private final CatalogoApi catalogo;
+	/** Preguicoso: a Fila traz o scheduler, que traz os jobs, que dependem de PedidoApi (ciclo). */
+	private final org.springframework.beans.factory.ObjectProvider<Fila> fila;
 	@PersistenceContext
 	private EntityManager em;
 
 	PedidoApiImpl(PedidoRepository pedidos, CriacaoDePedido criacao, ContaApi conta, ApplicationEventPublisher eventos, Clock relogio,
-			HmacDeIdentificador hmac) {
+			HmacDeIdentificador hmac, CatalogoApi catalogo, org.springframework.beans.factory.ObjectProvider<Fila> fila) {
 		this.hmac = hmac;
+		this.catalogo = catalogo;
+		this.fila = fila;
 		this.pedidos = pedidos;
 		this.criacao = criacao;
 		this.conta = conta;
@@ -233,5 +240,76 @@ class PedidoApiImpl implements PedidoApi {
 		if (!EM_ANDAMENTO.contains(p.getStatus()) || !p.getAtualizadoEm().isBefore(antesDe)) return false;
 		p.falhar(motivo, relogio.instant());
 		return true;
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<UUID> doTitular(String email, java.util.Collection<Long> contas) {
+		var donos = contas.isEmpty() ? List.of(-1L) : contas; // IN () nao existe: -1 nao e id de ninguem
+		return pedidos.doTitular(hmac.email(email), donos);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public Set<String> cpfHmacs(java.util.Collection<UUID> ids) {
+		return ids.isEmpty() ? Set.of() : new java.util.HashSet<>(pedidos.cpfHmacs(ids));
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<java.util.Map<String, Object>> exportar(java.util.Collection<UUID> ids) {
+		if (ids.isEmpty()) return List.of();
+		var todos = pedidos.findAllById(ids).stream().sorted(java.util.Comparator.comparing(Pedido::getCriadoEm).thenComparing(Pedido::getId)).toList();
+		var planos = catalogo.planos(todos.stream().map(Pedido::getPlanoId).distinct().toList());
+		var instituicoes = catalogo.instituicoes(todos.stream().map(Pedido::getInstituicaoId).filter(java.util.Objects::nonNull).distinct().toList());
+		return todos.stream().map(p -> {
+			var m = new java.util.LinkedHashMap<String, Object>();
+			m.put("id", p.getId());
+			m.put("criadoEm", p.getCriadoEm());
+			m.put("status", p.getStatus().name());
+			var plano = planos.get(p.getPlanoId());
+			m.put("plano", plano == null ? null : plano.nome());
+			var inst = p.getInstituicaoId() == null ? null : instituicoes.get(p.getInstituicaoId());
+			m.put("instituicao", inst == null ? null : inst.nome());
+			m.put("valorCentavos", p.getValorCentavos());
+			m.put("gratuito", p.isGratuito());
+			m.put("nome", p.getNome());
+			m.put("email", p.getEmail());
+			m.put("cpfCnpj", p.getCpfCnpj());
+			m.put("telefone", p.getTelefone());
+			m.put("idade", p.getIdade());
+			m.put("sexo", p.getSexo());
+			m.put("pedidoOracao", p.getPedidoOracao());
+			m.put("oracao", p.getOracao());
+			var consentimento = new java.util.LinkedHashMap<String, Object>();
+			consentimento.put("em", p.getConsentidoEm());
+			consentimento.put("versao", p.getConsentimentoVersao());
+			consentimento.put("ip", p.getConsentimentoIp());
+			m.put("consentimento", consentimento);
+			return (java.util.Map<String, Object>) m;
+		}).toList();
+	}
+
+	@Override
+	@Transactional(propagation = Propagation.MANDATORY)
+	public List<UUID> emProcessamento(java.util.Collection<UUID> ids) {
+		var ocupados = new java.util.ArrayList<UUID>();
+		for (var id : ids) {
+			var p = travado(id);
+			if (EM_ANDAMENTO.contains(p.getStatus()) || fila.getObject().existePendenteCitando(id)) ocupados.add(id);
+		}
+		return ocupados;
+	}
+
+	@Override
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void anonimizar(java.util.Collection<UUID> ids) {
+		for (var id : ids) travado(id).anonimizar();
+	}
+
+	@Override
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void apagar(java.util.Collection<UUID> ids) {
+		if (!ids.isEmpty()) pedidos.apagar(ids);
 	}
 }

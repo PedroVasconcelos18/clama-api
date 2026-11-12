@@ -64,4 +64,5 @@ public class Cobranca {
 	public String getPixQrBase64() { return pixQrBase64; }
 	public Instant getExpiraEm() { return expiraEm; }
 	public Instant getCanceladaEm() { return canceladaEm; }
+	public Instant getPagaEm() { return pagaEm; }
 }

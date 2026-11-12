@@ -1,5 +1,7 @@
 package me.clama.pagamento.interno;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,4 +16,6 @@ interface CobrancaRepository extends JpaRepository<Cobranca, Long> {
 	boolean existsByPedidoIdAndMpPagamentoIdAndPagaEmIsNotNull(UUID pedidoId, long mpPagamentoId);
 
 	Optional<Cobranca> findByMpPagamentoId(long mpPagamentoId);
+
+	List<Cobranca> findByPedidoIdInAndPagaEmIsNotNull(Collection<UUID> pedidoIds);
 }

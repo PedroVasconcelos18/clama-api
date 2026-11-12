@@ -48,10 +48,14 @@ class MetricasDaOracaoTest {
 	}
 
 	void geracao(String em, int entrada, int saida, int escrita, int leitura, int ms) {
+		geracao("claude-sonnet-4-6", em, entrada, saida, escrita, leitura, ms);
+	}
+
+	void geracao(String modelo, String em, int entrada, int saida, int escrita, int leitura, int ms) {
 		jdbc.update("""
 				insert into oracao_geracao (pedido_id, criado_em, modelo, tokens_entrada, tokens_saida, tokens_cache_escrita,
-				  tokens_cache_leitura, duracao_ms) values (?, ?::timestamptz, 'claude-sonnet-4-6', ?, ?, ?, ?, ?)""",
-				UUID.randomUUID(), em, entrada, saida, escrita, leitura, ms);
+				  tokens_cache_leitura, duracao_ms) values (?, ?::timestamptz, ?, ?, ?, ?, ?, ?)""",
+				UUID.randomUUID(), em, modelo, entrada, saida, escrita, leitura, ms);
 	}
 
 	Navegador nav(Papel papel) throws Exception {
@@ -103,24 +107,55 @@ class MetricasDaOracaoTest {
 		assertThat(r.at("/duracao/p50Ms").isNull()).isTrue();
 	}
 
-	@Test
-	void custoNuloSeFaltaQualquerPreco() throws Exception {
-		geracao("2026-03-10T15:00:00Z", 1, 1, 1, 1, 1);
-		var p = props.precoPorMilhao();
-		var semUm = new OracaoProps(props.anthropicApiKey(), props.anthropicUrl(), props.modelo(), props.maxTokens(), props.timeout(),
-				new OracaoProps.PrecoPorMilhao(p.entrada(), p.saida(), p.cacheEscrita(), null));
-		var semPreco = new OracaoProps(props.anthropicApiKey(), props.anthropicUrl(), props.modelo(), props.maxTokens(),
-				props.timeout(), null);
-		var periodo = new FiltrosDeAdmin.Periodo(Instant.parse("2026-03-10T03:00:00Z"), Instant.parse("2026-03-11T03:00:00Z"));
+	static final String SONNET = "claude-sonnet-4-6";
+	static final OracaoProps.PrecoPorMilhao OUTRO = new OracaoProps.PrecoPorMilhao(new BigDecimal("1"), new BigDecimal("2"),
+			new BigDecimal("3"), new BigDecimal("4"));
 
-		assertThat(new MetricasDaOracao(jdbcClient, semUm).resumo(periodo).custoEstimadoUsd()).isNull();
-		assertThat(new MetricasDaOracao(jdbcClient, semPreco).resumo(periodo).custoEstimadoUsd()).isNull();
-		assertThat(metricas.resumo(periodo).custoEstimadoUsd()).isEqualByComparingTo(new BigDecimal("0.000022")); // (3 + 15 + 3,75 + 0,30) / 1e6, arredondado a 6 casas
+	OracaoProps comPrecos(java.util.Map<String, OracaoProps.PrecoPorMilhao> precos) {
+		return new OracaoProps(props.anthropicApiKey(), props.anthropicUrl(), props.modelo(), props.maxTokens(), props.timeout(), precos);
+	}
+
+	static final FiltrosDeAdmin.Periodo MARCO = new FiltrosDeAdmin.Periodo(Instant.parse("2026-03-10T03:00:00Z"),
+			Instant.parse("2026-03-11T03:00:00Z"));
+
+	@Test
+	void custoNuloSeFaltaQualquerPreco() {
+		geracao("2026-03-10T15:00:00Z", 1, 1, 1, 1, 1);
+		var p = props.precos().get(SONNET);
+		var semUm = comPrecos(java.util.Map.of(SONNET, new OracaoProps.PrecoPorMilhao(p.entrada(), p.saida(), p.cacheEscrita(), null)));
+
+		assertThat(new MetricasDaOracao(jdbcClient, semUm).resumo(MARCO).custoEstimadoUsd()).isNull();
+		assertThat(new MetricasDaOracao(jdbcClient, comPrecos(null)).resumo(MARCO).custoEstimadoUsd()).isNull();
+		assertThat(metricas.resumo(MARCO).custoEstimadoUsd()).isEqualByComparingTo(new BigDecimal("0.000022")); // (3 + 15 + 3,75 + 0,30) / 1e6, arredondado a 6 casas
+	}
+
+	@Test
+	void cadaGeracaoPagaOPrecoDoSeuModelo() {
+		geracao(SONNET, "2026-03-10T15:00:00Z", 1_000_000, 0, 0, 0, 1);
+		geracao("modelo-b", "2026-03-10T16:00:00Z", 1_000_000, 1_000_000, 0, 0, 1);
+		var precos = java.util.Map.of(SONNET, props.precos().get(SONNET), "modelo-b", OUTRO);
+
+		var r = new MetricasDaOracao(jdbcClient, comPrecos(precos)).resumo(MARCO);
+
+		assertThat(r.geracoes()).isEqualTo(2);
+		assertThat(r.tokensEntrada()).isEqualTo(2_000_000);
+		assertThat(r.custoEstimadoUsd()).isEqualByComparingTo("6.00"); // 3,00 (sonnet) + 1,00 + 2,00 (modelo-b)
+	}
+
+	@Test
+	void modeloSemPrecoAnulaOCustoTotal() {
+		geracao(SONNET, "2026-03-10T15:00:00Z", 10, 10, 0, 0, 1);
+		geracao("modelo-sem-preco", "2026-03-10T16:00:00Z", 10, 10, 0, 0, 1);
+
+		var r = metricas.resumo(MARCO);
+
+		assertThat(r.geracoes()).isEqualTo(2);
+		assertThat(r.custoEstimadoUsd()).isNull();
 	}
 
 	@Test
 	void precosDoApplicationYml() {
-		var p = props.precoPorMilhao();
+		var p = props.precos().get(SONNET);
 		assertThat(p.entrada()).isEqualByComparingTo("3.00");
 		assertThat(p.saida()).isEqualByComparingTo("15.00");
 		assertThat(p.cacheEscrita()).isEqualByComparingTo("3.75");

@@ -234,6 +234,25 @@ public class Pedido {
 		return mudou;
 	}
 
+	/**
+	 * Exclusao LGPD de pedido que o registro contabil manda manter: fica status, valor, plano, instituicao e datas; vai
+	 * toda a PII (e-mail e HMAC vazios porque as colunas sao NOT NULL), o texto, a oracao, o IP e o dono.
+	 */
+	public void anonimizar() {
+		nome = "";
+		email = "";
+		emailHmac = "";
+		cpfCnpj = null;
+		cpfHmac = null;
+		telefone = null;
+		idade = null;
+		sexo = null;
+		pedidoOracao = null;
+		oracao = null;
+		consentimentoIp = null;
+		usuarioId = null;
+	}
+
 	/** Vincula o doador anonimo a conta criada ou achada no pagamento. */
 	public void vincularUsuario(Long usuarioId) {
 		this.usuarioId = usuarioId;

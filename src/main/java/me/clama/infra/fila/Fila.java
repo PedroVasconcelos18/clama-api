@@ -51,6 +51,12 @@ public class Fila {
 		return cliente.getScheduledExecution(TaskInstanceId.of(tarefa, instancia)).isPresent();
 	}
 
+	/** Ha job agendado, em retentativa ou rodando cuja instancia cita esse id ({@code <job>/<id>}, {@code alerta-admin/<id>/<motivo>}). */
+	public boolean existePendenteCitando(Object id) {
+		return Boolean.TRUE.equals(jdbc.queryForObject("select exists (select 1 from scheduled_tasks where task_instance like ?)",
+				Boolean.class, "%/" + id + "%"));
+	}
+
 	/**
 	 * Traz para agora uma instancia agendada. {@code false} se ela nao existe ou ja esta em execucao. Zera
 	 * {@code consecutive_failures}: o job volta a ter todas as retentativas da politica.

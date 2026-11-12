@@ -1,8 +1,12 @@
 package me.clama.pagamento;
 
+import java.time.Instant;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
-/** Interface do modulo para os outros (hoje so a gratuidade do admin, onda 4b). */
+/** Interface do modulo para os outros (a gratuidade do admin e a LGPD). */
 public interface PagamentoApi {
 
 	/**
@@ -11,4 +15,13 @@ public interface PagamentoApi {
 	 * confirmam o pedido; a gratuidade nao pode passar por cima de dinheiro recebido).
 	 */
 	void cancelarCobranca(UUID pedidoId);
+
+	/** O pagamento que confirmou o pedido: quando e o id no Mercado Pago. */
+	record Pagamento(Instant confirmadoEm, long mpPagamentoId) {}
+
+	/** Dos pedidos dados, os que tem cobranca paga ou repasse: registro contabil que a exclusao LGPD anonimiza em vez de apagar. */
+	Set<UUID> pedidosComPagamento(Collection<UUID> pedidoIds);
+
+	/** O pagamento confirmado de cada pedido que tem um (para a exportacao LGPD); os demais ficam fora do mapa. */
+	Map<UUID, Pagamento> pagamentos(Collection<UUID> pedidoIds);
 }

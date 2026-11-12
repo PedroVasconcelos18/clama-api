@@ -12,11 +12,11 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @ConfigurationProperties("clama.oracao")
 public record OracaoProps(@DefaultValue("") String anthropicApiKey, @DefaultValue("https://api.anthropic.com") String anthropicUrl,
 		@DefaultValue("claude-sonnet-4-6") String modelo, @DefaultValue("1500") long maxTokens, @DefaultValue("30s") Duration timeout,
-		PrecoPorMilhao precoPorMilhao) {
+		java.util.Map<String, PrecoPorMilhao> precos) {
 
-	/** USD por milhao de tokens ({@code clama.oracao.preco-por-milhao.*}). Qualquer um faltando = custo estimado nulo. */
+	/** USD por milhao de tokens de um modelo ({@code clama.oracao.precos.<modelo>.*}). Qualquer um faltando = custo estimado nulo. */
 	public record PrecoPorMilhao(BigDecimal entrada, BigDecimal saida, BigDecimal cacheEscrita, BigDecimal cacheLeitura) {
-		boolean completo() {
+		public boolean completo() {
 			return entrada != null && saida != null && cacheEscrita != null && cacheLeitura != null;
 		}
 	}
@@ -25,6 +25,6 @@ public record OracaoProps(@DefaultValue("") String anthropicApiKey, @DefaultValu
 	/** A chave nunca aparece (o toString do record imprimiria todos os campos). */
 	@Override
 	public String toString() {
-		return "OracaoProps[anthropicUrl=" + anthropicUrl + ", modelo=" + modelo + ", maxTokens=" + maxTokens + ", timeout=" + timeout + ", precoPorMilhao=" + precoPorMilhao + "]";
+		return "OracaoProps[anthropicUrl=" + anthropicUrl + ", modelo=" + modelo + ", maxTokens=" + maxTokens + ", timeout=" + timeout + ", precos=" + precos + "]";
 	}
 }
