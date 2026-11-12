@@ -828,7 +828,8 @@
             "type" : "integer"
           },
           "nome" : {
-            "minLength" : 1,
+            "maxLength" : 120,
+            "minLength" : 0,
             "type" : "string"
           },
           "pedidoOracao" : {

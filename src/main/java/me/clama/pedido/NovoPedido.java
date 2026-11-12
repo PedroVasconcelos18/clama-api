@@ -9,6 +9,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import me.clama.infra.validacao.CpfOuCnpj;
+import org.hibernate.validator.constraints.Length;
 
 /**
  * Corpo de {@code POST /api/pedidos}, {@code /api/pedidos/gratuito}, {@code /api/doacoes} e o submit do freemium: cada rota le so o que lhe
@@ -16,11 +17,13 @@ import me.clama.infra.validacao.CpfOuCnpj;
  * {@code plano} nao vale na doacao (sempre inferido); {@code turnstileToken} so na doacao; o pedido gratuito usa so os
  * dados pessoais. Um {@code deviceHash} que o front antigo ainda mande e ignorado (o Jackson descarta propriedade
  * desconhecida).
+ * <p>Nada de {@code @Size.List} nos componentes: o javac repete o {@code @Size} como anotacao de tipo e o
+ * {@code Field.getAnnotatedType} do Hibernate Validator falha com "Duplicate annotation" (500 em todo pedido).
  */
 public record NovoPedido(
 		@NotBlank(message = "Por favor, digite seu nome.")
-		@Size.List({ @Size(min = 2, message = "Conta um pouco de você no nome — pelo menos 2 letras."),
-				@Size(max = 120, message = "O nome pode ter no máximo 120 caracteres.") }) String nome,
+		@Length(min = 2, message = "Conta um pouco de você no nome — pelo menos 2 letras.")
+		@Size(max = 120, message = "O nome pode ter no máximo 120 caracteres.") String nome,
 		@NotBlank(message = "Por favor, digite seu e-mail.")
 		@Email(message = "Confira seu e-mail — parece que faltou algo.")
 		@Size(max = 254, message = "O e-mail pode ter no máximo 254 caracteres.") String email,
