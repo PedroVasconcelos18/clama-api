@@ -338,6 +338,19 @@
         },
         "type" : "object"
       },
+      "Duracao" : {
+        "properties" : {
+          "p50Ms" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "p90Ms" : {
+            "format" : "double",
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
       "EdicaoDaConta" : {
         "properties" : {
           "nomeCompleto" : {
@@ -625,6 +638,19 @@
           },
           "usuarioNome" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "Latencia" : {
+        "properties" : {
+          "p50Segundos" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "p90Segundos" : {
+            "format" : "double",
+            "type" : "number"
           }
         },
         "type" : "object"
@@ -1452,6 +1478,22 @@
         },
         "type" : "object"
       },
+      "PorPlano" : {
+        "properties" : {
+          "faturamentoCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "plano" : {
+            "type" : "string"
+          },
+          "quantidade" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "Previa" : {
         "properties" : {
           "oracao" : {
@@ -1831,6 +1873,79 @@
             "type" : "integer"
           },
           "totalRepasseCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ResumoDaOracao" : {
+        "properties" : {
+          "custoEstimadoUsd" : {
+            "type" : "number"
+          },
+          "duracao" : {
+            "$ref" : "#/components/schemas/Duracao"
+          },
+          "geracoes" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "tokensCacheEscrita" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "tokensCacheLeitura" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "tokensEntrada" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "tokensSaida" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ResumoDePedidos" : {
+        "properties" : {
+          "criados" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "emErroAgora" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "enviados" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "faturamentoCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "gratuitos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "latencia" : {
+            "$ref" : "#/components/schemas/Latencia"
+          },
+          "pagos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "porPlano" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PorPlano"
+            },
+            "type" : "array"
+          },
+          "ticketMedioCentavos" : {
             "format" : "int64",
             "type" : "integer"
           }
@@ -2890,7 +3005,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Resumo"
+                  "$ref" : "#/components/schemas/ResumoDaOracao"
                 }
               }
             },
@@ -2929,7 +3044,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Resumo"
+                  "$ref" : "#/components/schemas/ResumoDePedidos"
                 }
               }
             },

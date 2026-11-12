@@ -24,7 +24,7 @@ class MetricasDaOracaoController {
 	}
 
 	@GetMapping
-	MetricasDaOracao.Resumo resumo(
+	MetricasDaOracao.ResumoDaOracao resumo(
 			@Parameter(description = "Dia inicial AAAA-MM-DD (Sao Paulo). Padrao: dia 1 do mes.") @RequestParam(required = false) @Size(max = 10) String de,
 			@Parameter(description = "Dia final AAAA-MM-DD (Sao Paulo), inclusivo. Padrao: hoje.") @RequestParam(required = false) @Size(max = 10) String ate) {
 		return metricas.resumo(FiltrosDeAdmin.periodoDoMes(de, ate, relogio));

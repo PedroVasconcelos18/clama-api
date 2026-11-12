@@ -15,7 +15,7 @@ public class MetricasDaOracao {
 	public record Duracao(Double p50Ms, Double p90Ms) {}
 
 	/** {@code custoEstimadoUsd} nulo = algum modelo do periodo nao tem preco completo em {@code clama.oracao.precos.<modelo>.*}. */
-	public record Resumo(long geracoes, long tokensEntrada, long tokensSaida, long tokensCacheEscrita, long tokensCacheLeitura,
+	public record ResumoDaOracao(long geracoes, long tokensEntrada, long tokensSaida, long tokensCacheEscrita, long tokensCacheLeitura,
 			BigDecimal custoEstimadoUsd, Duracao duracao) {}
 
 	private final JdbcClient jdbc;
@@ -26,7 +26,7 @@ public class MetricasDaOracao {
 		this.props = props;
 	}
 
-	public Resumo resumo(Periodo p) {
+	public ResumoDaOracao resumo(Periodo p) {
 		var ini = OffsetDateTime.ofInstant(p.inicio(), ZoneOffset.UTC);
 		var fim = OffsetDateTime.ofInstant(p.fimExclusivo(), ZoneOffset.UTC);
 		var duracao = jdbc.sql("""
@@ -49,7 +49,7 @@ public class MetricasDaOracao {
 			var parcial = custo == null ? null : custo(g);
 			custo = parcial == null ? null : custo.add(parcial);
 		}
-		return new Resumo(n, e, s, ce, cl, custo == null ? null : custo.divide(BigDecimal.valueOf(1_000_000), 6, RoundingMode.HALF_UP), duracao);
+		return new ResumoDaOracao(n, e, s, ce, cl, custo == null ? null : custo.divide(BigDecimal.valueOf(1_000_000), 6, RoundingMode.HALF_UP), duracao);
 	}
 
 	private record Grupo(String modelo, long n, long e, long s, long ce, long cl) {}

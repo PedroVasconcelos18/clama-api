@@ -22,7 +22,7 @@ public class MetricasDePedido {
 	/** Segundos de {@code pago_em} a {@code enviada_em}; nulos sem nenhum enviado no periodo. */
 	public record Latencia(Double p50Segundos, Double p90Segundos) {}
 
-	public record Resumo(long criados, long pagos, long gratuitos, long enviados, long emErroAgora, long faturamentoCentavos,
+	public record ResumoDePedidos(long criados, long pagos, long gratuitos, long enviados, long emErroAgora, long faturamentoCentavos,
 			long ticketMedioCentavos, List<PorPlano> porPlano, Latencia latencia) {}
 
 	private final JdbcClient jdbc;
@@ -33,7 +33,7 @@ public class MetricasDePedido {
 		this.catalogo = catalogo;
 	}
 
-	public Resumo resumo(Periodo p) {
+	public ResumoDePedidos resumo(Periodo p) {
 		var ini = OffsetDateTime.ofInstant(p.inicio(), ZoneOffset.UTC);
 		var fim = OffsetDateTime.ofInstant(p.fimExclusivo(), ZoneOffset.UTC);
 		var c = jdbc.sql("""
@@ -63,7 +63,7 @@ public class MetricasDePedido {
 			var plano = nomes.get(l[0]);
 			porPlano.add(new PorPlano(plano == null ? "Plano " + l[0] : plano.nome(), l[1], l[2]));
 		}
-		return new Resumo((Long) c[0], pagos, (Long) c[2], (Long) c[3], (Long) c[4], faturamento,
+		return new ResumoDePedidos((Long) c[0], pagos, (Long) c[2], (Long) c[3], (Long) c[4], faturamento,
 				pagos == 0 ? 0 : Math.round((double) faturamento / pagos), porPlano,
 				new Latencia((Double) c[6], (Double) c[7]));
 	}
