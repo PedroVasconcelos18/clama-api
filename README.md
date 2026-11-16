@@ -2,7 +2,8 @@
 
 Backend Java/Spring Boot 4.1 (Java 27) do Clama. Pacote raiz `me.clama`, classe principal `me.clama.ClamaApplication`.
 
-**A reescrita esta em andamento (onda 1, fundacao).** O codigo antigo continua no branch `migracao-java/integracao`.
+**Em producao desde 16/11/2026** em `https://api.clama.me` (Railway, config em `railway.json`), no lugar do antigo
+backend Django. O front (`clama.me`, Vercel) chama a API pela mesma origem, pelo rewrite de `/api/*`.
 Spec: `clama-docs/superpowers/specs/2026-11-08-clama-api-estrutura-java-idiomatica.md`.
 Inventario de comportamentos: `clama-docs/superpowers/specs/2026-11-08-inventario-de-comportamentos.md`.
 
