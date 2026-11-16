@@ -80,7 +80,7 @@ class PromptsAdminTest {
 		assertThat(padrao.get("padrao").asBoolean()).isTrue();
 		assertThat(padrao.get("ativo").asBoolean()).isTrue();
 		assertThat(padrao.get("id").isNull()).isTrue();
-		assertThat(padrao.at("/conteudo/sistema").asString()).startsWith("# Identidade");
+		assertThat(padrao.at("/conteudo/sistema").asString()).startsWith("Identidade\nVocê é o Clama");
 		assertThat(padrao.at("/conteudo/gratuito").asString()).startsWith("Gere uma oração pastoral");
 	}
 
@@ -175,8 +175,9 @@ class PromptsAdminTest {
 		assertThat(res.statusCode()).as(res.body()).isEqualTo(200);
 		assertThat(Navegador.json(res).get("versaoId").isNull()).isTrue();
 		CLAUDE.verify(postRequestedFor(urlEqualTo("/v1/messages"))
-				.withRequestBody(matchingJsonPath("$.system[0].text", matching("# Identidade(?s).*")))
-				.withRequestBody(matchingJsonPath("$.messages[0].content", matching("Complexidade: SIMPLES(?s).*Nome: Maria(?s).*"))));
+				.withRequestBody(matchingJsonPath("$.system[0].text", matching("Identidade\nVocê é o Clama(?s).*")))
+				.withRequestBody(matchingJsonPath("$.messages[0].content",
+						matching("Gere uma oração pastoral(?s).*\n\nNome: Maria\nSexo: feminino\nIdade: não informada\n\nPedido: Oração de teste"))));
 	}
 
 	@Test

@@ -44,8 +44,9 @@ import org.springframework.stereotype.Component;
  * {@code Authorization: Bearer} e so deixa de mandar quando o {@code X-Api-Key} ja esta no request
  * ({@code StaticAuthHeaders}); por isso o header e posto a mao. Nunca em log nem em mensagem.
  *
- * <p>Retentativa nossa (a do SDK fica desligada, {@code maxRetries(0)}), paridade com o INV:106: 3 tentativas com esperas
- * de 1 e 2 s, so em rede/timeout e 529. Primeiro bloco sem texto (ou em branco) e {@link Falha}. Credito esgotado (400 "credit balance", ou 402) vira {@link CreditosEsgotados} sem retentar. O texto
+ * <p>Retentativa em duas camadas, como no Django de producao: a do SDK ({@code retentativasDoSdk}, 2 como o default do SDK
+ * Python: 408, 409, 429, 5xx e rede, com o backoff dele) e, por fora, a nossa (INV:106): 3 tentativas com esperas de 1 e
+ * 2 s, so em rede/timeout e 529. Primeiro bloco sem texto (ou em branco) e {@link Falha}. Credito esgotado (400 "credit balance", ou 402) vira {@link CreditosEsgotados} sem retentar. O texto
  * e o do primeiro bloco, que tem de ser texto ({@code stop_reason=max_tokens} so gera WARN). O system vai com
  * {@code cache_control} efemero.
  *
@@ -117,7 +118,7 @@ public class ClienteClaude {
 		var chave = props.anthropicApiKey().strip();
 		this.cliente = chave.isEmpty() ? null
 				: AnthropicOkHttpClient.builder().apiKey(chave).putHeader("X-Api-Key", chave)
-						.baseUrl(props.anthropicUrl().replaceAll("/+$", "")).maxRetries(0).timeout(props.timeout()).build();
+						.baseUrl(props.anthropicUrl().replaceAll("/+$", "")).maxRetries(props.retentativasDoSdk()).timeout(props.timeout()).build();
 	}
 
 	@PreDestroy

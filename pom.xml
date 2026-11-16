@@ -142,7 +142,7 @@
 			</exclusions>
 		</dependency>
 		<dependency>
-			<!-- SDK oficial da Claude (oracao): manda o anthropic-version dele; a retentativa e nossa (maxRetries 0) -->
+			<!-- SDK oficial da Claude (oracao): manda o anthropic-version dele; retentativa do SDK (2, como o Python do Django) e a nossa por fora -->
 			<groupId>com.anthropic</groupId>
 			<artifactId>anthropic-java</artifactId>
 			<version>3.6.0</version>

@@ -133,6 +133,7 @@ clama:
     modelo: claude-sonnet-4-6 # o que roda hoje (mapa §3.2); trocar e decisao a parte (custo e prompt)
     max-tokens: 1500
     timeout: 30s # por tentativa; 3 tentativas (esperas 1 e 2 s) so em rede/timeout e 529
+    retentativas-do-sdk: 2 # as do SDK (408/409/429/5xx/rede) dentro de cada tentativa: o default do SDK Python do Django
     # USD por milhao de tokens, por id de modelo (pagina oficial de precos); modelo sem preco completo = custo estimado nulo
     precos:
       claude-sonnet-4-6:

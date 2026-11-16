@@ -9,6 +9,7 @@ clama:
     mercadopago-token: token-de-teste # INV:26: sem perfil local/test, estas quatro barram o boot
   oracao:
     anthropic-api-key: chave-de-teste
+    retentativas-do-sdk: 0 # os testes contam as chamadas a Claude; a do SDK tem teste proprio (ClienteClaudeTest)
   turnstile:
     secret: segredo-de-teste
   email:

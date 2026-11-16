@@ -36,7 +36,7 @@ class ClienteClaudeTest {
 	final List<Duration> esperas = new ArrayList<>();
 
 	ClienteClaude cliente(String url, String chave, Duration timeout) {
-		return new ClienteClaude(new OracaoProps(chave, url, "claude-sonnet-4-6", 1500, timeout, null), esperas::add);
+		return new ClienteClaude(new OracaoProps(chave, url, "claude-sonnet-4-6", 1500, timeout, null, 0), esperas::add);
 	}
 
 	ClienteClaude cliente(WireMockRuntimeInfo wm) {
@@ -193,6 +193,25 @@ class ClienteClaudeTest {
 		}
 		verify(1, postRequestedFor(urlEqualTo("/v1/messages")));
 		assertThat(eventos.list).anyMatch(e -> e.getLevel() == Level.WARN && e.getFormattedMessage().contains("max_tokens"));
+	}
+
+	/** Com as retentativas do SDK ligadas (as de producao): 429 e 500 o proprio SDK retenta, sem passar pela nossa espera. */
+	@Test
+	void retentativasDoSdkComoNoDjango(WireMockRuntimeInfo wm) {
+		for (int i = 0; i < 3; i++) {
+			var status = new int[] { 429, 500, 200 }[i];
+			stubFor(post("/v1/messages").inScenario("sdk").whenScenarioStateIs(i == 0 ? Scenario.STARTED : "r" + i)
+					.willReturn(aResponse().withStatus(status).withHeader("Content-Type", "application/json").withHeader("Retry-After-Ms", "1")
+							.withBody(status == 200 ? OK : SOBRECARGA))
+					.willSetStateTo("r" + (i + 1)));
+		}
+		var c = new ClienteClaude(new OracaoProps("sk-ant-teste", wm.getHttpBaseUrl(), "claude-sonnet-4-6", 1500, Duration.ofSeconds(5), null, 2),
+				esperas::add);
+
+		assertThat(c.gerar("s", "m").texto()).startsWith("Senhor");
+
+		verify(3, postRequestedFor(urlEqualTo("/v1/messages")));
+		assertThat(esperas).isEmpty();
 	}
 
 	/** A previa e uma chamada so: o admin espera na tela. */

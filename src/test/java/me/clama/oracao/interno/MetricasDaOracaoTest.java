@@ -112,7 +112,8 @@ class MetricasDaOracaoTest {
 			new BigDecimal("3"), new BigDecimal("4"));
 
 	OracaoProps comPrecos(java.util.Map<String, OracaoProps.PrecoPorMilhao> precos) {
-		return new OracaoProps(props.anthropicApiKey(), props.anthropicUrl(), props.modelo(), props.maxTokens(), props.timeout(), precos);
+		return new OracaoProps(props.anthropicApiKey(), props.anthropicUrl(), props.modelo(), props.maxTokens(), props.timeout(), precos,
+				props.retentativasDoSdk());
 	}
 
 	static final FiltrosDeAdmin.Periodo MARCO = new FiltrosDeAdmin.Periodo(Instant.parse("2026-03-10T03:00:00Z"),

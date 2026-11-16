@@ -28,10 +28,10 @@ class MontagemDoPromptTest {
 				Pedido: Peço oração pela minha família.""");
 	}
 
-	/** Sexo vazio, nulo ou "nao_informado", idade nula ou 0 (falsy no Django, como no antigo) e pedido so de espaco. */
+	/** Sexo vazio ou nulo, idade nula ou 0 (falsy no Django) e pedido so de espaco. */
 	@Test
 	void opcionaisVazios() {
-		for (var sexo : new String[] { null, "", "nao_informado" }) {
+		for (var sexo : new String[] { null, "" }) {
 			assertThat(MontagemDoPrompt.mensagem(PROMPT, dados(false, "Ana", sexo, sexo == null ? null : (short) 0," 　\t "),
 					plano(Complexidade.SIMPLES, TipoDePlano.COMUM)))
 					.isEqualTo("Curta.\n\nNome: Ana\nSexo: não informado\nIdade: não informada\n\nPedido: [pedido vazio]");
@@ -39,6 +39,13 @@ class MontagemDoPromptTest {
 		assertThat(MontagemDoPrompt.mensagem(PROMPT, dados(false, "Ana", "masculino", null, null),
 				plano(Complexidade.COM_PROFECIA_E_VERSICULOS, TipoDePlano.VALOR_LIVRE)))
 				.startsWith("Com profecia.\n\nNome: Ana\nSexo: masculino\n").endsWith("Pedido: [pedido vazio]");
+	}
+
+	/** "Prefiro não informar" do formulario vai cru, como o build_prompt do Django manda em producao. */
+	@Test
+	void naoInformadoDoFormularioVaiCru() {
+		assertThat(MontagemDoPrompt.mensagem(PROMPT, dados(false, "Ana", "nao_informado", null, "paz"),
+				plano(Complexidade.SIMPLES, TipoDePlano.COMUM))).isEqualTo("Curta.\n\nNome: Ana\nSexo: nao_informado\nIdade: não informada\n\nPedido: paz");
 	}
 
 	/** So o plano GRATUITO usa a instrucao gratuita, qualquer que seja a complexidade gravada nele. */

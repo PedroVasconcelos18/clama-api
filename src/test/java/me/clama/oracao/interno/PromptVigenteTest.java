@@ -25,13 +25,13 @@ class PromptVigenteTest {
 		assertThat(v.versaoId()).isNull();
 		assertThat(v.prompt()).isEqualTo(vigente.padrao());
 		var p = v.prompt();
-		assertThat(p.sistema()).startsWith("# Identidade\n\nVocê é o **Clama**").contains("CVV")
-				.endsWith("com palavras que cabem no colo, não no púlpito.");
-		assertThat(p.simples()).startsWith("Complexidade: SIMPLES\n");
-		assertThat(p.comVersiculo()).startsWith("Complexidade: COM_VERSICULO\n");
-		assertThat(p.comProfeciaEVersiculos()).startsWith("Complexidade: COM_PROFECIA_E_VERSICULOS\n");
-		assertThat(p.gratuito()).startsWith("Gere uma oração pastoral em exatamente 3 parágrafos curtos.")
-				.endsWith("sem digressões.");
+		// o "Clama Pastoral v6" de producao; o texto inteiro, caractere a caractere, no ParidadeComDjangoTest
+		assertThat(p.sistema()).hasSize(12_120).startsWith("Identidade\nVocê é o Clama").contains("CVV")
+				.endsWith("Palavras que cabem no colo, não no púlpito.");
+		assertThat(p.simples()).startsWith("Gere uma oração pastoral em exatamente 3 parágrafos curtos.");
+		assertThat(p.comVersiculo()).startsWith("Escreva uma oração em 1ª pessoa (a própria pessoa orando a Deus) com 3-4 parágrafos.");
+		assertThat(p.comProfeciaEVersiculos()).startsWith("Escreva uma oração em 1ª pessoa (a própria pessoa orando a Deus) com 6-8 parágrafos.");
+		assertThat(p.gratuito()).isEqualTo(p.simples()); // em producao simples_gratuita e simples tem o mesmo texto
 	}
 
 	@Test
