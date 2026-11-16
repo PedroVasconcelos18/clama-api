@@ -37,3 +37,6 @@ build/
 
 ### export LGPD (lgpd_export, dados pessoais) ###
 /lgpd_exports/
+
+### virada: o JSON do extrator tem PII em claro, nunca no git ###
+virada/*.json

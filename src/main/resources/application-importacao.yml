@@ -1,0 +1,13 @@
+# Importacao unica do Django na virada (me.clama.virada; mapa da onda 8, par. 4). Nunca no servico do Railway: roda no
+# terminal do operador com SPRING_PROFILES_ACTIVE=importacao e CLAMA_IMPORTACAO_ARQUIVO=<json do extrator>.
+server:
+  port: 0 # sem disputar porta; o processo encerra sozinho antes de atender
+clama:
+  fila:
+    iniciar: false # nenhum job roda neste processo
+  conta:
+    admin-resgate-email: "" # o resgate rodaria antes e falharia com o banco vazio
+management:
+  health:
+    db-scheduler:
+      enabled: false
