@@ -167,6 +167,12 @@ class PedidoApiImpl implements PedidoApi {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
+	public Optional<Long> donoDe(UUID id) {
+		return pedidos.findById(id).map(Pedido::getUsuarioId);
+	}
+
+	@Override
 	@Transactional(propagation = Propagation.MANDATORY)
 	public PedidoCobravel travarParaCobranca(UUID id) {
 		var p = travado(id);

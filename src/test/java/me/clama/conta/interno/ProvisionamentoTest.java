@@ -49,12 +49,10 @@ class ProvisionamentoTest {
 	}
 
 	@Test
-	void criaClienteSemSenhaEEnviaLinkDepoisDoCommit() throws Exception {
+	void criaClienteSemSenhaENaoMandaEmail() throws Exception {
 		var email = email();
 		var resumo = transacao.execute(s -> {
-			var r = api.provisionarOuVincular(email, "Maria da Graça");
-			assertThat(caixa.enviados()).as("nada sai antes do commit").isEmpty();
-			return r;
+			return api.provisionarOuVincular(email, "Maria da Graça");
 		});
 		ociosa();
 		assertThat(resumo.email()).isEqualTo(email);
@@ -63,9 +61,8 @@ class ProvisionamentoTest {
 		assertThat(u.getPapel()).isEqualTo(Papel.CLIENTE);
 		assertThat(u.temSenha()).isFalse();
 		assertThat(u.isAtivo()).isTrue();
-		assertThat(caixa.para(email)).hasSize(1);
-		var texto = caixa.para(email).get(0).email().texto();
-		assertThat(texto).contains("Maria").contains("/definir-senha#token=");
+		assertThat(caixa.enviados()).as("o link de ativacao vai no e-mail da oracao").isEmpty();
+		assertThat(api.linkDeAtivacao(resumo.id())).hasValueSatisfying(l -> assertThat(l).contains("/definir-senha#token="));
 	}
 
 	@Test
@@ -132,6 +129,6 @@ class ProvisionamentoTest {
 		}
 		ociosa();
 		assertThat(usuarios.findByEmailCanonico(email)).isPresent();
-		assertThat(caixa.para(email)).as("so quem criou envia").hasSize(1);
+		assertThat(caixa.para(email)).as("provisionar nao manda e-mail").isEmpty();
 	}
 }

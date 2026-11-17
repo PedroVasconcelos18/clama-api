@@ -14,7 +14,8 @@ import java.time.Clock;
 /**
  * Saga da confirmacao (D3, D4, D5): uma transacao so. Trava o link pelo hash, confirma o pedido (PAGO, conta, evento
  * da geracao), grava o bloqueio e gasta o link. Qualquer erro, inclusive o bloqueio que colide, desfaz tudo: sem conta,
- * pedido pendente, link valido e nenhum e-mail ({@code ContaCriada} e o evento da geracao so agem no commit).
+ * pedido pendente, link valido e nenhum e-mail (o evento da geracao so age no commit; a conta nova nao manda e-mail:
+ * o link de ativacao vai na oracao, e o token de senha da tela e emitido depois, pelo controller).
  */
 @Service
 public class ConfirmacaoFreemium {

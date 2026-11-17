@@ -8,5 +8,11 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * (CLAMA_ADMIN_RESGATE_EMAIL) e a conta que o boot promove a superusuario, vazio = nada.
  */
 @ConfigurationProperties("clama.conta")
-record ContaProps(@DefaultValue("http://localhost:5173") String frontendUrl,
-		@DefaultValue("") String adminResgateEmail) {}
+public record ContaProps(@DefaultValue("http://localhost:5173") String frontendUrl,
+		@DefaultValue("") String adminResgateEmail) {
+
+	/** {@code <frontendUrl>/<rota>#token=<token>}: no fragmento, o token nao vai ao servidor nem ao Referer. */
+	public String linkDeSenha(String rota, String token) {
+		return frontendUrl.replaceAll("/+$", "") + "/" + rota + "#token=" + token;
+	}
+}

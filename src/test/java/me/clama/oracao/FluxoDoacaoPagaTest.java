@@ -19,6 +19,8 @@ import javax.crypto.spec.SecretKeySpec;
 import me.clama.BancoDeTeste;
 import me.clama.CaixaDeSaidaEmMemoria;
 import me.clama.EmailDeTeste;
+import me.clama.conta.interno.Papel;
+import me.clama.conta.interno.UsuarioRepository;
 import me.clama.conta.web.Navegador;
 import me.clama.infra.email.EnvioAssincrono;
 import me.clama.infra.fila.FilaLigada;
@@ -31,6 +33,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -70,6 +73,8 @@ class FluxoDoacaoPagaTest {
 	@Autowired CaixaDeSaidaEmMemoria caixa;
 	@Autowired EnvioAssincrono envio;
 	@Autowired LimiteDeTaxa limite;
+	@Autowired UsuarioRepository usuarios;
+	@Autowired PasswordEncoder encoder;
 
 	@BeforeEach
 	@AfterEach
@@ -83,6 +88,7 @@ class FluxoDoacaoPagaTest {
 		jdbc.update("delete from repasse");
 		jdbc.update("delete from cobranca");
 		jdbc.update("delete from pedido");
+		jdbc.update("delete from instituicao where nome = 'Casa'");
 		jdbc.update("delete from usuario where email like '%@exemplo.com'");
 		jdbc.update("delete from plano where tipo = 'COMUM'");
 	}
@@ -94,8 +100,8 @@ class FluxoDoacaoPagaTest {
 				.getBytes(StandardCharsets.UTF_8)));
 	}
 
-	@Test
-	void doacaoPagaPorPixViraOracaoNoEmailENoStatus() throws Exception {
+	/** Turnstile, MP (Pix) e Claude respondem; o plano comum de R$ 30 existe. */
+	void foraResponde() throws Exception {
 		jdbc.update("""
 				insert into plano (nome, valor_centavos, complexidade, tipo, ordem) values ('Oração Simples', 3000, 'SIMPLES', 'COMUM', 1)""");
 		FORA.stubFor(post("/siteverify").willReturn(okJson("{\"success\": true}")));
@@ -105,7 +111,10 @@ class FluxoDoacaoPagaTest {
 				{"id": "msg_1", "type": "message", "role": "assistant", "model": "claude-sonnet-4-6",
 				 "content": [{"type": "text", "text": "Senhor, guarda a família da Maria.\\n\\nAmém."}], "stop_reason": "end_turn",
 				 "stop_sequence": null, "usage": {"input_tokens": 800, "output_tokens": 120}}""")));
+	}
 
+	/** Doacao anonima de maria@exemplo.com, Pix e o webhook assinado do MP aprovando; devolve o id do pedido. */
+	UUID doarEPagar() throws Exception {
 		// 1. doacao anonima
 		var nav = new Navegador(porta);
 		nav.get("/api/auth/eu");
@@ -140,6 +149,61 @@ class FluxoDoacaoPagaTest {
 						"{\"id\": 1, \"type\": \"payment\", \"action\": \"payment.updated\", \"data\": {\"id\": \"" + PAG + "\"}}"))
 				.build(), java.net.http.HttpResponse.BodyHandlers.ofString());
 		assertThat(webhook.statusCode()).as(webhook.body()).isEqualTo(200);
+		return id;
+	}
+
+	void esperarEnviada(UUID id) {
+		await().atMost(Duration.ofSeconds(20)).until(() -> Navegador.json(new Navegador(porta).get("/api/pedidos/" + id))
+				.get("status").asString().equals("ENVIADA"));
+	}
+
+	CaixaDeSaidaEmMemoria.Enviado oracaoPara(String email) {
+		var oracao = caixa.para(email).stream().filter(e -> e.email().assunto().startsWith("Sua oração")).toList();
+		assertThat(oracao).hasSize(1);
+		return oracao.getFirst();
+	}
+
+	@Test
+	void oracaoDoAnonimoLevaOLinkDeAtivacao() throws Exception {
+		foraResponde();
+		var id = doarEPagar();
+		esperarEnviada(id);
+		var oracao = oracaoPara("maria@exemplo.com").email(); // modelo oracao_ativar_conta
+		assertThat(oracao.texto()).contains("Senhor, guarda a família da Maria.").contains("Guarde suas orações: crie sua senha no Clama")
+				.contains("http://localhost:5173/definir-senha#token=").contains("O link vale por 72 horas.");
+		assertThat(oracao.html()).contains("Guarde suas orações: crie sua senha no Clama").contains("http://localhost:5173/definir-senha#token=");
+		assertThat(caixa.para("maria@exemplo.com")).as("nenhum definir senha separado")
+				.noneMatch(e -> e.email().assunto().equals("Bem-vinda ao Clama — defina sua senha"));
+	}
+
+	@Test
+	void oracaoDeQuemTemSenhaUsaOModeloOracao() throws Exception {
+		foraResponde();
+		jdbc.update("""
+				insert into plano (nome, descricao, valor_centavos, complexidade, tipo, ordem)
+				values ('Gratuito', 'Sua primeira oração — por nossa conta', 0, 'SIMPLES', 'GRATUITO', 1000)
+				on conflict (tipo) where tipo <> 'COMUM' do nothing""");
+		var email = "com-senha@exemplo.com";
+		Navegador.usuario(usuarios, encoder, email, "senha-forte-123", Papel.CLIENTE);
+		var nav = new Navegador(porta);
+		assertThat(nav.login(email, "senha-forte-123").statusCode()).isEqualTo(200);
+		var corpo = new LinkedHashMap<String, Object>();
+		corpo.put("nome", "Maria Souza");
+		corpo.put("email", email);
+		corpo.put("cpfCnpj", "529.982.247-25");
+		corpo.put("pedidoOracao", "Pela minha família");
+		corpo.put("consentAceito", true);
+		var criado = nav.post("/api/pedidos/gratuito", Navegador.JSON.writeValueAsString(corpo));
+		assertThat(criado.statusCode()).as(criado.body()).isEqualTo(201);
+		esperarEnviada(UUID.fromString(Navegador.json(criado).get("id").asString()));
+		var oracao = oracaoPara(email).email(); // modelo oracao
+		assertThat(oracao.texto()).contains("Senhor, guarda a família da Maria.").doesNotContain("definir-senha").doesNotContain("Guarde suas orações");
+	}
+
+	@Test
+	void doacaoPagaPorPixViraOracaoNoEmailENoStatus() throws Exception {
+		foraResponde();
+		var id = doarEPagar();
 
 		// 4. a fila gera e envia; o status publico mostra a oracao
 		await().atMost(Duration.ofSeconds(20)).until(() -> Navegador.json(new Navegador(porta).get("/api/pedidos/" + id))

@@ -7,6 +7,7 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.UUID;
@@ -14,6 +15,8 @@ import java.util.regex.Pattern;
 import me.clama.BancoDeTeste;
 import me.clama.CaixaDeSaidaEmMemoria;
 import me.clama.EmailDeTeste;
+import me.clama.conta.interno.Papel;
+import me.clama.conta.interno.UsuarioRepository;
 import me.clama.conta.web.Navegador;
 import me.clama.infra.email.EnvioAssincrono;
 import me.clama.infra.fila.FilaLigada;
@@ -26,13 +29,15 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 /**
- * D13, o fluxo do freemium ate o e-mail: submit, e-mail de confirmacao, confirmacao, "definir senha" e a oracao. Turnstile
- * e Claude num WireMock so, e-mail na caixa em memoria. Antes da confirmacao nao existe e-mail de senha nem conta.
+ * D13, o fluxo do freemium ate o e-mail: submit, e-mail de confirmacao, confirmacao (com o token de senha para a tela) e a
+ * oracao com o link de ativacao. Turnstile e Claude num WireMock so, e-mail na caixa em memoria. Nenhum e-mail "definir
+ * senha" separado, nem antes nem depois da confirmacao.
  */
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @Import({ BancoDeTeste.class, EmailDeTeste.class })
@@ -62,6 +67,8 @@ class FluxoFreemiumTest {
 	@Autowired CaixaDeSaidaEmMemoria caixa;
 	@Autowired EnvioAssincrono envio;
 	@Autowired LimiteDeTaxa limite;
+	@Autowired UsuarioRepository usuarios;
+	@Autowired PasswordEncoder encoder;
 
 	@BeforeEach
 	@AfterEach
@@ -80,8 +87,7 @@ class FluxoFreemiumTest {
 				on conflict (tipo) where tipo <> 'COMUM' do nothing""");
 	}
 
-	@Test
-	void submitConfirmacaoDefinirSenhaEOracaoPorEmail() throws Exception {
+	static void foraResponde() {
 		FORA.stubFor(post("/siteverify").willReturn(okJson("{\"success\": true}")));
 		FORA.stubFor(post("/v1/messages").willReturn(okJson("""
 				{"id": "msg_1", "type": "message", "role": "assistant", "model": "claude-sonnet-4-6",
@@ -91,6 +97,65 @@ class FluxoFreemiumTest {
 				{"id": "msg_2", "type": "message", "role": "assistant", "model": "claude-sonnet-4-6",
 				 "content": [{"type": "text", "text": "SEM_RISCO"}], "stop_reason": "end_turn",
 				 "stop_sequence": null, "usage": {"input_tokens": 300, "output_tokens": 3}}""")));
+	}
+
+	/** Submit anonimo; devolve o token do link de confirmacao que chegou por e-mail. */
+	String submeter(String email, String cpf) throws Exception {
+		var nav = new Navegador(porta);
+		nav.get("/api/auth/eu");
+		var corpo = new LinkedHashMap<String, Object>();
+		corpo.put("nome", "Maria Souza");
+		corpo.put("email", email);
+		corpo.put("cpfCnpj", cpf);
+		corpo.put("pedidoOracao", "Pela minha família");
+		corpo.put("consentAceito", true);
+		corpo.put("turnstileToken", "token-ok");
+		var criado = nav.post("/api/freemium/pedidos", Navegador.JSON.writeValueAsString(corpo));
+		assertThat(criado.statusCode()).as(criado.body()).isEqualTo(201);
+		var m = LINK.matcher(caixa.aguardarPara(email, 1).getFirst().email().texto());
+		assertThat(m.find()).isTrue();
+		return m.group(1);
+	}
+
+	HttpResponse<String> confirmar(String token) throws Exception {
+		var nav = new Navegador(porta);
+		nav.get("/api/auth/eu");
+		return nav.post("/api/freemium/confirmacao", "{\"token\":\"" + token + "\"}");
+	}
+
+	@Test
+	void confirmacaoDevolveTokenDeSenha() throws Exception {
+		foraResponde();
+		// conta nova: o token vem na resposta (sem cache) e define a senha na tela
+		var nova = confirmar(submeter(EMAIL, "529.982.247-25"));
+		assertThat(nova.statusCode()).as(nova.body()).isEqualTo(200);
+		assertThat(nova.headers().firstValue("Cache-Control")).hasValueSatisfying(v -> assertThat(v).contains("no-store"));
+		var token = Navegador.json(nova).get("tokenDeSenha").asString();
+		assertThat(token).matches("[\\w-]{43}");
+
+		// conta criada (com senha) entre o submit e a confirmacao: vincula, sem token
+		var comSenha = "frm-comsenha@exemplo.com";
+		var link = submeter(comSenha, "111.444.777-35");
+		Navegador.usuario(usuarios, encoder, comSenha, "senha-forte-123", Papel.CLIENTE);
+		var vinculada = confirmar(link);
+		assertThat(vinculada.statusCode()).as(vinculada.body()).isEqualTo(200);
+		assertThat(Navegador.json(vinculada).get("tokenDeSenha").isNull()).isTrue();
+
+		// nenhum "definir senha" separado sai da confirmacao
+		for (int i = 0; i < 500 && envio.pendentes() > 0; i++) Thread.sleep(10);
+		Thread.sleep(300);
+		assertThat(caixa.enviados()).noneMatch(e -> e.email().assunto().equals("Bem-vinda ao Clama — defina sua senha"));
+
+		var nav = new Navegador(porta);
+		nav.get("/api/auth/eu");
+		var definida = nav.post("/api/auth/redefinicao-de-senha",
+				Navegador.JSON.writeValueAsString(java.util.Map.of("token", token, "novaSenha", "outra-senha-forte-9")));
+		assertThat(definida.statusCode()).as(definida.body()).isEqualTo(200);
+	}
+
+	@Test
+	void submitConfirmacaoDefinirSenhaEOracaoPorEmail() throws Exception {
+		foraResponde();
 
 		// 1. submit
 		var nav = new Navegador(porta);
@@ -123,15 +188,16 @@ class FluxoFreemiumTest {
 		var ok = nav.post("/api/freemium/confirmacao", "{\"token\":\"" + token + "\"}");
 		assertThat(ok.statusCode()).as(ok.body()).isEqualTo(200);
 
-		// 4. "definir senha" e a oracao
+		// 4. a oracao, com o link de ativacao; nenhum "definir senha" separado
 		await().atMost(Duration.ofSeconds(20)).until(() -> Navegador.json(new Navegador(porta).get("/api/pedidos/" + id))
 				.get("status").asString().equals("ENVIADA"));
-		var tudo = caixa.aguardarPara(EMAIL, 3);
-		assertThat(tudo).extracting(e -> e.email().assunto())
-				.containsExactlyInAnyOrder("Confirme sua oração — clama", "Bem-vinda ao Clama — defina sua senha", "Sua oração chegou, Maria");
+		var tudo = caixa.aguardarPara(EMAIL, 2);
+		Thread.sleep(300);
+		assertThat(caixa.para(EMAIL)).extracting(e -> e.email().assunto())
+				.containsExactlyInAnyOrder("Confirme sua oração — clama", "Sua oração chegou, Maria");
 		var oracao = tudo.stream().filter(e -> e.email().assunto().startsWith("Sua oração")).findFirst().orElseThrow();
 		assertThat(oracao.email().texto()).contains("Senhor, guarda a família da Maria.");
-		assertThat(oracao.email().texto()).as("o e-mail da oracao nao leva o link de senha").doesNotContain("definir-senha");
+		assertThat(oracao.email().texto()).as("a conta nova recebe o link de ativacao na oracao").contains("/definir-senha#token=");
 		assertThat(jdbc.queryForObject("select count(*) from usuario where email = ?", Integer.class, EMAIL)).isOne();
 		assertThat(jdbc.queryForObject("select count(*) from freemium_bloqueio", Integer.class)).isOne();
 		assertThat(caixa.para("contato@clama.me")).isEmpty(); // nenhum alerta

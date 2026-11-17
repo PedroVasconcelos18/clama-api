@@ -41,6 +41,9 @@ public interface PedidoApi {
 
 	Optional<PedidoResumo> resumo(UUID id);
 
+	/** A conta dona do pedido; vazio se o pedido nao existe ou nao tem dono. */
+	Optional<Long> donoDe(UUID id);
+
 	/** Em lote e sem PII (nem decifra nada): ids inexistentes ficam de fora. */
 	Map<UUID, PedidoResumo> resumos(Collection<UUID> ids);
 

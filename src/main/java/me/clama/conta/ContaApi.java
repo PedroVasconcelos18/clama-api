@@ -8,13 +8,13 @@ import java.util.Optional;
 import java.util.Map;
 import java.util.stream.Collectors;
 import me.clama.conta.interno.AdminDeUsuariosServico;
-import me.clama.conta.interno.ContaCriada;
+import me.clama.conta.interno.ContaProps;
 import me.clama.conta.interno.EmailCanonico;
 import me.clama.conta.interno.NomePublico;
 import me.clama.conta.interno.Papel;
+import me.clama.conta.interno.TokensDeSenha;
 import me.clama.conta.interno.Usuario;
 import me.clama.conta.interno.UsuarioRepository;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,15 +24,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class ContaApi {
 
 	private final UsuarioRepository usuarios;
-	private final ApplicationEventPublisher eventos;
 	private final Clock relogio;
 	private final AdminDeUsuariosServico admin;
+	private final TokensDeSenha tokens;
+	private final ContaProps props;
 
-	ContaApi(UsuarioRepository usuarios, ApplicationEventPublisher eventos, Clock relogio, AdminDeUsuariosServico admin) {
+	ContaApi(UsuarioRepository usuarios, Clock relogio, AdminDeUsuariosServico admin, TokensDeSenha tokens, ContaProps props) {
 		this.admin = admin;
 		this.usuarios = usuarios;
-		this.eventos = eventos;
 		this.relogio = relogio;
+		this.tokens = tokens;
+		this.props = props;
 	}
 
 	/** Ha conta com esse e-mail (comparado pelo canonico: Gmail sem pontos e sem "+tag"). */
@@ -42,9 +44,9 @@ public class ContaApi {
 	}
 
 	/**
-	 * Conta existente pelo e-mail canonico: so devolve. Senao cria um CLIENTE sem senha e, depois do commit de quem
-	 * chamou, manda o link de definir senha. Criacao simultanea do mesmo e-mail: o {@code ON CONFLICT DO NOTHING}
-	 * espera o outro commit e solta sem erro (sem excecao, a transacao do chamador nao se perde), e a conta e relida.
+	 * Conta existente pelo e-mail canonico: so devolve. Senao cria um CLIENTE sem senha, sem e-mail nenhum: o link de
+	 * ativacao vai no e-mail da oracao ({@link #linkDeAtivacao}). Criacao simultanea do mesmo e-mail: o
+	 * {@code ON CONFLICT DO NOTHING} espera o outro commit e solta sem erro (sem excecao, a transacao do chamador nao se perde), e a conta e relida.
 	 */
 	@Transactional(propagation = Propagation.MANDATORY)
 	public UsuarioResumo provisionarOuVincular(String email, String nomeCompleto) {
@@ -52,10 +54,9 @@ public class ContaApi {
 		var existente = usuarios.findByEmailCanonico(canonico);
 		if (existente.isEmpty()) {
 			var nome = nomeCompleto == null ? "" : nomeCompleto.strip();
-			var criou = usuarios.inserirSeAusente(email.strip().toLowerCase(Locale.ROOT), canonico,
-					nome.length() > 120 ? nome.substring(0, 120) : nome, relogio.instant()) == 1;
+			usuarios.inserirSeAusente(email.strip().toLowerCase(Locale.ROOT), canonico,
+					nome.length() > 120 ? nome.substring(0, 120) : nome, relogio.instant());
 			existente = usuarios.findByEmailCanonico(canonico);
-			if (criou) eventos.publishEvent(new ContaCriada(existente.orElseThrow().getId()));
 		}
 		var u = existente.orElseThrow();
 		return resumo(u);
@@ -63,6 +64,20 @@ public class ContaApi {
 
 	private static UsuarioResumo resumo(Usuario u) {
 		return new UsuarioResumo(u.getId(), u.getEmail(), u.getNomeCompleto(), NomePublico.de(u), u.getPapel() != Papel.CLIENTE, u.getPapel().name());
+	}
+
+	/**
+	 * Token cru de definir senha (72 h) para a conta ativa ainda sem senha; vazio se tem senha, esta inativa ou nao existe.
+	 * Nao revoga os anteriores: o da tela sobrevive ao do e-mail. Credencial: nunca logar. Transacao propria.
+	 */
+	public Optional<String> tokenDeAtivacao(Long usuarioId) {
+		return usuarios.findById(usuarioId).filter(u -> u.isAtivo() && !u.temSenha())
+				.map(u -> tokens.emitirSemRevogar(u.getId(), TokensDeSenha.Finalidade.DEFINIR));
+	}
+
+	/** {@code <frontend>/definir-senha#token=...} com um {@link #tokenDeAtivacao} novo; mesmas regras. */
+	public Optional<String> linkDeAtivacao(Long usuarioId) {
+		return tokenDeAtivacao(usuarioId).map(t -> props.linkDeSenha("definir-senha", t));
 	}
 
 	/** Uma consulta so; id inexistente fica fora do mapa. */

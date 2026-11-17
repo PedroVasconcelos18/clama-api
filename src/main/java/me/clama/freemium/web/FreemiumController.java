@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Duration;
 import java.util.List;
+import me.clama.conta.ContaApi;
 import me.clama.freemium.interno.ConfirmacaoFreemium;
 import me.clama.freemium.interno.PedidoFreemium;
 import me.clama.infra.antibot.Turnstile;
@@ -16,7 +17,10 @@ import me.clama.infra.validacao.EmailNaoDescartavelValidator;
 import me.clama.infra.web.ErroDeCampo;
 import me.clama.infra.web.ErroDeNegocio;
 import me.clama.pedido.NovoPedido;
+import me.clama.pedido.PedidoApi;
 import me.clama.pedido.StatusPedido;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +33,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 class FreemiumController {
 
+	private static final Logger LOG = LoggerFactory.getLogger(FreemiumController.class);
+
 	static final String CAPTCHA = "Verificação anti-robô falhou. Atualize a página e tente de novo.";
 	static final String DESCARTAVEL = "Use um e-mail principal para receber sua oração — e-mails temporários não funcionam aqui.";
 
@@ -39,8 +45,13 @@ class FreemiumController {
 	private final ConfirmacaoFreemium confirmacao;
 	private final LimiteDeTaxa limite;
 	private final Turnstile turnstile;
+	private final PedidoApi pedidos;
+	private final ContaApi conta;
 
-	FreemiumController(PedidoFreemium freemium, ConfirmacaoFreemium confirmacao, LimiteDeTaxa limite, Turnstile turnstile) {
+	FreemiumController(PedidoFreemium freemium, ConfirmacaoFreemium confirmacao, LimiteDeTaxa limite, Turnstile turnstile,
+			PedidoApi pedidos, ContaApi conta) {
+		this.pedidos = pedidos;
+		this.conta = conta;
 		this.freemium = freemium;
 		this.confirmacao = confirmacao;
 		this.limite = limite;
@@ -65,11 +76,21 @@ class FreemiumController {
 		return new PedidoFreemiumCriado(freemium.submeter(n, ip), StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL);
 	}
 
-	/** O token e uma credencial: nao entra em log nem em cache. 30/h por IP. */
+	/**
+	 * Os dois tokens (o do link e o de senha devolvido) sao credenciais: nao entram em log nem em cache. 30/h por IP. O
+	 * token de senha sai depois do commit da confirmacao: se a emissao falhar, a resposta segue sem ele (o pedido ja
+	 * esta PAGO) e a pessoa usa o link do e-mail da oracao.
+	 */
 	@PostMapping("/api/freemium/confirmacao")
 	ResponseEntity<PedidoConfirmado> confirmar(@Valid @RequestBody Confirmar corpo, HttpServletRequest req) {
 		limite.exigir(new Cota("freemium-confirmacao:ip:" + ClienteIp.de(req), 30, Duration.ofHours(1)));
 		var id = confirmacao.confirmar(corpo.token());
-		return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(new PedidoConfirmado(id, StatusPedido.PAGO));
+		String tokenDeSenha = null;
+		try {
+			tokenDeSenha = pedidos.donoDe(id).flatMap(conta::tokenDeAtivacao).orElse(null);
+		} catch (RuntimeException e) {
+			LOG.error("confirmacao: token de senha nao emitido, segue sem (pedido_id={})", id, e);
+		}
+		return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(new PedidoConfirmado(id, StatusPedido.PAGO, tokenDeSenha));
 	}
 }

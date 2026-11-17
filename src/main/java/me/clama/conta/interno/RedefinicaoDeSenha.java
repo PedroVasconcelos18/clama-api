@@ -57,7 +57,8 @@ public class RedefinicaoDeSenha {
 		envio.executar("link de redefinir senha", () -> enviarLink(minusculo));
 	}
 
-	private void enviarLink(String minusculo) {
+	/** Tambem do {@link Cadastro} de e-mail que ja tem conta. Roda no executor: so o e-mail minusculo, sem limite. */
+	void enviarLink(String minusculo) {
 		var usuario = usuarios.findByEmail(minusculo).or(() -> usuarios.findByEmailCanonico(EmailCanonico.de(minusculo)))
 				.filter(Usuario::isAtivo);
 		if (usuario.isEmpty()) return;

@@ -17,13 +17,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Link de senha de uso unico: o token (32 bytes aleatorios, base64url) so existe no e-mail; o banco guarda o SHA-256.
- * Emitir um novo invalida os anteriores da mesma finalidade. Consumir e um UPDATE atomico: duas requisicoes com o
- * mesmo token, so uma ganha.
+ * Emitir um novo invalida os anteriores da mesma finalidade, menos o link de ativacao ({@link #emitirSemRevogar}).
+ * Consumir e um UPDATE atomico: duas requisicoes com o mesmo token, so uma ganha.
  */
 @Component
-class TokensDeSenha {
+public class TokensDeSenha {
 
-	enum Finalidade {
+	public enum Finalidade {
 		REDEFINIR(Duration.ofHours(1)), DEFINIR(Duration.ofHours(72));
 
 		final Duration validade;
@@ -55,12 +55,21 @@ class TokensDeSenha {
 		}
 	}
 
-	/** Devolve o token em claro. Transacao propria: tambem e chamado de listener AFTER_COMMIT, onde nao ha como escrever. */
+	/** Devolve o token em claro. Transacao propria: e chamado do executor de e-mail, fora de qualquer transacao. */
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	String emitir(Long usuarioId, Finalidade finalidade) {
-		var agora = agora();
 		jdbc.sql("update token_de_senha set usado_em = :agora where usuario_id = :u and finalidade = :f and usado_em is null")
-				.param("agora", agora).param("u", usuarioId).param("f", finalidade.name()).update();
+				.param("agora", agora()).param("u", usuarioId).param("f", finalidade.name()).update();
+		return emitirSemRevogar(usuarioId, finalidade); // chamada interna: segue na transacao acima
+	}
+
+	/**
+	 * Como {@link #emitir}, mas os links pendentes continuam valendo: o da tela da confirmacao nao morre quando o e-mail
+	 * da oracao sai com outro. Definir a senha revoga todos ({@link RedefinicaoDeSenha#redefinir}).
+	 */
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public String emitirSemRevogar(Long usuarioId, Finalidade finalidade) {
+		var agora = agora();
 		var token = novoToken();
 		jdbc.sql("insert into token_de_senha (usuario_id, hash, finalidade, criado_em, expira_em) values (:u, :h, :f, :agora, :expira)")
 				.param("u", usuarioId).param("h", hash(token)).param("f", finalidade.name()).param("agora", agora)
