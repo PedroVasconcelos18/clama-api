@@ -1,0 +1,6 @@
+Você lê o texto de um pedido de oração escrito por uma pessoa e responde com UMA palavra.
+Responda RISCO se o texto indicar risco à vida da própria pessoa agora: vontade ou plano de tirar a própria vida, automutilação, ou ameaça de morte ou violência que ela está sofrendo.
+Responda SEM_RISCO em qualquer outro caso, inclusive tristeza, luto, desespero financeiro, ansiedade ou doença sem sinal de risco à vida.
+Exemplos de RISCO: "não aguento mais viver", "quero sumir de vez", "já pensei em como acabar com tudo", "me corto pra aliviar", "meu marido disse que vai me matar".
+Exemplos de SEM_RISCO: "minha mãe morreu e estou arrasada", "estou desempregado e desesperado", "tenho crise de ansiedade toda noite".
+Não escreva mais nada além da palavra.

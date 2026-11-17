@@ -12,6 +12,7 @@ import me.clama.infra.formato.Dinheiro;
 import me.clama.infra.web.ErroDeNegocio;
 import me.clama.pedido.GeracaoSolicitada;
 import me.clama.pedido.NovoPedido;
+import me.clama.pedido.PedidoRegistrado;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
@@ -66,16 +67,16 @@ public class CriacaoDePedido {
 			throw new ErroDeNegocio(HttpStatus.TOO_MANY_REQUESTS, "gratuito_diario", "Limite diário de orações gratuitas.",
 					"Você já recebeu uma oração gratuita nas últimas 24 horas. Volte amanhã para pedir outra — estamos com você.");
 		}
-		var p = pedidos.saveAndFlush(Pedido.gratuito(dados(usuarioId, plano.id(), null, 0, n, ip), hmac, agora));
+		var p = registrar(Pedido.gratuito(dados(usuarioId, plano.id(), null, 0, n, ip), hmac, agora));
 		eventos.publishEvent(new GeracaoSolicitada(p.getId()));
 		return p;
 	}
 
-	/** Freemium: plano gratuito (503 se faltar), AGUARDANDO_CONFIRMACAO_EMAIL; sem conta e sem evento. */
+	/** Freemium: plano gratuito (503 se faltar), AGUARDANDO_CONFIRMACAO_EMAIL; sem conta e sem {@link GeracaoSolicitada}. */
 	@Transactional
 	public Pedido criarFreemium(NovoPedido n, String ip) {
 		var plano = catalogo.planoGratuito();
-		return pedidos.saveAndFlush(Pedido.freemium(dados(null, plano.id(), null, 0, n, ip), hmac, relogio.instant()));
+		return registrar(Pedido.freemium(dados(null, plano.id(), null, 0, n, ip), hmac, relogio.instant()));
 	}
 
 	private Pedido pago(Long usuarioId, NovoPedido n, Long planoEscolhido, String ip) {
@@ -102,7 +103,14 @@ public class CriacaoDePedido {
 		}
 		if (!erros.isEmpty()) throw dadosInvalidos(erros);
 		if (plano == null) plano = catalogo.inferirPlano(n.valorCentavos());
-		return pedidos.saveAndFlush(Pedido.novo(dados(usuarioId, plano.id(), n.instituicao(), n.valorCentavos(), n, ip), hmac, relogio.instant()));
+		return registrar(Pedido.novo(dados(usuarioId, plano.id(), n.instituicao(), n.valorCentavos(), n, ip), hmac, relogio.instant()));
+	}
+
+	/** Grava e publica {@link PedidoRegistrado} na mesma transacao (o {@code oracao} enfileira a triagem de crise). */
+	private Pedido registrar(Pedido novo) {
+		var p = pedidos.saveAndFlush(novo);
+		eventos.publishEvent(new PedidoRegistrado(p.getId()));
+		return p;
 	}
 
 	private Pedido.Dados dados(Long usuarioId, Long planoId, Long instituicaoId, long valor, NovoPedido n, String ip) {

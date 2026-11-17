@@ -85,10 +85,10 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID>, org.sprin
 	@Query("select count(p) from Pedido p where p.enviadaEm < :antesDe and p.pedidoOracao is not null")
 	int contarTextosParaPurgar(Instant antesDe);
 
-	/** Zera o texto do pedido (a oracao fica). Irreversivel. */
+	/** Zera o texto do pedido e o risco que a triagem tirou dele (a oracao fica). Irreversivel. */
 	@Transactional
 	@Modifying(flushAutomatically = true, clearAutomatically = true)
-	@Query("update Pedido p set p.pedidoOracao = null where p.enviadaEm < :antesDe and p.pedidoOracao is not null")
+	@Query("update Pedido p set p.pedidoOracao = null, p.risco = null where p.enviadaEm < :antesDe and p.pedidoOracao is not null")
 	int purgarTextos(Instant antesDe);
 
 	@Query("select count(p) from Pedido p where p.status = me.clama.pedido.StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL and p.criadoEm < :antesDe")

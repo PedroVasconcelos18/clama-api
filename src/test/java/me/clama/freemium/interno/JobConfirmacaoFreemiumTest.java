@@ -185,7 +185,7 @@ class JobConfirmacaoFreemiumTest {
 		assertThat(caixa.enviados()).isEmpty();
 		assertThat(pedidos.resumo(id).orElseThrow().status()).isEqualTo(StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL);
 		assertThat(linhas(id)).as("1 tentativa + 3 retentativas, cada uma com seu link").isEqualTo(4);
-		assertThat(jdbc.queryForObject("select count(*) from scheduled_tasks where task_name <> 'confirmacao-freemium'", Integer.class))
+		assertThat(jdbc.queryForObject("select count(*) from scheduled_tasks where task_name not in ('confirmacao-freemium', 'triar-pedido')", Integer.class))
 				.as("nenhum job de alerta").isZero();
 	}
 }

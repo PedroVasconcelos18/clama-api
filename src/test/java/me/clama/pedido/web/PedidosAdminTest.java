@@ -208,7 +208,7 @@ class PedidosAdminTest extends PedidoWebTeste {
 			var d = corpo(res);
 			assertThat(chaves(d)).containsExactlyInAnyOrder("id", "criadoEm", "atualizadoEm", "status", "gratuito", "valorCentavos",
 					"usuarioId", "nome", "email", "telefone", "idade", "sexo", "pedidoOracao", "oracaoGerada", "plano", "instituicao",
-					"tentativas", "ultimoErro", "cobrancas", "repasse", "eventos");
+					"tentativas", "ultimoErro", "risco", "cobrancas", "repasse", "eventos");
 			assertThat(d.get("nome").asString()).isEqualTo("Maria Souza");
 			assertThat(d.get("email").asString()).isEqualTo("maria@exemplo.com");
 			assertThat(d.get("telefone").asString()).isEqualTo("11999990000");
@@ -229,6 +229,17 @@ class PedidosAdminTest extends PedidoWebTeste {
 			jdbc.update("delete from pagamento_evento");
 			jdbc.update("delete from cobranca");
 		}
+	}
+
+	@Test
+	void detalheDoAdminTrazRisco() throws Exception {
+		var p = pedido(null, plano("Simples", 3000), null, "Maria Souza", "maria@exemplo.com", "52998224725", Instant.now());
+		var adm = admin();
+		assertThat(corpo(adm.get("/api/admin/pedidos/" + p.getId())).get("risco").isNull()).isTrue(); // ainda nao triado
+
+		jdbc.update("update pedido set risco = true where id = ?", p.getId());
+
+		assertThat(corpo(adm.get("/api/admin/pedidos/" + p.getId())).get("risco").asBoolean()).isTrue();
 	}
 
 	@Test

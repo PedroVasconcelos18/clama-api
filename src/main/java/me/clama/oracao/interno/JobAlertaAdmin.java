@@ -70,6 +70,8 @@ class JobAlertaAdmin extends TipoDeJob<JobAlertaAdmin.Aviso> {
 			case "falha_reenvio" -> "O reenvio da oração falhou em todas as tentativas (Resend). O pedido segue ENVIADA.";
 			case "pedido_preso" -> "O pedido ficou mais de " + VarreduraDePedidosPresos.JANELA.toMinutes()
 					+ " minutos parado sem job na fila. Nada foi regerado: confira e regenere ou reenvie pelo admin.";
+			case "risco" -> "A triagem viu sinal de risco à vida neste pedido. A pessoa viu o CVV na tela. O Clama não entra em contato "
+					+ "(decisão do Pedro, P6): confira o pedido no admin.";
 			default -> null;
 		};
 	}

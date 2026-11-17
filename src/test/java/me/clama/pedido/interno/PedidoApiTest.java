@@ -246,7 +246,7 @@ class PedidoApiTest {
 		assertThat(p.getPlanoId()).isEqualTo(jdbc.queryForObject("select id from plano where tipo = 'GRATUITO'", Long.class));
 		assertThat(usuarios.findByEmail(email)).isEmpty();
 		assertThat(eventos.stream(GeracaoSolicitada.class)).isEmpty();
-		assertThat(jdbc.queryForObject("select count(*) from scheduled_tasks", Integer.class)).isZero();
+		assertThat(jdbc.queryForList("select task_instance from scheduled_tasks", String.class)).containsExactly("triar-pedido/" + id); // so a triagem
 	}
 
 	@Test

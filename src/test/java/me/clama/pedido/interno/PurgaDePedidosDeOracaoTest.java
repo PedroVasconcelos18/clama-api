@@ -116,6 +116,20 @@ class PurgaDePedidosDeOracaoTest {
 	}
 
 	@Test
+	void purgaApagaORiscoJuntoComOTexto() {
+		var velho = enviado(null, Duration.ofDays(31));
+		jdbc.update("update pedido set risco = true where id = ?", velho);
+
+		assertThat(tarefa.executar(true)).isEqualTo("1 texto(s) de pedido seriam apagados (simulação)");
+		assertThat(pedido(velho).getRisco()).isTrue();
+
+		tarefa.executar(false);
+
+		assertThat(pedido(velho).getPedidoOracao()).isNull();
+		assertThat(pedido(velho).getRisco()).isNull();
+	}
+
+	@Test
 	void dryRunSoConta() {
 		var velho = enviado(null, Duration.ofDays(40));
 		assertThat(tarefa.executar(true)).isEqualTo("1 texto(s) de pedido seriam apagados (simulação)");

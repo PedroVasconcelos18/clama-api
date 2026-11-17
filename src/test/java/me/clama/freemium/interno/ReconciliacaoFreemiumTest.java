@@ -139,7 +139,7 @@ class ReconciliacaoFreemiumTest {
 		assertThat(log.getAll().lines().filter(l -> l.contains("WARN") && l.contains("reconciliar-freemium"))).hasSize(1);
 		assertThat(log.getAll()).contains("2 pedido(s)").doesNotContain(email, a.toString());
 		assertThat(jdbc.queryForObject("select count(*) from scheduled_tasks where task_name = 'alerta-admin'", Integer.class)).isZero();
-		assertThat(jdbc.queryForObject("select count(*) from scheduled_tasks", Integer.class)).isZero();
+		assertThat(jdbc.queryForObject("select count(*) from scheduled_tasks where task_name <> 'triar-pedido'", Integer.class)).isZero();
 		assertThat(caixa.enviados()).isEmpty();
 		assertThat(jdbc.queryForObject("select count(*) from pedido where status = 'ERRO'", Integer.class)).isZero();
 	}

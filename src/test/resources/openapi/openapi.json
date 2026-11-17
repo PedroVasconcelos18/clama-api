@@ -149,6 +149,17 @@
         "required" : [ "email" ],
         "type" : "object"
       },
+      "Clamor" : {
+        "properties" : {
+          "texto" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "texto" ],
+        "type" : "object"
+      },
       "CobrancaDoPedido" : {
         "properties" : {
           "canceladaEm" : {
@@ -1177,6 +1188,9 @@
           "repasse" : {
             "$ref" : "#/components/schemas/RepasseDoPedido"
           },
+          "risco" : {
+            "type" : [ "boolean", "null" ]
+          },
           "sexo" : {
             "type" : [ "string", "null" ]
           },
@@ -1829,6 +1843,14 @@
           "pedidosApagados" : {
             "format" : "int32",
             "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ResultadoDaTriagem" : {
+        "properties" : {
+          "risco" : {
+            "type" : [ "boolean", "null" ]
           }
         },
         "type" : "object"
@@ -4723,6 +4745,34 @@
           }
         },
         "tags" : [ "catalogo-publico-controller" ]
+      }
+    },
+    "/api/triagem" : {
+      "post" : {
+        "operationId" : "triar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Clamor"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResultadoDaTriagem"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "triagem-controller" ]
       }
     },
     "/api/webhooks/mercadopago" : {

@@ -81,6 +81,9 @@ public class Pedido {
 	@Convert(converter = CampoCifrado.class)
 	private String oracao;
 
+	/** Triagem de crise; nulo enquanto nao triado. Sai do texto do pedido: some com ele (purga, anonimizacao). */
+	private Boolean risco;
+
 	private Instant consentidoEm;
 	private String consentimentoIp;
 	private String consentimentoVersao;
@@ -215,6 +218,11 @@ public class Pedido {
 		return c;
 	}
 
+	/** Resultado da triagem de crise. Nao e transicao: status e {@code atualizadoEm} ficam. */
+	public void registrarTriagem(boolean risco) {
+		this.risco = risco;
+	}
+
 	/** Troca o e-mail e recalcula o hash de busca. */
 	public void alterarEmail(String email, HmacDeIdentificador hmac) {
 		this.email = email;
@@ -251,6 +259,7 @@ public class Pedido {
 		sexo = null;
 		pedidoOracao = null;
 		oracao = null;
+		risco = null;
 		consentimentoIp = null;
 		usuarioId = null;
 	}
@@ -278,6 +287,7 @@ public class Pedido {
 	public String getTema() { return tema; }
 	public String getPedidoOracao() { return pedidoOracao; }
 	public String getOracao() { return oracao; }
+	public Boolean getRisco() { return risco; }
 	public Instant getConsentidoEm() { return consentidoEm; }
 	public String getConsentimentoIp() { return consentimentoIp; }
 	public String getConsentimentoVersao() { return consentimentoVersao; }

@@ -235,6 +235,11 @@ class PedidoApiImpl implements PedidoApi {
 	}
 
 	@Override
+	public void registrarTriagem(UUID id, boolean risco) {
+		mudar(id, p -> p.registrarTriagem(risco));
+	}
+
+	@Override
 	public void marcarEnviado(UUID id) {
 		mudar(id, p -> p.marcarEnviado(relogio.instant()));
 	}
@@ -292,6 +297,7 @@ class PedidoApiImpl implements PedidoApi {
 			m.put("sexo", p.getSexo());
 			m.put("pedidoOracao", p.getPedidoOracao());
 			m.put("tema", p.getTema());
+			m.put("risco", p.getRisco());
 			m.put("oracao", p.getOracao());
 			var consentimento = new LinkedHashMap<String, Object>();
 			consentimento.put("em", p.getConsentidoEm());

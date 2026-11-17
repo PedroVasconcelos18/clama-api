@@ -40,6 +40,7 @@ import org.springframework.test.context.DynamicPropertySource;
 @FilaLigada
 class FluxoFreemiumTest {
 
+	static final String TRIAGEM = "responde com UMA palavra"; // so o system da triagem tem
 	static final WireMockServer FORA = new WireMockServer(WireMockConfiguration.options().dynamicPort());
 	static final Pattern LINK = Pattern.compile("/confirmar#token=([A-Za-z0-9_-]+)");
 	static final String EMAIL = "frm-fluxo@exemplo.com";
@@ -86,6 +87,10 @@ class FluxoFreemiumTest {
 				{"id": "msg_1", "type": "message", "role": "assistant", "model": "claude-sonnet-4-6",
 				 "content": [{"type": "text", "text": "Senhor, guarda a família da Maria.\\n\\nAmém."}], "stop_reason": "end_turn",
 				 "stop_sequence": null, "usage": {"input_tokens": 800, "output_tokens": 120}}""")));
+		FORA.stubFor(post("/v1/messages").withRequestBody(containing(TRIAGEM)).atPriority(1).willReturn(okJson("""
+				{"id": "msg_2", "type": "message", "role": "assistant", "model": "claude-sonnet-4-6",
+				 "content": [{"type": "text", "text": "SEM_RISCO"}], "stop_reason": "end_turn",
+				 "stop_sequence": null, "usage": {"input_tokens": 300, "output_tokens": 3}}""")));
 
 		// 1. submit
 		var nav = new Navegador(porta);
@@ -130,6 +135,10 @@ class FluxoFreemiumTest {
 		assertThat(jdbc.queryForObject("select count(*) from usuario where email = ?", Integer.class, EMAIL)).isOne();
 		assertThat(jdbc.queryForObject("select count(*) from freemium_bloqueio", Integer.class)).isOne();
 		assertThat(caixa.para("contato@clama.me")).isEmpty(); // nenhum alerta
-		FORA.verify(1, postRequestedFor(urlEqualTo("/v1/messages")));
+		FORA.verify(1, postRequestedFor(urlEqualTo("/v1/messages")).withRequestBody(notContaining(TRIAGEM)));
+		// a triagem do pedido corre em paralelo e grava o risco
+		await().atMost(Duration.ofSeconds(20)).until(() -> jdbc.queryForObject("select risco from pedido where id = ?", Boolean.class, id) != null);
+		assertThat(jdbc.queryForObject("select risco from pedido where id = ?", Boolean.class, id)).isFalse();
+		FORA.verify(1, postRequestedFor(urlEqualTo("/v1/messages")).withRequestBody(containing(TRIAGEM)));
 	}
 }
