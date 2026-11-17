@@ -41,7 +41,7 @@ public class Triagem {
 		if (texto == null || texto.isBlank()) return Optional.of(false);
 		String resposta;
 		try {
-			resposta = claude.classificar(sistema, texto, props.modelo(), props.maxTokens());
+			resposta = claude.classificar(sistema, texto, props.modelo(), props.maxTokens(), props.timeout());
 		} catch (RuntimeException e) {
 			LOG.warn("triagem falhou (event=triagem, motivo={})", e.getClass().getSimpleName());
 			return Optional.empty();

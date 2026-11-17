@@ -43,7 +43,8 @@ class TriagemTest {
 	static void props(DynamicPropertyRegistry r) {
 		r.add("clama.oracao.anthropic-url", CLAUDE::baseUrl);
 		r.add("clama.oracao.anthropic-api-key", () -> "sk-ant-teste");
-		r.add("clama.oracao.timeout", () -> "1s");
+		r.add("clama.oracao.retentativas-do-sdk", () -> "2"); // como em prod: a triagem nao pode herdar as retentativas do SDK
+		r.add("clama.triagem.timeout", () -> "1s"); // o da oracao fica no padrao (30 s)
 	}
 
 	@LocalServerPort int porta;
@@ -115,9 +116,13 @@ class TriagemTest {
 	}
 
 	@Test
-	void timeoutEVazio() {
-		claude(okJson(resposta("RISCO")).withFixedDelay(2000));
+	void timeoutEVazioDentroDoPrazoDaTriagem() {
+		claude(okJson(resposta("RISCO")).withFixedDelay(3000));
+		var inicio = System.nanoTime();
+
 		assertThat(triagem.avaliar(TEXTO)).isEmpty();
+
+		assertThat(java.time.Duration.ofNanos(System.nanoTime() - inicio)).isLessThan(java.time.Duration.ofMillis(2500));
 		CLAUDE.verify(1, postRequestedFor(urlEqualTo("/v1/messages")));
 	}
 

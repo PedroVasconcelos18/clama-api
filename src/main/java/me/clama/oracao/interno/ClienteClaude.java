@@ -146,14 +146,15 @@ public class ClienteClaude {
 	}
 
 	/**
-	 * Classificacao curta (triagem de crise): uma tentativa so, com o modelo e o teto dados, system sem
-	 * {@code cache_control}, sem documentos e sem {@code thinking}. Devolve o texto ou lanca {@link Falha}. {@code texto}
-	 * e o do pedido: nunca vai para o log.
+	 * Classificacao curta (triagem de crise): uma tentativa so, sem as retentativas do SDK e com o {@code timeout} dado
+	 * (a tela e uma thread da fila esperam por ela), com o modelo e o teto dados, system sem {@code cache_control}, sem
+	 * documentos e sem {@code thinking}. Devolve o texto ou lanca {@link Falha}. {@code texto} e o do pedido: nunca vai
+	 * para o log.
 	 */
-	public String classificar(String sistema, String texto, String modelo, long maxTokens) {
+	public String classificar(String sistema, String texto, String modelo, long maxTokens, Duration timeout) {
 		exigirChave();
-		return enviar(MessageCreateParams.builder().model(modelo).maxTokens(maxTokens).system(sistema).addUserMessage(texto).build(), 1)
-				.texto();
+		return enviar(cliente.withOptions(o -> o.maxRetries(0).timeout(timeout)),
+				MessageCreateParams.builder().model(modelo).maxTokens(maxTokens).system(sistema).addUserMessage(texto).build(), 1).texto();
 	}
 
 	private void exigirChave() {
@@ -178,11 +179,11 @@ public class ClienteClaude {
 			blocos.add(ContentBlockParam.ofText(TextBlockParam.builder().text(mensagem).build()));
 			builder.addUserMessageOfContentBlockParams(blocos);
 		}
-		return enviar(builder.build(), tentativas);
+		return enviar(cliente, builder.build(), tentativas);
 	}
 
 	/** A chamada com a nossa retentativa e a classificacao das falhas; modelo e teto nos logs saem dos {@code params}. */
-	private Resposta enviar(MessageCreateParams params, int tentativas) {
+	private Resposta enviar(AnthropicClient cliente, MessageCreateParams params, int tentativas) {
 		var modelo = params.model().asString();
 		for (int tentativa = 1;; tentativa++) {
 			var inicio = System.nanoTime();
@@ -294,7 +295,7 @@ public class ClienteClaude {
 				m.stopReason().map(Object::toString).orElse(null), u.outputTokens(), u.cacheCreationInputTokens().orElse(null),
 				u.cacheReadInputTokens().orElse(null));
 		if (m.stopReason().filter(StopReason.MAX_TOKENS::equals).isPresent()) {
-			LOG.warn("Claude parou no max_tokens: oracao possivelmente cortada (event=claude_max_tokens, model={}, max_tokens={})",
+			LOG.warn("Claude parou no max_tokens: resposta possivelmente cortada (event=claude_max_tokens, model={}, max_tokens={})",
 					modelo, maxTokens);
 		}
 		if (m.content().isEmpty() || !m.content().get(0).isText()) {
