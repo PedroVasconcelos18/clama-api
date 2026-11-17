@@ -18,11 +18,12 @@ class DoacaoTest extends PedidoWebTeste {
 
 	@Test
 	void doacaoAnonimaCriaPedidoSemDonoEInfereOPlano() throws Exception {
+		var inst = instituicao("Casa", true);
 		turnstileAprova(true);
 		var simples = plano("Simples", 3000);
 		var outro = plano("Completo", 9000);
 
-		var res = anonimo().post("/api/doacoes", json(com(doacao(), "plano", outro, "valorCentavos", 3500)));
+		var res = anonimo().post("/api/doacoes", json(com(doacao(), "instituicao", inst, "plano", outro, "valorCentavos", 3500)));
 
 		assertThat(res.statusCode()).isEqualTo(201);
 		var p = pedidos.findById(UUID.fromString(corpo(res).get("id").asString())).orElseThrow();
@@ -39,31 +40,42 @@ class DoacaoTest extends PedidoWebTeste {
 	}
 
 	@Test
+	void doacaoSemInstituicaoE400() throws Exception {
+		turnstileAprova(true);
+		var res = anonimo().post("/api/doacoes", json(com(doacao(), "valorCentavos", 3000)));
+		assertThat(res.statusCode()).isEqualTo(400);
+		assertThat(erroDe(res, "instituicao")).isEqualTo("Escolha a instituição que vai receber parte da sua contribuição.");
+	}
+
+	@Test
 	void deviceHashNaoEGuardado() throws Exception {
+		var inst = instituicao("Casa", true);
 		turnstileAprova(true);
 		plano("Simples", 3000);
-		assertThat(anonimo().post("/api/doacoes", json(doacao())).statusCode()).isEqualTo(201);
+		assertThat(anonimo().post("/api/doacoes", json(com(doacao(), "instituicao", inst))).statusCode()).isEqualTo(201);
 		var colunas = jdbc.queryForList("select column_name from information_schema.columns where table_name = 'pedido'", String.class);
 		assertThat(colunas).noneMatch(c -> c.contains("device"));
 	}
 
 	@Test
 	void deviceHashQueOFrontAntigoAindaMandaEAceitoEIgnorado() throws Exception {
+		var inst = instituicao("Casa", true);
 		turnstileAprova(true);
 		plano("Simples", 3000);
 		// mesmo um valor que antes estourava o @Size(128) passa: o campo nao existe mais no corpo
-		var res = anonimo().post("/api/doacoes", json(com(doacao(), "deviceHash", "d".repeat(500))));
+		var res = anonimo().post("/api/doacoes", json(com(doacao(), "instituicao", inst, "deviceHash", "d".repeat(500))));
 		assertThat(res.statusCode()).isEqualTo(201);
 	}
 
 	@Test
 	void mantemCsrfMasNaoExigeLogin() throws Exception {
+		var inst = instituicao("Casa", true);
 		turnstileAprova(true);
 		plano("Simples", 3000);
-		var res = new Navegador(porta).post("/api/doacoes", json(doacao()));
+		var res = new Navegador(porta).post("/api/doacoes", json(com(doacao(), "instituicao", inst)));
 		assertThat(res.statusCode()).isEqualTo(403);
 		assertThat(corpo(res).get("codigo").asString()).isEqualTo("csrf_invalido");
-		assertThat(anonimo().post("/api/doacoes", json(doacao())).statusCode()).isEqualTo(201);
+		assertThat(anonimo().post("/api/doacoes", json(com(doacao(), "instituicao", inst))).statusCode()).isEqualTo(201);
 	}
 
 	@Test

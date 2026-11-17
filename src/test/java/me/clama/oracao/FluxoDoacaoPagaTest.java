@@ -115,6 +115,7 @@ class FluxoDoacaoPagaTest {
 		corpo.put("cpfCnpj", "529.982.247-25");
 		corpo.put("pedidoOracao", "Pela minha família");
 		corpo.put("valorCentavos", 3000);
+		corpo.put("instituicao", jdbc.queryForObject("insert into instituicao (nome, ativo) values ('Casa', true) returning id", Long.class));
 		corpo.put("consentAceito", true);
 		corpo.put("turnstileToken", "token-ok");
 		corpo.put("deviceHash", "abcdef1234567890");

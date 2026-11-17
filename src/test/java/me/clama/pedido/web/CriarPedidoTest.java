@@ -52,11 +52,22 @@ class CriarPedidoTest extends PedidoWebTeste {
 	}
 
 	@Test
+	void pedidoPagoSemInstituicaoE400() throws Exception {
+		var u = logado();
+		var msg = "Escolha a instituição que vai receber parte da sua contribuição.";
+		var res = u.nav().post("/api/pedidos", json(com(corpo(), "valorCentavos", 3000)));
+		assertThat(res.statusCode()).isEqualTo(400);
+		assertThat(corpo(res).get("erros").get(0).get("campo").asString()).isEqualTo("instituicao");
+		assertThat(corpo(res).get("erros").get(0).get("mensagem").asString()).isEqualTo(msg);
+	}
+
+	@Test
 	void semPlanoInfereOPlanoPeloValor() throws Exception {
+		var inst = instituicao("Casa", true);
 		var u = logado();
 		plano("Simples", 3000);
 		var maior = plano("Completo", 9000);
-		var res = u.nav().post("/api/pedidos", json(com(corpo(), "valorCentavos", 9500)));
+		var res = u.nav().post("/api/pedidos", json(com(corpo(), "instituicao", inst, "valorCentavos", 9500)));
 		assertThat(res.statusCode()).isEqualTo(201);
 		assertThat(pedidos.findById(java.util.UUID.fromString(corpo(res).get("id").asString())).orElseThrow().getPlanoId()).isEqualTo(maior);
 	}
@@ -64,22 +75,24 @@ class CriarPedidoTest extends PedidoWebTeste {
 	@Test
 	void planoExplicitoExigeValorDoPlano() throws Exception { // D6
 		var u = logado();
+		var inst = instituicao("Casa", true);
 		var plano = plano("Simples", 3000);
-		var res = u.nav().post("/api/pedidos", json(com(corpo(), "plano", plano, "valorCentavos", 2999)));
+		var res = u.nav().post("/api/pedidos", json(com(corpo(), "instituicao", inst, "plano", plano, "valorCentavos", 2999)));
 		assertThat(res.statusCode()).isEqualTo(400);
 		assertThat(erroDe(res, "valorCentavos")).isEqualTo("O valor mínimo para este plano é R$ 30,00.");
 		assertThat(pedidos.count()).isZero();
-		assertThat(u.nav().post("/api/pedidos", json(com(corpo(), "plano", plano, "valorCentavos", 3000))).statusCode()).isEqualTo(201);
+		assertThat(u.nav().post("/api/pedidos", json(com(corpo(), "instituicao", inst, "plano", plano, "valorCentavos", 3000))).statusCode()).isEqualTo(201);
 	}
 
 	@Test
 	void pisoDeUmReal() throws Exception { // D7
 		var u = logado();
+		var inst = instituicao("Casa", true);
 		plano("Simples", 3000);
-		var res = u.nav().post("/api/pedidos", json(com(corpo(), "valorCentavos", 99)));
+		var res = u.nav().post("/api/pedidos", json(com(corpo(), "instituicao", inst, "valorCentavos", 99)));
 		assertThat(res.statusCode()).isEqualTo(400);
 		assertThat(erroDe(res, "valorCentavos")).isEqualTo("O valor mínimo é R$ 1,00 — qualquer oferta acima ajuda o Clama.");
-		assertThat(u.nav().post("/api/pedidos", json(com(corpo(), "valorCentavos", 100))).statusCode()).isEqualTo(201);
+		assertThat(u.nav().post("/api/pedidos", json(com(corpo(), "instituicao", inst, "valorCentavos", 100))).statusCode()).isEqualTo(201);
 	}
 
 	@Test
@@ -147,8 +160,9 @@ class CriarPedidoTest extends PedidoWebTeste {
 	void limiteDeCincoPorHoraPorUsuario() throws Exception { // INV:23: 10/min e 5/h; o da hora e o que aperta
 		var u = logado();
 		plano("Simples", 3000);
-		for (int i = 0; i < 5; i++) assertThat(u.nav().post("/api/pedidos", json(corpo())).statusCode()).isEqualTo(201);
-		var res = u.nav().post("/api/pedidos", json(corpo()));
+		var inst = instituicao("Casa", true);
+		for (int i = 0; i < 5; i++) assertThat(u.nav().post("/api/pedidos", json(com(corpo(), "instituicao", inst))).statusCode()).isEqualTo(201);
+		var res = u.nav().post("/api/pedidos", json(com(corpo(), "instituicao", inst)));
 		assertThat(res.statusCode()).isEqualTo(429);
 		assertThat(corpo(res).get("codigo").asString()).isEqualTo("limite_excedido");
 		assertThat(pedidos.count()).isEqualTo(5);

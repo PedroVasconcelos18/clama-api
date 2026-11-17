@@ -21,6 +21,9 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID>, org.sprin
 	@Query("select p from Pedido p where p.id = :id")
 	Optional<Pedido> travar(UUID id);
 
+	/** Limite de um gratuito por dia: so conta o gratuito da conta, nao o pago nem o freemium (sem usuario). */
+	boolean existsByUsuarioIdAndGratuitoTrueAndCriadoEmAfter(Long usuarioId, Instant desde);
+
 	/** O que o status publico le: sem PII, sem hidratar o {@code Pedido} (a oracao cifrada so sai por {@link #oracaoDe}). */
 	record Status(UUID id, me.clama.pedido.StatusPedido status, Long planoId, Long instituicaoId, long valorCentavos,
 			Instant criadoEm, String ultimoErro) {}

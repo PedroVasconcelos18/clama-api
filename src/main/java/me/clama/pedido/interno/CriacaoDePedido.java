@@ -1,6 +1,7 @@
 package me.clama.pedido.interno;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import me.clama.catalogo.CatalogoApi;
@@ -61,6 +62,10 @@ public class CriacaoDePedido {
 	public Pedido criarGratuito(Long usuarioId, NovoPedido n, String ip) {
 		var plano = catalogo.planoGratuito();
 		var agora = relogio.instant();
+		if (pedidos.existsByUsuarioIdAndGratuitoTrueAndCriadoEmAfter(usuarioId, agora.minus(Duration.ofHours(24)))) {
+			throw new ErroDeNegocio(HttpStatus.TOO_MANY_REQUESTS, "gratuito_diario", "Limite diário de orações gratuitas.",
+					"Você já recebeu uma oração gratuita nas últimas 24 horas. Volte amanhã para pedir outra — estamos com você.");
+		}
 		var p = pedidos.saveAndFlush(Pedido.gratuito(dados(usuarioId, plano.id(), null, 0, n, ip), hmac, agora));
 		eventos.publishEvent(new GeracaoSolicitada(p.getId()));
 		return p;
@@ -90,7 +95,9 @@ public class CriacaoDePedido {
 				erros.add(new ErroDeCampo("valorCentavos", "O valor mínimo para este plano é " + Dinheiro.reais(plano.valorCentavos()) + "."));
 			}
 		}
-		if (n.instituicao() != null && catalogo.instituicaoAtiva(n.instituicao()).isEmpty()) {
+		if (n.instituicao() == null) {
+			erros.add(new ErroDeCampo("instituicao", "Escolha a instituição que vai receber parte da sua contribuição."));
+		} else if (catalogo.instituicaoAtiva(n.instituicao()).isEmpty()) {
 			erros.add(new ErroDeCampo("instituicao", "Não encontramos essa instituição. Escolha uma da lista, por favor."));
 		}
 		if (!erros.isEmpty()) throw dadosInvalidos(erros);
