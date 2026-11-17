@@ -146,7 +146,7 @@ class RedefinicaoTest {
 		assertThat(usuarios.findByEmail(email).orElseThrow().temSenha()).isFalse();
 		assertThat(new Navegador(porta).login(email, ANTIGA).statusCode()).isEqualTo(401);
 
-		var link = contaApi.linkDeAtivacao(id).orElseThrow(); // vai no e-mail da oracao
+		var link = contaApi.linkDeAtivacao(id, email).orElseThrow(); // vai no e-mail da oracao
 		assertThat(link).startsWith("http://localhost:5173/definir-senha#token=");
 		assertThat(redefinir(link.replaceFirst(".*#token=", ""), NOVA).statusCode()).isEqualTo(200);
 		assertThat(new Navegador(porta).login(email, NOVA).statusCode()).isEqualTo(200);
@@ -156,7 +156,7 @@ class RedefinicaoTest {
 	void redefinirRevogaOutrosLinksPendentes() throws Exception {
 		var email = emailUnico();
 		var id = transacao.execute(s -> contaApi.provisionarOuVincular(email, "Maria")).id();
-		var definir = contaApi.tokenDeAtivacao(id).orElseThrow(); // link DEFINIR da conta nova
+		var definir = contaApi.tokenDeAtivacao(id, email).orElseThrow(); // link DEFINIR da conta nova
 		var redefinir = pedirToken(email);
 		assertThat(redefinir(redefinir, NOVA).statusCode()).isEqualTo(200);
 		assertLinkInvalido(redefinir(definir, "mais-uma-senha-forte-7"));

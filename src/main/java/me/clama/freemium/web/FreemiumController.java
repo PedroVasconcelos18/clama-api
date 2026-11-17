@@ -87,7 +87,8 @@ class FreemiumController {
 		var id = confirmacao.confirmar(corpo.token());
 		String tokenDeSenha = null;
 		try {
-			tokenDeSenha = pedidos.donoDe(id).flatMap(conta::tokenDeAtivacao).orElse(null);
+			var destino = pedidos.doadores(List.of(id)).get(id).email(); // nunca logar
+			tokenDeSenha = pedidos.donoDe(id).flatMap(dono -> conta.tokenDeAtivacao(dono, destino)).orElse(null);
 		} catch (RuntimeException e) {
 			LOG.error("confirmacao: token de senha nao emitido, segue sem (pedido_id={})", id, e);
 		}

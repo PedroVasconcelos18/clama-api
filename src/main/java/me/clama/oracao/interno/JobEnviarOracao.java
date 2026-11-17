@@ -125,7 +125,7 @@ class JobEnviarOracao extends TipoDeJob<UUID> {
 	private Email email(DadosParaOracao d) {
 		var primeiro = primeiroNome(d.nome());
 		var contexto = new HashMap<>(Map.of("primeiro_nome", primeiro, "oracao", d.oracao(), "whatsapp_share_url", whatsapp(d.oracao())));
-		var ativacao = d.usuarioId() == null ? Optional.<String>empty() : conta.linkDeAtivacao(d.usuarioId());
+		var ativacao = d.usuarioId() == null ? Optional.<String>empty() : conta.linkDeAtivacao(d.usuarioId(), d.email());
 		ativacao.ifPresent(link -> contexto.put("link_ativacao", link));
 		return modelos.montar(d.email(), "Sua oração chegou, " + primeiro, ativacao.isPresent() ? "oracao_ativar_conta" : "oracao", contexto);
 	}

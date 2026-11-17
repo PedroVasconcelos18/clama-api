@@ -19,6 +19,7 @@ import java.util.UUID;
 import me.clama.infra.cripto.CampoCifrado;
 import me.clama.infra.cripto.HmacDeIdentificador;
 import me.clama.pedido.StatusPedido;
+import me.clama.infra.web.ErroDeNegocio;
 import me.clama.pedido.TransicaoInvalidaException;
 import org.hibernate.annotations.DynamicUpdate;
 
@@ -229,8 +230,16 @@ public class Pedido {
 		this.emailHmac = hmac.email(email);
 	}
 
-	/** Correcao de dados pelo admin; nulo = deixa. Devolve os nomes dos campos que mudaram de fato. O status nao se toca. */
+	/**
+	 * Correcao de dados pelo admin; nulo = deixa. Devolve os nomes dos campos que mudaram de fato. O status nao se toca.
+	 * Freemium pendente nao troca de e-mail: a confirmacao vincularia a conta do e-mail novo e devolveria o token de
+	 * senha dela a quem tem o link (409 {@code correcao_bloqueada}). Os outros campos seguem corrigiveis.
+	 */
 	public java.util.List<String> corrigirDados(me.clama.pedido.CorrecaoDeDados c, HmacDeIdentificador hmac) {
+		if (status == AGUARDANDO_CONFIRMACAO_EMAIL && c.email() != null && !c.email().equals(email)) {
+			throw new ErroDeNegocio(org.springframework.http.HttpStatus.CONFLICT, "correcao_bloqueada", "E-mail de freemium pendente nao se corrige.",
+					"Este pedido ainda aguarda a confirmação do e-mail. Peça para a pessoa fazer um novo pedido com o e-mail certo.");
+		}
 		var mudou = new java.util.ArrayList<String>();
 		if (c.nome() != null && !c.nome().equals(nome)) { nome = c.nome(); mudou.add("nome"); }
 		if (c.email() != null && !c.email().equals(email)) { alterarEmail(c.email(), hmac); mudou.add("email"); }

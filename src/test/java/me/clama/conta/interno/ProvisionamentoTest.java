@@ -62,7 +62,7 @@ class ProvisionamentoTest {
 		assertThat(u.temSenha()).isFalse();
 		assertThat(u.isAtivo()).isTrue();
 		assertThat(caixa.enviados()).as("o link de ativacao vai no e-mail da oracao").isEmpty();
-		assertThat(api.linkDeAtivacao(resumo.id())).hasValueSatisfying(l -> assertThat(l).contains("/definir-senha#token="));
+		assertThat(api.linkDeAtivacao(resumo.id(), email)).hasValueSatisfying(l -> assertThat(l).contains("/definir-senha#token="));
 	}
 
 	@Test

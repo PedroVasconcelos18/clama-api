@@ -282,6 +282,30 @@ class PedidosAdminTest extends PedidoWebTeste {
 	}
 
 	@Test
+	void patchDoEmailDePedidoAguardandoConfirmacaoE409() throws Exception {
+		var em = relogio.instant();
+		var d = new Pedido.Dados(null, plano("Simples", 3000), null, 0, "Maria Souza", "maria@exemplo.com", "52998224725", "11999990000",
+				(short) 40, "feminino", "Pela minha família", em, null, "1", null);
+		var p = salvar(Pedido.freemium(d, hmac, em));
+		var adm = admin();
+
+		var res = adm.patch("/api/admin/pedidos/" + p.getId(), "{\"nome\":\"Maria de Souza\",\"email\":\"outra@exemplo.com\"}");
+		assertThat(res.statusCode()).as(res.body()).isEqualTo(409);
+		assertThat(corpo(res).get("codigo").asString()).isEqualTo("correcao_bloqueada");
+		assertThat(corpo(res).get("mensagemPastoral").asString())
+				.isEqualTo("Este pedido ainda aguarda a confirmação do e-mail. Peça para a pessoa fazer um novo pedido com o e-mail certo.");
+		var igual = pedidos.findById(p.getId()).orElseThrow();
+		assertThat(igual.getEmailHmac()).isEqualTo(p.getEmailHmac());
+		assertThat(corpo(adm.get("/api/admin/pedidos/" + p.getId())).get("email").asString()).isEqualTo("maria@exemplo.com");
+		assertThat(corpo(adm.get("/api/admin/pedidos/" + p.getId())).get("nome").asString()).as("nada mudou").isEqualTo("Maria Souza");
+
+		// os outros campos (e o mesmo e-mail) seguem corrigiveis
+		var outros = adm.patch("/api/admin/pedidos/" + p.getId(), "{\"nome\":\"Maria de Souza\",\"email\":\"maria@exemplo.com\"}");
+		assertThat(outros.statusCode()).as(outros.body()).isEqualTo(200);
+		assertThat(corpo(outros).get("nome").asString()).isEqualTo("Maria de Souza");
+	}
+
+	@Test
 	void patchSemMudancaNaoAudita() throws Exception {
 		var p = pedido(null, plano("Simples", 3000), null, "Maria Souza", "maria@exemplo.com", "52998224725", relogio.instant());
 		var res = admin().patch("/api/admin/pedidos/" + p.getId(), "{\"nome\":\"Maria Souza\"}");

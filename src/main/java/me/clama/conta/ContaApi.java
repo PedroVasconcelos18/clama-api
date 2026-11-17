@@ -67,17 +67,21 @@ public class ContaApi {
 	}
 
 	/**
-	 * Token cru de definir senha (72 h) para a conta ativa ainda sem senha; vazio se tem senha, esta inativa ou nao existe.
-	 * Nao revoga os anteriores: o da tela sobrevive ao do e-mail. Credencial: nunca logar. Transacao propria.
+	 * Token cru de definir senha (72 h) para a conta ativa ainda sem senha; vazio se tem senha, esta inativa, nao existe
+	 * ou se {@code emailDestino} (a caixa que vai receber o token) nao e o e-mail da conta pelo canonico: o e-mail do
+	 * pedido pode ter sido corrigido depois do vinculo. Nao revoga os anteriores: o da tela sobrevive ao do e-mail.
+	 * Credencial: nunca logar. Transacao propria.
 	 */
-	public Optional<String> tokenDeAtivacao(Long usuarioId) {
-		return usuarios.findById(usuarioId).filter(u -> u.isAtivo() && !u.temSenha())
+	public Optional<String> tokenDeAtivacao(Long usuarioId, String emailDestino) {
+		if (emailDestino == null) return Optional.empty();
+		var destino = EmailCanonico.de(emailDestino);
+		return usuarios.findById(usuarioId).filter(u -> u.isAtivo() && !u.temSenha() && destino.equals(u.getEmailCanonico()))
 				.map(u -> tokens.emitirSemRevogar(u.getId(), TokensDeSenha.Finalidade.DEFINIR));
 	}
 
-	/** {@code <frontend>/definir-senha#token=...} com um {@link #tokenDeAtivacao} novo; mesmas regras. */
-	public Optional<String> linkDeAtivacao(Long usuarioId) {
-		return tokenDeAtivacao(usuarioId).map(t -> props.linkDeSenha("definir-senha", t));
+	/** {@code <frontend>/definir-senha#token=...} com um {@link #tokenDeAtivacao} novo; mesmas regras, inclusive o destino. */
+	public Optional<String> linkDeAtivacao(Long usuarioId, String emailDestino) {
+		return tokenDeAtivacao(usuarioId, emailDestino).map(t -> props.linkDeSenha("definir-senha", t));
 	}
 
 	/** Uma consulta so; id inexistente fica fora do mapa. */
