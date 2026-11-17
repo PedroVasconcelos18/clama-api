@@ -43,7 +43,7 @@ class PedidosAdminTest extends PedidoWebTeste {
 
 	Pedido pedido(Long usuario, Long plano, Long instituicao, String nome, String email, String cpf, Instant em) {
 		var d = new Pedido.Dados(usuario, plano, instituicao, 3000, nome, email, cpf, "11999990000", (short) 40, "feminino",
-				"Pela minha família", em, null, "1");
+				"Pela minha família", em, null, "1", null);
 		return salvar(Pedido.novo(d, hmac, em));
 	}
 

@@ -89,7 +89,7 @@ class AcoesDePedidoAdminTest {
 				returning id""", Long.class, "Simples " + UUID.randomUUID());
 		var agora = Instant.now();
 		var d = new Pedido.Dados(null, plano, null, 3000, "Maria Souza", "maria@exemplo.com", "52998224725", null, (short) 40,
-				"feminino", "Pela família", agora, null, "1");
+				"feminino", "Pela família", agora, null, "1", null);
 		return pedidos.saveAndFlush(Pedido.novo(d, hmac, agora)).getId();
 	}
 

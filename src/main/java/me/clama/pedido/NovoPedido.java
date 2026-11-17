@@ -39,7 +39,9 @@ public record NovoPedido(
 		@Min(value = 0, message = "Informe um valor válido.") @Max(value = Integer.MAX_VALUE, message = "Informe um valor válido.") Long valorCentavos,
 		@NotNull(message = "Para enviar seu pedido, é preciso concordar com a política de privacidade.")
 		@AssertTrue(message = "Para enviar seu pedido, é preciso concordar com a política de privacidade.") Boolean consentAceito,
-		@Size(max = 2048, message = "Verificação anti-robô falhou. Atualize a página e tente de novo.") String turnstileToken) {
+		@Size(max = 2048, message = "Verificação anti-robô falhou. Atualize a página e tente de novo.") String turnstileToken,
+		@Size(max = 20, message = "Escolha um tema válido.")
+		@Pattern(regexp = "luto|ansiedade|familia|saude|sustento|fe|injustica", message = "Escolha um tema válido.") String tema) {
 
 	/** Tira as pontas dos textos: as regras de tamanho valem para o que a pessoa de fato escreveu. */
 	public NovoPedido {

@@ -121,7 +121,7 @@ class PedidosController {
 		return lista.stream().map(p -> {
 			PlanoResumo plano = planos.get(p.getPlanoId());
 			return new PedidoDaConta(p.getId(), p.getStatus(), plano == null ? null : plano.nome(), p.getValorCentavos(),
-					p.isGratuito(), p.getCriadoEm(), oracaoVisivel(p));
+					p.isGratuito(), p.getCriadoEm(), oracaoVisivel(p), p.getTema());
 		}).toList();
 	}
 

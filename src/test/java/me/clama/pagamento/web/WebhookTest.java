@@ -115,7 +115,7 @@ class WebhookTest {
 				returning id""", Long.class, "Pedido de Oração " + UUID.randomUUID());
 		var agora = Instant.now();
 		var d = new Pedido.Dados(null, plano, instituicao, valor, "Maria Souza", email, "52998224725", null, null, null,
-				"Pela família", agora, null, "1");
+				"Pela família", agora, null, "1", null);
 		return pedidos.saveAndFlush(Pedido.novo(d, hmac, agora)).getId();
 	}
 

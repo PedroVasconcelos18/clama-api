@@ -37,6 +37,16 @@ class PedidoGratuitoTest extends PedidoWebTeste {
 	}
 
 	@Test
+	void pedidoGratuitoGuardaOTemaEAContaDevolve() throws Exception {
+		var u = logado();
+
+		var res = u.nav().post("/api/pedidos/gratuito", json(com(corpo(), "tema", "fe")));
+
+		assertThat(res.statusCode()).isEqualTo(201);
+		assertThat(corpo(u.nav().get("/api/conta/pedidos")).get(0).get("tema").asString()).isEqualTo("fe");
+	}
+
+	@Test
 	void semPlanoGratuito503ENadaGravado() throws Exception {
 		var u = logado();
 		jdbc.update("delete from plano where tipo = 'GRATUITO'"); // o @AfterEach recoloca

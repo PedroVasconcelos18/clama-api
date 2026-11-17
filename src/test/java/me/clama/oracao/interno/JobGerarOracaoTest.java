@@ -78,7 +78,7 @@ class JobGerarOracaoTest {
 				returning id""", Long.class, "Oração Simples " + UUID.randomUUID());
 		var agora = Instant.now();
 		var d = new Pedido.Dados(null, plano, null, 3000, "Maria Souza", "maria@exemplo.com", "52998224725", "11999990000",
-				(short) 40, "feminino", "Pela família", agora, null, "1");
+				(short) 40, "feminino", "Pela família", agora, null, "1", null);
 		var p = Pedido.novo(d, hmac, agora);
 		p.confirmarPagamento(agora);
 		return pedidos.saveAndFlush(p).getId();

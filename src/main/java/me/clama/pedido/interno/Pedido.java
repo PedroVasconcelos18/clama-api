@@ -34,7 +34,7 @@ public class Pedido {
 	/** Dados de um pedido novo. O {@code toString} nao imprime nada (e quase tudo PII). */
 	public record Dados(Long usuarioId, Long planoId, Long instituicaoId, long valorCentavos, String nome, String email,
 			String cpfCnpj, String telefone, Short idade, String sexo, String pedidoOracao, Instant consentidoEm,
-			String consentimentoIp, String consentimentoVersao) {
+			String consentimentoIp, String consentimentoVersao, String tema) {
 		@Override
 		public String toString() {
 			return "Pedido.Dados[...]";
@@ -73,6 +73,7 @@ public class Pedido {
 
 	private Short idade;
 	private String sexo;
+	private String tema; // categoria fixa, nao texto livre: fica em claro
 
 	@Convert(converter = CampoCifrado.class)
 	private String pedidoOracao;
@@ -112,6 +113,7 @@ public class Pedido {
 		p.telefone = d.telefone();
 		p.idade = d.idade();
 		p.sexo = d.sexo();
+		p.tema = d.tema();
 		p.pedidoOracao = d.pedidoOracao();
 		p.consentidoEm = d.consentidoEm();
 		p.consentimentoIp = d.consentimentoIp();
@@ -273,6 +275,7 @@ public class Pedido {
 	public String getTelefone() { return telefone; }
 	public Short getIdade() { return idade; }
 	public String getSexo() { return sexo; }
+	public String getTema() { return tema; }
 	public String getPedidoOracao() { return pedidoOracao; }
 	public String getOracao() { return oracao; }
 	public Instant getConsentidoEm() { return consentidoEm; }

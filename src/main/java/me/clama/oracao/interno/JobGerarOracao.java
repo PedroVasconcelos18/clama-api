@@ -5,9 +5,7 @@ import io.sentry.SentryLevel;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.EnumSet;
-import java.util.List;
 import java.util.UUID;
-import me.clama.catalogo.CatalogoApi;
 import me.clama.infra.fila.Fila;
 import me.clama.infra.fila.TipoDeJob;
 import me.clama.pedido.DadosParaOracao;
@@ -44,7 +42,6 @@ class JobGerarOracao extends TipoDeJob<UUID> {
 			StatusPedido.AGUARDANDO_NOVA_TENTATIVA);
 
 	private final PedidoApi pedidos;
-	private final CatalogoApi catalogo;
 	private final PromptVigente prompts;
 	private final AdminDeDocumentos documentos;
 	private final ClienteClaude claude;
@@ -56,13 +53,12 @@ class JobGerarOracao extends TipoDeJob<UUID> {
 	private final Clock relogio;
 	private final Duration novaTentativa;
 
-	JobGerarOracao(PedidoApi pedidos, CatalogoApi catalogo, PromptVigente prompts, AdminDeDocumentos documentos,
+	JobGerarOracao(PedidoApi pedidos, PromptVigente prompts, AdminDeDocumentos documentos,
 			ClienteClaude claude, Geracoes geracoes, @Lazy Fila fila, JobEnviarOracao enviar, JobAlertaAdmin alerta, TransactionTemplate tx, Clock relogio,
 			@Value("${clama.oracao.espera-geracao:60s}") Duration espera,
 			@Value("${clama.oracao.espera-nova-tentativa:300s}") Duration novaTentativa) {
 		super("gerar-oracao", UUID.class, new Retentativas(3, espera, 1.0));
 		this.pedidos = pedidos;
-		this.catalogo = catalogo;
 		this.prompts = prompts;
 		this.documentos = documentos;
 		this.claude = claude;
@@ -79,15 +75,13 @@ class JobGerarOracao extends TipoDeJob<UUID> {
 	protected void executar(UUID id, int tentativa) {
 		var d = iniciar(id);
 		if (d == null) return;
-		var plano = catalogo.planos(List.of(d.planoId())).get(d.planoId());
-		if (plano == null) throw new IllegalStateException("plano " + d.planoId() + " do pedido nao existe");
 		var prompt = prompts.vigente().prompt();
 		var fileIds = documentos.fileIdsAtivos();
 		LOG.info("gerar-oracao: chamando a Claude (pedido_id={}, tentativa={}, novas_tentativas={}, documentos={})", id,
 				tentativa + 1, d.tentativas(), fileIds.size());
 		ClienteClaude.Resposta resposta;
 		try {
-			resposta = claude.gerar(prompt.sistema(), MontagemDoPrompt.mensagem(prompt, d, plano), fileIds);
+			resposta = claude.gerar(prompt.sistema(), MontagemDoPrompt.mensagem(prompt, d), fileIds);
 		} catch (ClienteClaude.CreditosEsgotados e) {
 			LOG.error("gerar-oracao: Anthropic sem creditos (pedido_id={})", id);
 			Sentry.captureMessage("Anthropic sem créditos: pedido em ERRO aguardando o admin", SentryLevel.ERROR);

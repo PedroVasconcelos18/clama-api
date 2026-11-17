@@ -35,7 +35,7 @@ class MetricasDePedidoTest extends PedidoWebTeste {
 
 	Pedido.Dados dados(Long plano, long valor, Instant em) {
 		return new Pedido.Dados(null, plano, null, valor, "Maria Souza", "maria@exemplo.com", "52998224725", "11999990000",
-				(short) 40, "feminino", "Pela família", em, null, "1");
+				(short) 40, "feminino", "Pela família", em, null, "1", null);
 	}
 
 	Pedido pago(Long plano, long valor, Instant pagoEm) {

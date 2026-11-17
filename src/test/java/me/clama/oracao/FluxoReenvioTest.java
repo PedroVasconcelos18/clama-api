@@ -90,7 +90,7 @@ class FluxoReenvioTest {
 				returning id""", Long.class);
 		var agora = Instant.now();
 		var d = new Pedido.Dados(null, plano, null, 3000, "Maria Souza", "maria@exemplo.com", "52998224725", null, (short) 40,
-				"feminino", "Pela família", agora, null, "1");
+				"feminino", "Pela família", agora, null, "1", null);
 		var id = pedidos.saveAndFlush(Pedido.novo(d, hmac, agora)).getId();
 		var email = "adm-" + UUID.randomUUID() + "@exemplo.com";
 		Navegador.usuario(usuarios, encoder, email, "senha-forte-123", Papel.ADMIN);

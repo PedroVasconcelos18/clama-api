@@ -101,7 +101,7 @@ public class CriacaoDePedido {
 	private Pedido.Dados dados(Long usuarioId, Long planoId, Long instituicaoId, long valor, NovoPedido n, String ip) {
 		var cpf = n.cpfCnpj().replaceAll("\\D", ""); // so digitos: o que o provedor de pagamento espera e o HMAC usa
 		return new Pedido.Dados(usuarioId, planoId, instituicaoId, valor, n.nome(), n.email(), cpf, n.telefone(), n.idade(),
-				n.sexo(), n.pedidoOracao(), relogio.instant(), ip, POLITICA_VERSAO);
+				n.sexo(), n.pedidoOracao(), relogio.instant(), ip, POLITICA_VERSAO, n.tema());
 	}
 
 	private static ErroDeNegocio dadosInvalidos(List<ErroDeCampo> erros) {

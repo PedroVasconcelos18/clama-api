@@ -13,7 +13,7 @@ final class FreemiumDeTeste {
 	private FreemiumDeTeste() {}
 
 	static NovoPedido novo(String email, String cpf) {
-		return new NovoPedido("Maria Souza", email, cpf, null, null, null, "Pela família", null, null, null, true, null);
+		return new NovoPedido("Maria Souza", email, cpf, null, null, null, "Pela família", null, null, null, true, null, null);
 	}
 
 	/** O plano gratuito pode ter sido apagado por outro teste. */

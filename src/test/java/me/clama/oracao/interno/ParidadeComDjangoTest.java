@@ -7,9 +7,6 @@ import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import java.util.List;
 import java.util.UUID;
-import me.clama.catalogo.Complexidade;
-import me.clama.catalogo.PlanoResumo;
-import me.clama.catalogo.TipoDePlano;
 import me.clama.pedido.DadosParaOracao;
 import me.clama.pedido.StatusPedido;
 import org.junit.jupiter.api.Test;
@@ -18,10 +15,12 @@ import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.io.ClassPathResource;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * O corpo que sai para a Claude e o mesmo que o Django de producao manda. {@code oracao/corpo-django-v6.json} foi gerado
+ * O corpo que sai para a Claude e o mesmo que o Django de producao manda, exceto a instrucao: a paridade da instrucao acabou
+ * na v2 (spec 8 P2, oracao igual para todos); o resto da mensagem segue igual. {@code oracao/corpo-django-v6.json} foi gerado
  * com o codigo commitado do clama-backend ({@code build_prompt} + o {@code messages.create} de
  * {@code anthropic_client.gerar_oracao}, pelo SDK Python com transporte falso) e o prompt ativo "Clama Pastoral v6". Aqui
  * passa pelo mesmo caminho do job: prompt padrao, {@link MontagemDoPrompt}, {@link ClienteClaude#gerar} sem documentos e
@@ -52,11 +51,9 @@ class ParidadeComDjangoTest {
 			var e = caso.get("entrada");
 			var idade = e.get("idade").isNull() ? null : (short) e.get("idade").asInt();
 			var dados = new DadosParaOracao(UUID.randomUUID(), StatusPedido.GERANDO_ORACAO, 1L, false, e.get("nome").asString(),
-					"x@exemplo.com", idade, e.get("sexo").asString(), e.get("pedidoOracao").asString(), null, 0, null);
-			var plano = new PlanoResumo(1L, "Plano", null, 3000, Complexidade.valueOf(e.get("complexidade").asString()),
-					TipoDePlano.valueOf(e.get("tipo").asString()));
+					"x@exemplo.com", idade, e.get("sexo").asString(), e.get("pedidoOracao").asString(), 7L, null, null, 0, null);
 
-			cliente.gerar(prompt.sistema(), MontagemDoPrompt.mensagem(prompt, dados, plano), List.of());
+			cliente.gerar(prompt.sistema(), MontagemDoPrompt.mensagem(prompt, dados), List.of());
 
 			var req = findAll(postRequestedFor(urlEqualTo(caso.get("path").asString()))).get(i);
 			// Unica diferenca deliberada: o SDK Java 3.x manda anthropic-version 2026-10-21; o Python 0.x do Django, 2023-06-01.
@@ -65,7 +62,14 @@ class ParidadeComDjangoTest {
 			assertThat(req.getHeader("anthropic-version")).isEqualTo("2026-10-21");
 			assertThat(req.containsHeader("anthropic-beta")).isFalse();
 			// estrito: nem campo a mais nem a menos, texto exato
-			assertThat(equalToJson(caso.get("corpo").toString(), false, false).match(req.getBodyAsString()).isExactMatch())
+			// Deliberado desde a v2 (spec 8 P2): a instrucao e a mesma para todos os planos (comVersiculo); o Django variava por
+			// plano. A fixture vale para o resto da mensagem (Nome, Sexo, Idade, Pedido) e para o corpo; troca-se so a instrucao.
+			var corpoEsperado = (ObjectNode) caso.get("corpo").deepCopy();
+			var conteudo = corpoEsperado.get("messages").get(0).get("content").asString();
+			assertThat(conteudo).contains("\n\nNome: ");
+			((ObjectNode) corpoEsperado.get("messages").get(0)).put("content",
+					prompt.comVersiculo() + conteudo.substring(conteudo.indexOf("\n\nNome: ")));
+			assertThat(equalToJson(corpoEsperado.toString(), false, false).match(req.getBodyAsString()).isExactMatch())
 					.as("caso %d (%s): %s", i, caso.get("planoDjango").asString(), req.getBodyAsString()).isTrue();
 		}
 	}

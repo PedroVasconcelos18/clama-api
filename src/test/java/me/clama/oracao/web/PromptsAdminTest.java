@@ -177,7 +177,7 @@ class PromptsAdminTest {
 		CLAUDE.verify(postRequestedFor(urlEqualTo("/v1/messages"))
 				.withRequestBody(matchingJsonPath("$.system[0].text", matching("Identidade\nVocê é o Clama(?s).*")))
 				.withRequestBody(matchingJsonPath("$.messages[0].content",
-						matching("Gere uma oração pastoral(?s).*\n\nNome: Maria\nSexo: feminino\nIdade: não informada\n\nPedido: Oração de teste"))));
+						matching("Escreva uma oração em 1ª pessoa(?s).*\n\nNome: Maria\nSexo: feminino\nIdade: não informada\n\nPedido: Oração de teste"))));
 	}
 
 	@Test
@@ -211,7 +211,7 @@ class PromptsAdminTest {
 	void exemploInvalidoE400() throws Exception {
 		var adm = entrar(Papel.ADMIN);
 		for (var corpo : List.of("{\"nome\": \"" + "n".repeat(121) + "\"}", "{\"pedidoOracao\": \"" + "p".repeat(2001) + "\"}",
-				"{\"sexo\": \"outro\"}", "{\"idade\": 0}", "{\"complexidade\": \"ENORME\"}")) {
+				"{\"sexo\": \"outro\"}", "{\"idade\": 0}")) {
 			assertThat(adm.post(RAIZ + "/previa", corpo).statusCode()).as(corpo).isEqualTo(400);
 		}
 		CLAUDE.verify(0, postRequestedFor(anyUrl()));

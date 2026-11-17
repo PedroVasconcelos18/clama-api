@@ -8,8 +8,6 @@ import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import me.clama.catalogo.Complexidade;
-import me.clama.catalogo.TipoDePlano;
 import me.clama.infra.web.ErroDeNegocio;
 import me.clama.oracao.interno.AdminDePrompts;
 import me.clama.oracao.interno.ClienteClaude;
@@ -46,10 +44,10 @@ class PromptsAdminController {
 		}
 	}
 
-	/** Pedido de exemplo da previa; ausentes caem no padrao (Maria, feminino, "Oração de teste", SIMPLES, COMUM). {@code versaoId} nulo = o padrao do codigo. */
+	/** Pedido de exemplo da previa; ausentes caem no padrao (Maria, feminino, "Oração de teste"). {@code versaoId} nulo = o padrao do codigo. */
 	record PedidoDeExemplo(@Nullable Long versaoId, @Nullable @Size(max = 120) String nome,
 			@Nullable @Pattern(regexp = "feminino|masculino|nao_informado|") String sexo, @Nullable @Min(1) @Max(120) Short idade,
-			@Nullable @Size(max = 2000) String pedidoOracao, @Nullable Complexidade complexidade, @Nullable TipoDePlano tipo) {}
+			@Nullable @Size(max = 2000) String pedidoOracao) {}
 
 	record Previa(String oracao, @Nullable Long versaoId) {}
 
@@ -98,8 +96,7 @@ class PromptsAdminController {
 	@PostMapping("/previa")
 	Previa previa(@Valid @RequestBody PedidoDeExemplo e) {
 		var prompt = e.versaoId() == null ? vigente.padrao() : servico.versao(e.versaoId()).conteudo();
-		var mensagem = MontagemDoPrompt.mensagem(prompt, valor(e.complexidade(), Complexidade.SIMPLES), valor(e.tipo(), TipoDePlano.COMUM),
-				valor(e.nome(), "Maria"), valor(e.sexo(), "feminino"), e.idade(), valor(e.pedidoOracao(), "Oração de teste"));
+		var mensagem = MontagemDoPrompt.mensagem(prompt, valor(e.nome(), "Maria"), valor(e.sexo(), "feminino"), e.idade(), null, valor(e.pedidoOracao(), "Oração de teste"));
 		try {
 			return new Previa(claude.previa(prompt.sistema(), mensagem), e.versaoId());
 		} catch (ClienteClaude.CreditosEsgotados x) {
