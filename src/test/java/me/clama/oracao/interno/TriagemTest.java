@@ -17,6 +17,8 @@ import me.clama.infra.seguranca.LimiteDeTaxa;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -91,6 +93,21 @@ class TriagemTest {
 		assertThat(triagem.avaliar(TEXTO)).isEqualTo(Optional.of(true));
 	}
 
+	/** A Claude as vezes pontua, marca ou acrescenta uma frase: vale a primeira palavra, sem pontuacao, aspas ou asteriscos. */
+	@ParameterizedTest
+	@CsvSource(delimiter = '|', emptyValue = "", nullValues = "nulo", value = {
+			"RISCO.|true",
+			"**RISCO**|true",
+			"RISCO. Sinto muito pelo que você está passando.|true",
+			"SEM_RISCO.|false",
+			"Sem risco|false",
+			"Talvez|nulo",
+			"''|nulo"})
+	void respostaTolerante(String texto, Boolean esperado) {
+		responde(texto);
+		assertThat(triagem.avaliar(TEXTO)).isEqualTo(Optional.ofNullable(esperado));
+	}
+
 	@Test
 	void respostaForaDoFormatoEVaziaSemLogarOTexto() {
 		var log = (Logger) LoggerFactory.getLogger("me.clama");
@@ -133,7 +150,7 @@ class TriagemTest {
 		CLAUDE.verify(0, postRequestedFor(urlEqualTo("/v1/messages")));
 	}
 
-	/** O modelo da oracao (padrao de {@code clama.triagem.modelo}), 256 tokens, o system do arquivo, sem cache e sem thinking. */
+	/** O modelo da oracao (padrao de {@code clama.triagem.modelo}), 256 tokens, o system do arquivo, sem cache, sem thinking e sem temperature. */
 	@Test
 	void corpoDaChamada() {
 		responde("SEM_RISCO");
@@ -144,7 +161,8 @@ class TriagemTest {
 				.withRequestBody(matchingJsonPath("$.messages[0].content", equalTo(TEXTO)))
 				.withRequestBody(containing("responde com UMA palavra"))
 				.withRequestBody(notContaining("cache_control"))
-				.withRequestBody(notContaining("thinking")));
+				.withRequestBody(notContaining("thinking"))
+				.withRequestBody(notContaining("temperature"))); // a versao da API em uso recusa temperature
 	}
 
 	@Test

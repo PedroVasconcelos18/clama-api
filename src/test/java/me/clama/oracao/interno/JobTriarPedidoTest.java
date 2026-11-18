@@ -58,6 +58,7 @@ class JobTriarPedidoTest {
 	@Autowired UsuarioRepository usuarios;
 	@Autowired PasswordEncoder encoder;
 	@Autowired JobTriarPedido triar;
+	@Autowired JobAlertaAdmin alerta;
 
 	@BeforeEach
 	@AfterEach
@@ -145,7 +146,7 @@ class JobTriarPedidoTest {
 	}
 
 	@Test
-	void jobQueDesisteNaoMudaOPedido() {
+	void jobQueDesisteNaoMudaOPedidoEAlertaOAdmin() {
 		CLAUDE.stubFor(post("/v1/messages").willReturn(aResponse().withStatus(500).withHeader("Content-Type", "application/json")
 				.withBody("{\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"x\"}}")));
 		var id = pedido("Pela minha família");
@@ -161,7 +162,9 @@ class JobTriarPedidoTest {
 		assertThat(jdbc.queryForMap("select status, atualizado_em, risco from pedido where id = ?", id)).isEqualTo(antes);
 		assertThat(risco(id)).isNull();
 		assertThat(jobs("gerar-oracao")).containsExactly("gerar-oracao/" + id);
-		assertThat(jobs("alerta-admin")).isEmpty();
+		assertThat(jobs("alerta-admin")).containsExactly("alerta-admin/" + id + "/triagem_falhou");
+		assertThat(alerta.detalhe("triagem_falhou")).isEqualTo(
+				"A triagem de risco deste pedido falhou em todas as tentativas. Confira o texto do pedido no admin.");
 	}
 
 	@Test

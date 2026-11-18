@@ -13,7 +13,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * {@code triar-pedido/<pedido>}: a triagem de crise do pedido. Grava {@code pedido.risco} e, com risco, enfileira o
  * {@code alerta-admin} na mesma transacao. Sem resposta valida, a fila tenta de novo (3 vezes: 1, 2 e 4 min); ao desistir
- * o pedido fica como esta ({@code risco} nulo) e a geracao, que corre em paralelo, nao depende disto.
+ * o pedido fica como esta ({@code risco} nulo) e vai o {@code alerta-admin} {@code triagem_falhou}. A geracao, que corre
+ * em paralelo, nao depende disto.
  */
 @Component
 class JobTriarPedido extends TipoDeJob<UUID> {
@@ -54,5 +55,6 @@ class JobTriarPedido extends TipoDeJob<UUID> {
 	@Override
 	protected void aoDesistir(UUID id, Throwable erro) {
 		LOG.warn("triar-pedido: desistiu, pedido segue sem triagem (pedido_id={})", id);
+		tx.executeWithoutResult(s -> alerta.enfileirar(id, "triagem_falhou"));
 	}
 }

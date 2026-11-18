@@ -60,7 +60,7 @@ class JobAlertaAdmin extends TipoDeJob<JobAlertaAdmin.Aviso> {
 				id + "/" + a.motivo() + "/" + relogio.instant().truncatedTo(ChronoUnit.HOURS));
 	}
 
-	private String detalhe(String motivo) {
+	String detalhe(String motivo) {
 		return switch (motivo) {
 			case "credit_balance" -> "A conta da Anthropic está sem créditos. Recarregue e regenere o pedido pelo admin.";
 			case "falha_geracao" -> "A geração da oração falhou (recusa da Claude ou todas as tentativas esgotadas)."
@@ -72,6 +72,7 @@ class JobAlertaAdmin extends TipoDeJob<JobAlertaAdmin.Aviso> {
 					+ " minutos parado sem job na fila. Nada foi regerado: confira e regenere ou reenvie pelo admin.";
 			case "risco" -> "A triagem viu sinal de risco à vida neste pedido. A pessoa viu o CVV na tela. O Clama não entra em contato "
 					+ "(decisão do Pedro, P6): confira o pedido no admin.";
+			case "triagem_falhou" -> "A triagem de risco deste pedido falhou em todas as tentativas. Confira o texto do pedido no admin.";
 			default -> null;
 		};
 	}

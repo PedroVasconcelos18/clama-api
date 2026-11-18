@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Triagem de crise: a Claude le o texto do pedido e responde {@code RISCO} ou {@code SEM_RISCO} (system em
- * {@code oracao/triagem.txt}). Qualquer outra resposta, ou falha, e vazio: quem chama decide (a tela mostra o CVV, o job
+ * {@code oracao/triagem.txt}; leitura tolerante, ver {@link #ler}). Qualquer outra resposta, ou falha, e vazio: quem chama decide (a tela mostra o CVV, o job
  * tenta de novo). Nem o texto nem a resposta vao para o log.
  */
 @Component
@@ -46,13 +46,21 @@ public class Triagem {
 			LOG.warn("triagem falhou (event=triagem, motivo={})", e.getClass().getSimpleName());
 			return Optional.empty();
 		}
-		return switch (resposta.strip().toUpperCase(Locale.ROOT)) {
-			case "RISCO" -> Optional.of(true);
-			case "SEM_RISCO" -> Optional.of(false);
-			default -> {
-				LOG.warn("triagem falhou (event=triagem, motivo=resposta_fora_do_formato)");
-				yield Optional.empty();
-			}
-		};
+		var risco = ler(resposta);
+		if (risco.isEmpty()) LOG.warn("triagem falhou (event=triagem, motivo=resposta_fora_do_formato)");
+		return risco;
+	}
+
+	/**
+	 * Tolerante: a Claude as vezes pontua, marca ({@code **RISCO**}) ou acrescenta uma frase. Vale a primeira palavra, em
+	 * caixa alta e sem pontuacao, aspas ou asteriscos em volta; {@code SEM_RISCO} (ou {@code SEM RISCO}) e falso,
+	 * {@code RISCO} e verdadeiro, o resto e vazio.
+	 */
+	private static Optional<Boolean> ler(String resposta) {
+		var texto = resposta == null ? "" : resposta.strip().toUpperCase(Locale.ROOT).replaceFirst("^[^A-Z_]+", "");
+		var primeira = texto.split("\\s+", 2)[0].replaceFirst("[^A-Z_]+$", "");
+		if (primeira.startsWith("SEM_RISCO") || texto.startsWith("SEM RISCO")) return Optional.of(false);
+		if (primeira.equals("RISCO")) return Optional.of(true);
+		return Optional.empty();
 	}
 }
