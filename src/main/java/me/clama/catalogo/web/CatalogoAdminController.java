@@ -43,10 +43,14 @@ class CatalogoAdminController {
 			@Min(0) @Max(Integer.MAX_VALUE) Long valorCentavos, Complexidade complexidade,
 			@Min(0) @Max(32767) Integer ordem, Boolean ativo) {}
 
-	record NovaInstituicao(@NotBlank @Size(max = 120) String nome, @Min(0) @Max(32767) Integer ordem) {}
+	record NovaInstituicao(@NotBlank @Size(max = 120) String nome, @Min(0) @Max(32767) Integer ordem,
+			@Size(max = 140) String causa, @Min(1) Long metaMensalCentavos, @Min(1) Long custoUnidadeCentavos,
+			@Size(max = 40) String unidade) {}
 
+	/** Nome, ordem e ativo: nulo = deixa como esta. Os 4 campos de meta: o front manda todos a cada save, entao nulo LIMPA. */
 	record MudancaDeInstituicao(@Size(max = 120) @Pattern(regexp = SO_BRANCOS) String nome,
-			@Min(0) @Max(32767) Integer ordem, Boolean ativo) {}
+			@Min(0) @Max(32767) Integer ordem, Boolean ativo, @Size(max = 140) String causa,
+			@Min(1) Long metaMensalCentavos, @Min(1) Long custoUnidadeCentavos, @Size(max = 40) String unidade) {}
 
 	private final CatalogoAdminServico servico;
 
@@ -83,13 +87,15 @@ class CatalogoAdminController {
 	@ResponseStatus(HttpStatus.CREATED)
 	InstituicaoAdmin criarInstituicao(@Valid @RequestBody NovaInstituicao c, Authentication auth) {
 		return InstituicaoAdmin.de(
-				servico.criarInstituicao(autor(auth), c.nome(), c.ordem() != null ? c.ordem() : 0), null);
+				servico.criarInstituicao(autor(auth), c.nome(), c.ordem() != null ? c.ordem() : 0, c.causa(),
+						c.metaMensalCentavos(), c.custoUnidadeCentavos(), c.unidade()), null);
 	}
 
 	@PatchMapping("/instituicoes/{id}")
 	InstituicaoAdmin alterarInstituicao(@PathVariable Long id, @Valid @RequestBody MudancaDeInstituicao c,
 			Authentication auth) {
-		var i = servico.alterarInstituicao(autor(auth), id, c.nome(), c.ordem(), c.ativo());
+		var i = servico.alterarInstituicao(autor(auth), id, c.nome(), c.ordem(), c.ativo(), c.causa(),
+				c.metaMensalCentavos(), c.custoUnidadeCentavos(), c.unidade());
 		return InstituicaoAdmin.de(i, servico.hashesDeLogo(List.of(id)).get(id));
 	}
 

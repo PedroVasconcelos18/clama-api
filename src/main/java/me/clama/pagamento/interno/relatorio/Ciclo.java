@@ -17,6 +17,12 @@ public record Ciclo(LocalDate de, LocalDate ate) {
 		return new Ciclo(fim.minusMonths(1).withDayOfMonth(28), fim);
 	}
 
+	/** O ciclo aberto em {@code hoje}: termina no proximo dia 27 (inclusive) e comeca no 28 anterior; o dia 28 abre um novo. */
+	public static Ciclo emCurso(LocalDate hoje) {
+		var fim = hoje.getDayOfMonth() <= 27 ? hoje.withDayOfMonth(27) : hoje.plusMonths(1).withDayOfMonth(27);
+		return new Ciclo(fim.minusMonths(1).withDayOfMonth(28), fim);
+	}
+
 	/** Do 1o ao ultimo dia do mes (dezembro vira janeiro sem estourar; fevereiro bissexto incluso). */
 	public static Ciclo doMes(YearMonth mes) {
 		return new Ciclo(mes.atDay(1), mes.atEndOfMonth());

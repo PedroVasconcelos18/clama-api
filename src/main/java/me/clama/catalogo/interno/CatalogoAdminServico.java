@@ -130,18 +130,24 @@ public class CatalogoAdminServico {
 
 	// --- instituicoes ---
 
-	public Instituicao criarInstituicao(Long autorId, String nome, int ordem) {
+	public Instituicao criarInstituicao(Long autorId, String nome, int ordem, String causa, Long metaMensalCentavos,
+			Long custoUnidadeCentavos, String unidade) {
 		return gravar(NOME_DUPLICADO_INSTITUICAO, () -> {
-			var i = instituicoes.saveAndFlush(Instituicao.nova(nome.strip(), ordem));
+			var nova = Instituicao.nova(nome.strip(), ordem);
+			nova.definirMeta(vazioViraNulo(causa), metaMensalCentavos, custoUnidadeCentavos, vazioViraNulo(unidade));
+			var i = instituicoes.saveAndFlush(nova);
 			var diff = new LinkedHashMap<String, Object>();
 			diff.put("nome", mudanca(null, i.getNome()));
 			diff.put("ordem", mudanca(null, i.getOrdem()));
+			metaNoDiff(diff, null, null, null, null, i);
 			auditoria.registrar(autorId, "instituicao", i.getId().toString(), Acao.ADICAO, diff);
 			return i;
 		});
 	}
 
-	public Instituicao alterarInstituicao(Long autorId, Long id, String nome, Integer ordem, Boolean ativo) {
+	/** Nome, ordem e ativo: nulo = deixa como esta. Os 4 campos de meta substituem os atuais (nulo limpa). */
+	public Instituicao alterarInstituicao(Long autorId, Long id, String nome, Integer ordem, Boolean ativo, String causa,
+			Long metaMensalCentavos, Long custoUnidadeCentavos, String unidade) {
 		return gravar(NOME_DUPLICADO_INSTITUICAO, () -> {
 			var i = instituicoes.travar(id).orElseThrow(CatalogoAdminServico::naoEncontrado);
 			var diff = new LinkedHashMap<String, Object>();
@@ -157,6 +163,12 @@ public class CatalogoAdminServico {
 				diff.put("ativo", mudanca(i.isAtivo(), ativo));
 				if (ativo) i.ativar(); else i.desativar();
 			}
+			var c0 = i.getCausa();
+			var m0 = i.getMetaMensalCentavos();
+			var u0 = i.getCustoUnidadeCentavos();
+			var n0 = i.getUnidade();
+			i.definirMeta(vazioViraNulo(causa), metaMensalCentavos, custoUnidadeCentavos, vazioViraNulo(unidade));
+			metaNoDiff(diff, c0, m0, u0, n0, i);
 			if (diff.isEmpty()) return i;
 			instituicoes.flush();
 			auditoria.registrar(autorId, "instituicao", id.toString(), Acao.MUDANCA, diff);
@@ -191,6 +203,17 @@ public class CatalogoAdminServico {
 	}
 
 	// --- apoio ---
+
+	private static String vazioViraNulo(String s) {
+		return s == null || s.isBlank() ? null : s.strip();
+	}
+
+	private static void metaNoDiff(Map<String, Object> diff, String causa, Long meta, Long custo, String unidade, Instituicao i) {
+		if (!java.util.Objects.equals(causa, i.getCausa())) diff.put("causa", mudanca(causa, i.getCausa()));
+		if (!java.util.Objects.equals(meta, i.getMetaMensalCentavos())) diff.put("metaMensalCentavos", mudanca(meta, i.getMetaMensalCentavos()));
+		if (!java.util.Objects.equals(custo, i.getCustoUnidadeCentavos())) diff.put("custoUnidadeCentavos", mudanca(custo, i.getCustoUnidadeCentavos()));
+		if (!java.util.Objects.equals(unidade, i.getUnidade())) diff.put("unidade", mudanca(unidade, i.getUnidade()));
+	}
 
 	private static String curto(String sha) {
 		return sha == null ? null : sha.substring(0, 8);

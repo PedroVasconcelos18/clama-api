@@ -189,7 +189,7 @@ class CatalogoPublicoTest {
 		assertThat(lista.get(0).get("logoUrl").isNull()).isTrue();
 		assertThat(lista.get(1).get("logoUrl").asString())
 				.isEqualTo("/api/instituicoes/" + b.getId() + "/logo?v=" + hash(PNG).substring(0, 8));
-		assertThat(lista.get(0).propertyNames()).containsExactlyInAnyOrder("id", "nome", "logoUrl");
+		assertThat(lista.get(0).propertyNames()).containsExactlyInAnyOrder("id", "nome", "logoUrl", "causa", "metaMensalCentavos", "custoUnidadeCentavos", "unidade");
 		assertThat(a.getId()).isEqualTo(lista.get(0).get("id").asLong());
 	}
 

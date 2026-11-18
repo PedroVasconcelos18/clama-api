@@ -324,6 +324,28 @@ class CatalogoAdminTest {
 	}
 
 	@Test
+	void metaDaInstituicaoValidaGravaEAparecemNasListas() throws Exception {
+		var admin = entrar(Papel.ADMIN);
+		var id = id(admin.post("/api/admin/instituicoes", "{\"nome\":\"Casa\"}"));
+		assertThat(admin.patch("/api/admin/instituicoes/" + id, "{\"metaMensalCentavos\":0}").statusCode()).isEqualTo(400);
+		assertThat(admin.patch("/api/admin/instituicoes/" + id, "{\"custoUnidadeCentavos\":-1}").statusCode()).isEqualTo(400);
+		var corpo = "{\"causa\":\"Acolhe idosos\",\"metaMensalCentavos\":500000,\"custoUnidadeCentavos\":2500,\"unidade\":\"cesta\"}";
+		assertThat(admin.patch("/api/admin/instituicoes/" + id, corpo).statusCode()).isEqualTo(200);
+		for (var caminho : List.of("/api/admin/instituicoes", "/api/instituicoes")) {
+			var i = json(admin.get(caminho)).get(0);
+			assertThat(i.get("causa").asString()).isEqualTo("Acolhe idosos");
+			assertThat(i.get("metaMensalCentavos").asLong()).isEqualTo(500000);
+			assertThat(i.get("custoUnidadeCentavos").asLong()).isEqualTo(2500);
+			assertThat(i.get("unidade").asString()).isEqualTo("cesta");
+		}
+		// o front manda os 4 campos a cada save: nulo limpa
+		var limpo = json(admin.patch("/api/admin/instituicoes/" + id,
+				"{\"nome\":\"Casa\",\"causa\":null,\"metaMensalCentavos\":null,\"custoUnidadeCentavos\":null,\"unidade\":null}"));
+		assertThat(limpo.get("metaMensalCentavos").isNull()).isTrue();
+		assertThat(limpo.get("causa").isNull()).isTrue();
+	}
+
+	@Test
 	void instituicaoComNomeDeOutraAtivaEh400() throws Exception {
 		var admin = entrar(Papel.ADMIN);
 		admin.post("/api/admin/instituicoes", "{\"nome\":\"Casa\"}");

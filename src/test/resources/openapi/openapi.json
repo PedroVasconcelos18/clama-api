@@ -38,6 +38,19 @@
         },
         "type" : "object"
       },
+      "Arrecadado" : {
+        "properties" : {
+          "arrecadadoCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "instituicaoId" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "AuditoriaDoLedgerAdmin" : {
         "properties" : {
           "achados" : {
@@ -593,12 +606,23 @@
           "ativo" : {
             "type" : "boolean"
           },
+          "causa" : {
+            "type" : "string"
+          },
+          "custoUnidadeCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
           "id" : {
             "format" : "int64",
             "type" : "integer"
           },
           "logoUrl" : {
             "type" : "string"
+          },
+          "metaMensalCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
           },
           "nome" : {
             "type" : "string"
@@ -609,12 +633,22 @@
           },
           "temLogo" : {
             "type" : "boolean"
+          },
+          "unidade" : {
+            "type" : "string"
           }
         },
         "type" : "object"
       },
       "InstituicaoPublica" : {
         "properties" : {
+          "causa" : {
+            "type" : "string"
+          },
+          "custoUnidadeCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
           "id" : {
             "format" : "int64",
             "type" : "integer"
@@ -622,7 +656,14 @@
           "logoUrl" : {
             "type" : "string"
           },
+          "metaMensalCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
           "nome" : {
+            "type" : "string"
+          },
+          "unidade" : {
             "type" : "string"
           }
         },
@@ -704,10 +745,48 @@
         },
         "type" : "object"
       },
+      "Metas" : {
+        "properties" : {
+          "ate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "de" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "instituicoes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Arrecadado"
+            },
+            "type" : "array"
+          },
+          "percentual" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "MudancaDeInstituicao" : {
         "properties" : {
           "ativo" : {
             "type" : "boolean"
+          },
+          "causa" : {
+            "maxLength" : 140,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "custoUnidadeCentavos" : {
+            "format" : "int64",
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "metaMensalCentavos" : {
+            "format" : "int64",
+            "minimum" : 1,
+            "type" : "integer"
           },
           "nome" : {
             "maxLength" : 120,
@@ -720,6 +799,11 @@
             "maximum" : 32767,
             "minimum" : 0,
             "type" : "integer"
+          },
+          "unidade" : {
+            "maxLength" : 40,
+            "minLength" : 0,
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -775,6 +859,21 @@
       },
       "NovaInstituicao" : {
         "properties" : {
+          "causa" : {
+            "maxLength" : 140,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "custoUnidadeCentavos" : {
+            "format" : "int64",
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "metaMensalCentavos" : {
+            "format" : "int64",
+            "minimum" : 1,
+            "type" : "integer"
+          },
           "nome" : {
             "maxLength" : 120,
             "minLength" : 0,
@@ -785,6 +884,11 @@
             "maximum" : 32767,
             "minimum" : 0,
             "type" : "integer"
+          },
+          "unidade" : {
+            "maxLength" : 40,
+            "minLength" : 0,
+            "type" : "string"
           }
         },
         "required" : [ "nome" ],
@@ -4669,6 +4773,24 @@
           }
         },
         "tags" : [ "catalogo-publico-controller" ]
+      }
+    },
+    "/api/metas" : {
+      "get" : {
+        "operationId" : "metas",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Metas"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "metas-controller" ]
       }
     },
     "/api/pedidos" : {

@@ -66,7 +66,8 @@ class CatalogoPublicoController {
 		// so id e hash: a lista nunca carrega os blobs
 		var hashes = admin.hashesDeLogo(ativas.stream().map(i -> i.getId()).toList());
 		var lista = ativas.stream().map(i -> new InstituicaoPublica(i.getId(), i.getNome(),
-				InstituicaoPublica.urlDaLogo(i.getId(), hashes.get(i.getId()))))
+				InstituicaoPublica.urlDaLogo(i.getId(), hashes.get(i.getId())), i.getCausa(), i.getMetaMensalCentavos(),
+				i.getCustoUnidadeCentavos(), i.getUnidade()))
 				.toList();
 		return ResponseEntity.ok().cacheControl(LISTA).eTag(etag(lista.toString())).body(lista);
 	}
