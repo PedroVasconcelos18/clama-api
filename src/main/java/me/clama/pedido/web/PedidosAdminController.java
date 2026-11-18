@@ -100,7 +100,7 @@ class PedidosAdminController {
 				p.getPedidoOracao(), p.getOracao(),
 				plano == null ? null : new PedidoAdminDetalhe.Plano(plano.id(), plano.nome(), plano.valorCentavos()),
 				instituicao == null ? null : new PedidoAdminDetalhe.Instituicao(instituicao.id(), instituicao.nome()),
-				p.getTentativas(), p.getUltimoErro(), p.getRisco(), h.cobrancas(), h.repasse(), h.eventos());
+				p.getTentativas(), p.getUltimoErro(), p.getRisco(), p.getTema(), h.cobrancas(), h.repasse(), h.eventos());
 	}
 
 	private static UUID uuid(String s) {

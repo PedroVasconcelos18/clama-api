@@ -1301,6 +1301,9 @@
           "telefone" : {
             "type" : [ "string", "null" ]
           },
+          "tema" : {
+            "type" : [ "string", "null" ]
+          },
           "tentativas" : {
             "format" : "int32",
             "type" : "integer"

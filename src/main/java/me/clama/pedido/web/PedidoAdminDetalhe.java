@@ -18,7 +18,7 @@ record PedidoAdminDetalhe(UUID id, Instant criadoEm, Instant atualizadoEm, Statu
 		long valorCentavos, @Nullable Long usuarioId, String nome, String email, @Nullable String telefone,
 		@Nullable Short idade, @Nullable String sexo, @Nullable String pedidoOracao, @Nullable String oracaoGerada,
 		@Nullable Plano plano, @Nullable Instituicao instituicao, int tentativas, @Nullable String ultimoErro,
-		@Nullable Boolean risco,
+		@Nullable Boolean risco, @Nullable String tema,
 		List<CobrancaDoPedido> cobrancas, @Nullable RepasseDoPedido repasse, List<EventoDoPedido> eventos) {
 
 	record Plano(Long id, String nome, long valorCentavos) {}
