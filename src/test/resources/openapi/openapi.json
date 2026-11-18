@@ -771,39 +771,35 @@
       "MudancaDeInstituicao" : {
         "properties" : {
           "ativo" : {
-            "type" : "boolean"
+            "type" : "boolean",
+            "writeOnly" : true
           },
           "causa" : {
-            "maxLength" : 140,
-            "minLength" : 0,
-            "type" : "string"
+            "type" : "string",
+            "writeOnly" : true
           },
           "custoUnidadeCentavos" : {
             "format" : "int64",
-            "minimum" : 1,
-            "type" : "integer"
+            "type" : "integer",
+            "writeOnly" : true
           },
           "metaMensalCentavos" : {
             "format" : "int64",
-            "minimum" : 1,
-            "type" : "integer"
+            "type" : "integer",
+            "writeOnly" : true
           },
           "nome" : {
-            "maxLength" : 120,
-            "minLength" : 0,
-            "pattern" : ".*\\S.*",
-            "type" : "string"
+            "type" : "string",
+            "writeOnly" : true
           },
           "ordem" : {
             "format" : "int32",
-            "maximum" : 32767,
-            "minimum" : 0,
-            "type" : "integer"
+            "type" : "integer",
+            "writeOnly" : true
           },
           "unidade" : {
-            "maxLength" : 40,
-            "minLength" : 0,
-            "type" : "string"
+            "type" : "string",
+            "writeOnly" : true
           }
         },
         "type" : "object"

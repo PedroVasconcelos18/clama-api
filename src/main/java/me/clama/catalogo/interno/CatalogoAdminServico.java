@@ -145,9 +145,12 @@ public class CatalogoAdminServico {
 		});
 	}
 
-	/** Nome, ordem e ativo: nulo = deixa como esta. Os 4 campos de meta substituem os atuais (nulo limpa). */
-	public Instituicao alterarInstituicao(Long autorId, Long id, String nome, Integer ordem, Boolean ativo, String causa,
-			Long metaMensalCentavos, Long custoUnidadeCentavos, String unidade) {
+	/**
+	 * Nome, ordem e ativo: nulo = deixa como esta. Meta: referencia nula = deixa, Optional vazio = limpa, valor = define.
+	 */
+	public Instituicao alterarInstituicao(Long autorId, Long id, String nome, Integer ordem, Boolean ativo,
+			java.util.Optional<String> causa, java.util.Optional<Long> metaMensalCentavos,
+			java.util.Optional<Long> custoUnidadeCentavos, java.util.Optional<String> unidade) {
 		return gravar(NOME_DUPLICADO_INSTITUICAO, () -> {
 			var i = instituicoes.travar(id).orElseThrow(CatalogoAdminServico::naoEncontrado);
 			var diff = new LinkedHashMap<String, Object>();
@@ -167,7 +170,10 @@ public class CatalogoAdminServico {
 			var m0 = i.getMetaMensalCentavos();
 			var u0 = i.getCustoUnidadeCentavos();
 			var n0 = i.getUnidade();
-			i.definirMeta(vazioViraNulo(causa), metaMensalCentavos, custoUnidadeCentavos, vazioViraNulo(unidade));
+			i.definirMeta(causa == null ? c0 : vazioViraNulo(causa.orElse(null)),
+					metaMensalCentavos == null ? m0 : metaMensalCentavos.orElse(null),
+					custoUnidadeCentavos == null ? u0 : custoUnidadeCentavos.orElse(null),
+					unidade == null ? n0 : vazioViraNulo(unidade.orElse(null)));
 			metaNoDiff(diff, c0, m0, u0, n0, i);
 			if (diff.isEmpty()) return i;
 			instituicoes.flush();

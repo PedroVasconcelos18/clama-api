@@ -346,6 +346,26 @@ class CatalogoAdminTest {
 	}
 
 	@Test
+	void patchDistingueCampoAusenteDeNull() throws Exception {
+		var admin = entrar(Papel.ADMIN);
+		var id = id(admin.post("/api/admin/instituicoes", "{\"nome\":\"Casa\"}"));
+		admin.patch("/api/admin/instituicoes/" + id,
+				"{\"causa\":\"Acolhe\",\"metaMensalCentavos\":500000,\"custoUnidadeCentavos\":2500,\"unidade\":\"cesta\"}");
+		var so = json(admin.patch("/api/admin/instituicoes/" + id, "{\"ativo\":false}"));
+		assertThat(so.get("ativo").asBoolean()).isFalse();
+		assertThat(so.get("causa").asString()).isEqualTo("Acolhe");
+		assertThat(so.get("metaMensalCentavos").asLong()).isEqualTo(500000);
+		assertThat(so.get("custoUnidadeCentavos").asLong()).isEqualTo(2500);
+		assertThat(so.get("unidade").asString()).isEqualTo("cesta");
+		var limpa = json(admin.patch("/api/admin/instituicoes/" + id, "{\"metaMensalCentavos\":null}"));
+		assertThat(limpa.get("metaMensalCentavos").isNull()).isTrue();
+		assertThat(limpa.get("causa").asString()).isEqualTo("Acolhe");
+		assertThat(limpa.get("custoUnidadeCentavos").asLong()).isEqualTo(2500);
+		assertThat(admin.patch("/api/admin/instituicoes/" + id, "{\"metaMensalCentavos\":0}").statusCode()).isEqualTo(400);
+		assertThat(admin.patch("/api/admin/instituicoes/" + id, "{\"causa\":\"" + "a".repeat(141) + "\"}").statusCode()).isEqualTo(400);
+	}
+
+	@Test
 	void instituicaoComNomeDeOutraAtivaEh400() throws Exception {
 		var admin = entrar(Papel.ADMIN);
 		admin.post("/api/admin/instituicoes", "{\"nome\":\"Casa\"}");
