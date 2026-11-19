@@ -144,7 +144,7 @@ class BloqueiosAdminTest {
 	void desbloquearApagaGravaAuditoriaSemHashEAPessoaPodeSubmeterDeNovo() throws Exception {
 		var email = "frm-" + UUID.randomUUID() + "@exemplo.com";
 		var id = bloquear(email, CPF, null);
-		var novo = new NovoPedido("Maria Souza", email, CPF, null, null, null, "Pela família", null, null, null, true, null);
+		var novo = new NovoPedido("Maria Souza", email, CPF, null, null, null, "Pela família", null, null, null, true, null, null);
 		assertThatThrownBy(() -> servico.submeter(novo, null)).isInstanceOfSatisfying(ErroDeNegocio.class,
 				e -> assertThat(e.codigo()).isEqualTo("freemium_ja_usado"));
 

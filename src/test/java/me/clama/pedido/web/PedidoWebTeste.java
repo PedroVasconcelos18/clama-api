@@ -166,7 +166,7 @@ abstract class PedidoWebTeste {
 	/** Pedido no banco, pelo caminho do dominio (a PII e cifrada). */
 	Pedido pedido(Long usuarioId, Long planoId, Instant criadoEm) {
 		var d = new Pedido.Dados(usuarioId, planoId, null, 3000, "Maria Souza", "maria@exemplo.com", "52998224725", null, null, null,
-				"Pela família", criadoEm, null, "1");
+				"Pela família", criadoEm, null, "1", null);
 		return pedidos.saveAndFlush(Pedido.novo(d, hmac, criadoEm));
 	}
 

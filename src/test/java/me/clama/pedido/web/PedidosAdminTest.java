@@ -43,7 +43,7 @@ class PedidosAdminTest extends PedidoWebTeste {
 
 	Pedido pedido(Long usuario, Long plano, Long instituicao, String nome, String email, String cpf, Instant em) {
 		var d = new Pedido.Dados(usuario, plano, instituicao, 3000, nome, email, cpf, "11999990000", (short) 40, "feminino",
-				"Pela minha família", em, null, "1");
+				"Pela minha família", em, null, "1", null);
 		return salvar(Pedido.novo(d, hmac, em));
 	}
 
@@ -208,7 +208,7 @@ class PedidosAdminTest extends PedidoWebTeste {
 			var d = corpo(res);
 			assertThat(chaves(d)).containsExactlyInAnyOrder("id", "criadoEm", "atualizadoEm", "status", "gratuito", "valorCentavos",
 					"usuarioId", "nome", "email", "telefone", "idade", "sexo", "pedidoOracao", "oracaoGerada", "plano", "instituicao",
-					"tentativas", "ultimoErro", "cobrancas", "repasse", "eventos");
+					"tentativas", "ultimoErro", "risco", "tema", "cobrancas", "repasse", "eventos");
 			assertThat(d.get("nome").asString()).isEqualTo("Maria Souza");
 			assertThat(d.get("email").asString()).isEqualTo("maria@exemplo.com");
 			assertThat(d.get("telefone").asString()).isEqualTo("11999990000");
@@ -229,6 +229,21 @@ class PedidosAdminTest extends PedidoWebTeste {
 			jdbc.update("delete from pagamento_evento");
 			jdbc.update("delete from cobranca");
 		}
+	}
+
+	@Test
+	void detalheDoAdminTrazRiscoETema() throws Exception {
+		var p = pedido(null, plano("Simples", 3000), null, "Maria Souza", "maria@exemplo.com", "52998224725", Instant.now());
+		var adm = admin();
+		var antes = corpo(adm.get("/api/admin/pedidos/" + p.getId()));
+		assertThat(antes.get("risco").isNull()).isTrue(); // ainda nao triado
+		assertThat(antes.get("tema").isNull()).isTrue();
+
+		jdbc.update("update pedido set risco = true, tema = 'luto' where id = ?", p.getId());
+
+		var depois = corpo(adm.get("/api/admin/pedidos/" + p.getId()));
+		assertThat(depois.get("risco").asBoolean()).isTrue();
+		assertThat(depois.get("tema").asString()).isEqualTo("luto");
 	}
 
 	@Test
@@ -268,6 +283,30 @@ class PedidosAdminTest extends PedidoWebTeste {
 				.containsExactlyInAnyOrder("nome", "email", "telefone", "idade", "sexo", "pedidoOracao");
 		assertThat(chaves(Navegador.JSON.readTree(diff))).containsExactly("campos");
 		assertThat(diff).doesNotContain("Maria").doesNotContain("Nova").doesNotContain("saúde").doesNotContain("11888880000");
+	}
+
+	@Test
+	void patchDoEmailDePedidoAguardandoConfirmacaoE409() throws Exception {
+		var em = relogio.instant();
+		var d = new Pedido.Dados(null, plano("Simples", 3000), null, 0, "Maria Souza", "maria@exemplo.com", "52998224725", "11999990000",
+				(short) 40, "feminino", "Pela minha família", em, null, "1", null);
+		var p = salvar(Pedido.freemium(d, hmac, em));
+		var adm = admin();
+
+		var res = adm.patch("/api/admin/pedidos/" + p.getId(), "{\"nome\":\"Maria de Souza\",\"email\":\"outra@exemplo.com\"}");
+		assertThat(res.statusCode()).as(res.body()).isEqualTo(409);
+		assertThat(corpo(res).get("codigo").asString()).isEqualTo("correcao_bloqueada");
+		assertThat(corpo(res).get("mensagemPastoral").asString())
+				.isEqualTo("Este pedido ainda aguarda a confirmação do e-mail. Peça para a pessoa fazer um novo pedido com o e-mail certo.");
+		var igual = pedidos.findById(p.getId()).orElseThrow();
+		assertThat(igual.getEmailHmac()).isEqualTo(p.getEmailHmac());
+		assertThat(corpo(adm.get("/api/admin/pedidos/" + p.getId())).get("email").asString()).isEqualTo("maria@exemplo.com");
+		assertThat(corpo(adm.get("/api/admin/pedidos/" + p.getId())).get("nome").asString()).as("nada mudou").isEqualTo("Maria Souza");
+
+		// os outros campos (e o mesmo e-mail) seguem corrigiveis
+		var outros = adm.patch("/api/admin/pedidos/" + p.getId(), "{\"nome\":\"Maria de Souza\",\"email\":\"maria@exemplo.com\"}");
+		assertThat(outros.statusCode()).as(outros.body()).isEqualTo(200);
+		assertThat(corpo(outros).get("nome").asString()).isEqualTo("Maria de Souza");
 	}
 
 	@Test

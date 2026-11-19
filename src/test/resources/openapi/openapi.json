@@ -38,6 +38,19 @@
         },
         "type" : "object"
       },
+      "Arrecadado" : {
+        "properties" : {
+          "arrecadadoCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "instituicaoId" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "AuditoriaDoLedgerAdmin" : {
         "properties" : {
           "achados" : {
@@ -147,6 +160,17 @@
           }
         },
         "required" : [ "email" ],
+        "type" : "object"
+      },
+      "Clamor" : {
+        "properties" : {
+          "texto" : {
+            "maxLength" : 2000,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "texto" ],
         "type" : "object"
       },
       "CobrancaDoPedido" : {
@@ -582,12 +606,23 @@
           "ativo" : {
             "type" : "boolean"
           },
+          "causa" : {
+            "type" : "string"
+          },
+          "custoUnidadeCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
           "id" : {
             "format" : "int64",
             "type" : "integer"
           },
           "logoUrl" : {
             "type" : "string"
+          },
+          "metaMensalCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
           },
           "nome" : {
             "type" : "string"
@@ -598,12 +633,22 @@
           },
           "temLogo" : {
             "type" : "boolean"
+          },
+          "unidade" : {
+            "type" : "string"
           }
         },
         "type" : "object"
       },
       "InstituicaoPublica" : {
         "properties" : {
+          "causa" : {
+            "type" : "string"
+          },
+          "custoUnidadeCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
           "id" : {
             "format" : "int64",
             "type" : "integer"
@@ -611,7 +656,14 @@
           "logoUrl" : {
             "type" : "string"
           },
+          "metaMensalCentavos" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
           "nome" : {
+            "type" : "string"
+          },
+          "unidade" : {
             "type" : "string"
           }
         },
@@ -693,22 +745,61 @@
         },
         "type" : "object"
       },
+      "Metas" : {
+        "properties" : {
+          "ate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "de" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "instituicoes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Arrecadado"
+            },
+            "type" : "array"
+          },
+          "percentual" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "MudancaDeInstituicao" : {
         "properties" : {
           "ativo" : {
-            "type" : "boolean"
+            "type" : "boolean",
+            "writeOnly" : true
+          },
+          "causa" : {
+            "type" : "string",
+            "writeOnly" : true
+          },
+          "custoUnidadeCentavos" : {
+            "format" : "int64",
+            "type" : "integer",
+            "writeOnly" : true
+          },
+          "metaMensalCentavos" : {
+            "format" : "int64",
+            "type" : "integer",
+            "writeOnly" : true
           },
           "nome" : {
-            "maxLength" : 120,
-            "minLength" : 0,
-            "pattern" : ".*\\S.*",
-            "type" : "string"
+            "type" : "string",
+            "writeOnly" : true
           },
           "ordem" : {
             "format" : "int32",
-            "maximum" : 32767,
-            "minimum" : 0,
-            "type" : "integer"
+            "type" : "integer",
+            "writeOnly" : true
+          },
+          "unidade" : {
+            "type" : "string",
+            "writeOnly" : true
           }
         },
         "type" : "object"
@@ -764,6 +855,21 @@
       },
       "NovaInstituicao" : {
         "properties" : {
+          "causa" : {
+            "maxLength" : 140,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "custoUnidadeCentavos" : {
+            "format" : "int64",
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "metaMensalCentavos" : {
+            "format" : "int64",
+            "minimum" : 1,
+            "type" : "integer"
+          },
           "nome" : {
             "maxLength" : 120,
             "minLength" : 0,
@@ -774,6 +880,11 @@
             "maximum" : 32767,
             "minimum" : 0,
             "type" : "integer"
+          },
+          "unidade" : {
+            "maxLength" : 40,
+            "minLength" : 0,
+            "type" : "string"
           }
         },
         "required" : [ "nome" ],
@@ -850,6 +961,12 @@
           "telefone" : {
             "maxLength" : 20,
             "minLength" : 0,
+            "type" : "string"
+          },
+          "tema" : {
+            "maxLength" : 20,
+            "minLength" : 0,
+            "pattern" : "luto|ansiedade|familia|saude|sustento|fe|injustica",
             "type" : "string"
           },
           "turnstileToken" : {
@@ -1171,6 +1288,9 @@
           "repasse" : {
             "$ref" : "#/components/schemas/RepasseDoPedido"
           },
+          "risco" : {
+            "type" : [ "boolean", "null" ]
+          },
           "sexo" : {
             "type" : [ "string", "null" ]
           },
@@ -1179,6 +1299,9 @@
             "type" : "string"
           },
           "telefone" : {
+            "type" : [ "string", "null" ]
+          },
+          "tema" : {
             "type" : [ "string", "null" ]
           },
           "tentativas" : {
@@ -1241,6 +1364,9 @@
           "status" : {
             "enum" : [ "AGUARDANDO_PAGAMENTO", "PAGO", "GERANDO_ORACAO", "ORACAO_GERADA", "ENVIADA", "AGUARDANDO_NOVA_TENTATIVA", "ERRO", "AGUARDANDO_CONFIRMACAO_EMAIL", "CONFIRMACAO_EXPIRADA" ],
             "type" : "string"
+          },
+          "tokenDeSenha" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -1293,6 +1419,9 @@
             "enum" : [ "AGUARDANDO_PAGAMENTO", "PAGO", "GERANDO_ORACAO", "ORACAO_GERADA", "ENVIADA", "AGUARDANDO_NOVA_TENTATIVA", "ERRO", "AGUARDANDO_CONFIRMACAO_EMAIL", "CONFIRMACAO_EXPIRADA" ],
             "type" : "string"
           },
+          "tema" : {
+            "type" : "string"
+          },
           "valorCentavos" : {
             "format" : "int64",
             "type" : "integer"
@@ -1300,12 +1429,30 @@
         },
         "type" : "object"
       },
+      "PedidoDeCadastro" : {
+        "properties" : {
+          "email" : {
+            "format" : "email",
+            "maxLength" : 254,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "nome" : {
+            "maxLength" : 120,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "turnstileToken" : {
+            "maxLength" : 2048,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "email", "nome" ],
+        "type" : "object"
+      },
       "PedidoDeExemplo" : {
         "properties" : {
-          "complexidade" : {
-            "enum" : [ "SIMPLES", "COM_VERSICULO", "COM_PROFECIA_E_VERSICULOS" ],
-            "type" : [ "string", "null" ]
-          },
           "idade" : {
             "format" : "int32",
             "maximum" : 120,
@@ -1324,10 +1471,6 @@
           },
           "sexo" : {
             "pattern" : "feminino|masculino|nao_informado|",
-            "type" : [ "string", "null" ]
-          },
-          "tipo" : {
-            "enum" : [ "COMUM", "GRATUITO", "VALOR_LIVRE" ],
             "type" : [ "string", "null" ]
           },
           "versaoId" : {
@@ -1828,6 +1971,14 @@
           "pedidosApagados" : {
             "format" : "int32",
             "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ResultadoDaTriagem" : {
+        "properties" : {
+          "risco" : {
+            "type" : [ "boolean", "null" ]
           }
         },
         "type" : "object"
@@ -4187,6 +4338,34 @@
         "tags" : [ "usuarios-admin-controller" ]
       }
     },
+    "/api/auth/cadastro" : {
+      "post" : {
+        "operationId" : "cadastrar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PedidoDeCadastro"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MensagemPastoral"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "cadastro-controller" ]
+      }
+    },
     "/api/auth/esqueci-senha" : {
       "post" : {
         "operationId" : "esqueci",
@@ -4595,6 +4774,24 @@
         "tags" : [ "catalogo-publico-controller" ]
       }
     },
+    "/api/metas" : {
+      "get" : {
+        "operationId" : "metas",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Metas"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "metas-controller" ]
+      }
+    },
     "/api/pedidos" : {
       "post" : {
         "operationId" : "criar",
@@ -4722,6 +4919,34 @@
           }
         },
         "tags" : [ "catalogo-publico-controller" ]
+      }
+    },
+    "/api/triagem" : {
+      "post" : {
+        "operationId" : "triar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Clamor"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResultadoDaTriagem"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "triagem-controller" ]
       }
     },
     "/api/webhooks/mercadopago" : {

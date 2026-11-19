@@ -1,4 +1,4 @@
-/** Oracao: prompts (padrao no codigo + versoes do admin), documentos de contexto, cliente da Claude e o pipeline na fila (gerar, enviar, reenviar, alerta, varredura). Depende de pedido, catalogo, pagamento e infra. */
+/** Oracao: prompts (padrao no codigo + versoes do admin), documentos de contexto, cliente da Claude e o pipeline na fila (gerar, enviar, reenviar, alerta, varredura). Depende de pedido, conta (link de ativacao), catalogo, pagamento e infra. */
 @ApplicationModule
 package me.clama.oracao;
 

@@ -1,0 +1,33 @@
+CLAMA.
+
+Paz e bem, {{ primeiro_nome }}.
+
+Sua oração foi escrita com carinho — que ela seja bálsamo nestes dias:
+
+{{ oracao }}
+
+---
+
+Guarde suas orações: crie sua senha no Clama
+
+{{ link_ativacao }}
+
+O link vale por 72 horas.
+
+---
+
+Compartilhar no WhatsApp:
+{{ whatsapp_share_url }}
+
+---
+
+"Perto está o Senhor dos que têm o coração quebrantado
+e salva os de espírito oprimido."
+— Salmo 34:18
+
+---
+
+clama.me
+
+Este email foi enviado com amor pelo Clama.
+Para contato: contato@clama.me

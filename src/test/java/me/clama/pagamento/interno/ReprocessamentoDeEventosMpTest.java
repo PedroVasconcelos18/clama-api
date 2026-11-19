@@ -74,7 +74,7 @@ class ReprocessamentoDeEventosMpTest {
 				returning id""", Long.class, "Pedido de Oração " + UUID.randomUUID());
 		var agora = Instant.now();
 		var d = new Pedido.Dados(null, plano, null, 3001L, "Maria Souza", "maria@exemplo.com", "52998224725", null, null, null,
-				"Pela família", agora, null, "1");
+				"Pela família", agora, null, "1", null);
 		var id = pedidos.saveAndFlush(Pedido.novo(d, hmac, agora)).getId();
 		jdbc.update("""
 				insert into cobranca (pedido_id, n, mp_pagamento_id, pix_copia_e_cola, expira_em, criada_em)

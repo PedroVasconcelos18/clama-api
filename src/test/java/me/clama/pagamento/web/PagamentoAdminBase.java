@@ -116,7 +116,7 @@ abstract class PagamentoAdminBase {
 				returning id""", Long.class, "Plano " + UUID.randomUUID());
 		var agora = Instant.now();
 		var d = new Pedido.Dados(null, plano, instituicao, valor, nome, "maria@exemplo.com", "52998224725", "11987654321", null, null,
-				"Pela família", agora, null, "1");
+				"Pela família", agora, null, "1", null);
 		return pedidos.saveAndFlush(Pedido.novo(d, hmac, agora)).getId();
 	}
 

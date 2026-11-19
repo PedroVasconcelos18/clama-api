@@ -24,14 +24,28 @@ class NovoPedidoAnotacoesTest {
 	void validaNomeCurtoELongoComOsTextosPastorais() {
 		try (var fabrica = Validation.buildDefaultValidatorFactory()) {
 			var v = fabrica.getValidator();
-			var curto = new NovoPedido("A", "a@b.com", "52998224725", null, null, null, null, null, null, null, true, null);
-			var longo = new NovoPedido("A".repeat(121), "a@b.com", "52998224725", null, null, null, null, null, null, null, true, null);
-			var ok = new NovoPedido("Maria", "a@b.com", "52998224725", null, null, null, null, null, null, null, true, null);
+			var curto = new NovoPedido("A", "a@b.com", "52998224725", null, null, null, null, null, null, null, true, null, null);
+			var longo = new NovoPedido("A".repeat(121), "a@b.com", "52998224725", null, null, null, null, null, null, null, true, null, null);
+			var ok = new NovoPedido("Maria", "a@b.com", "52998224725", null, null, null, null, null, null, null, true, null, null);
 			assertThat(v.validate(curto)).extracting(c -> c.getMessage())
 					.containsExactly("Conta um pouco de você no nome — pelo menos 2 letras.");
 			assertThat(v.validate(longo)).extracting(c -> c.getMessage())
 					.containsExactly("O nome pode ter no máximo 120 caracteres.");
 			assertThat(v.validate(ok)).isEmpty();
 		}
+	}
+
+	@Test
+	void temaForaDaListaEInvalido() {
+		try (var fabrica = Validation.buildDefaultValidatorFactory()) {
+			var v = fabrica.getValidator();
+			assertThat(v.validate(comTema("amor"))).hasSize(1);
+			assertThat(v.validate(comTema(null))).isEmpty();
+			assertThat(v.validate(comTema("saude"))).isEmpty();
+		}
+	}
+
+	private static NovoPedido comTema(String tema) {
+		return new NovoPedido("Maria", "a@b.com", "52998224725", null, null, null, null, null, null, null, true, null, tema);
 	}
 }

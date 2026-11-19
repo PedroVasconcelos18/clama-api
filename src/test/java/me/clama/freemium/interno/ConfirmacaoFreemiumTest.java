@@ -38,15 +38,14 @@ import tools.jackson.databind.JsonNode;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
 /**
- * A saga da confirmacao (D3, D4, D5) por HTTP e pelo servico: tudo numa transacao, o "definir senha" so no commit, e
- * a saga que desfaz nao deixa conta, bloqueio, e-mail nem link gasto (Review Focus 1, 2 e 4).
+ * A saga da confirmacao (D3, D4, D5) por HTTP e pelo servico: tudo numa transacao, sem e-mail de senha (o token vai na
+ * resposta, depois do commit), e a saga que desfaz nao deixa conta, bloqueio, e-mail nem link gasto (Review Focus 1, 2 e 4).
  */
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @Import({ BancoDeTeste.class, EmailDeTeste.class })
 class ConfirmacaoFreemiumTest {
 
 	static final String CPF = "529.982.247-25";
-	static final String SENHA = "Bem-vinda ao Clama — defina sua senha";
 	static final String INVALIDO = "Esse link não é mais válido. Faça um novo pedido.";
 	static final String EXPIRADO = "Esse link expirou. Faça um novo pedido pra receber sua oração grátis.";
 
@@ -131,7 +130,7 @@ class ConfirmacaoFreemiumTest {
 	// --- sucesso ---
 
 	@Test
-	void confirmaViraPagoCriaContaBloqueioEEnfileiraAGeracaoSoDepoisDoCommitVemOEmailDeSenha() throws Exception {
+	void confirmaViraPagoCriaContaBloqueioEEnfileiraAGeracaoEDevolveOTokenDeSenha() throws Exception {
 		var p = pendente(email);
 		var res = confirmar(anonimo(), p.token());
 
@@ -147,9 +146,10 @@ class ConfirmacaoFreemiumTest {
 		assertThat(jdbc.queryForObject("select email_hmac from freemium_bloqueio", String.class)).isEqualTo(hmac.email(email));
 		assertThat(contar("scheduled_tasks where task_name = 'gerar-oracao' and task_instance = '" + "gerar-oracao/" + p.pedido() + "'")).isOne();
 		assertThat(linkUsado(p.token())).isTrue();
-		var senha = caixa.aguardarPara(email, 1);
-		assertThat(senha).singleElement().satisfies(e -> assertThat(e.email().assunto()).isEqualTo(SENHA));
-		assertThat(caixa.para("contato@clama.me")).isEmpty();
+		assertThat(Navegador.json(res).get("tokenDeSenha").asString()).matches("[\\w-]{43}");
+		assertThat(contar("token_de_senha t join usuario u on u.id = t.usuario_id where u.email = '" + email
+				+ "' and t.finalidade = 'DEFINIR' and t.usado_em is null")).isOne();
+		semEmailAlgum(); // nenhum "definir senha" separado, nem alerta
 	}
 
 	// --- limiar do IP na confirmacao ---
@@ -270,7 +270,8 @@ class ConfirmacaoFreemiumTest {
 		// o link continua usavel: sem o bloqueio, confirma
 		jdbc.update("delete from freemium_bloqueio");
 		assertThat(confirmar(nav, p.token()).statusCode()).isEqualTo(200);
-		assertThat(caixa.aguardarPara(email, 1)).hasSize(1);
+		assertThat(contar("usuario where email = '" + email + "'")).isOne();
+		semEmailAlgum();
 	}
 
 	// --- concorrencia (Review Focus 2) ---
@@ -311,7 +312,7 @@ class ConfirmacaoFreemiumTest {
 			assertThat(contar("usuario where email = '" + email + "'")).isOne();
 			assertThat(contar("freemium_bloqueio")).isOne();
 			assertThat(contar("scheduled_tasks where task_name = 'gerar-oracao'")).isOne();
-			assertThat(caixa.aguardarPara(email, 1)).hasSize(1);
+			semEmailAlgum();
 			limpar(); // uma rodada por vez: o bloqueio da anterior nao pode barrar a seguinte
 			email = "frm-" + UUID.randomUUID() + "@exemplo.com";
 		}
@@ -335,9 +336,7 @@ class ConfirmacaoFreemiumTest {
 			assertThat(status(perdedor.pedido())).isEqualTo(StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL);
 			assertThat(linkUsado(perdedor.token())).isFalse();
 			assertThat(contar("pedido where status = 'PAGO'")).isOne();
-			assertThat(caixa.aguardarPara(email, 1)).hasSize(1);
-			esperarEnvios();
-			assertThat(caixa.para(email)).hasSize(1);
+			semEmailAlgum();
 			limpar(); // uma rodada por vez: o bloqueio da anterior nao pode barrar a seguinte
 			email = "frm-" + UUID.randomUUID() + "@exemplo.com";
 		}

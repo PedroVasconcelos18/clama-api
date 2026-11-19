@@ -62,7 +62,7 @@ class PurgaDePedidosDeOracaoTest {
 	UUID enviado(Long usuario, Duration enviadaHa) {
 		var agora = Instant.now();
 		var d = new Pedido.Dados(usuario, plano, null, 3000, "Maria Souza", "ppo-" + UUID.randomUUID() + "@exemplo.com", "52998224725", null,
-				(short) 40, "F", TEXTO, agora, null, "1");
+				(short) 40, "F", TEXTO, agora, null, "1", null);
 		var p = pedidos.saveAndFlush(Pedido.novo(d, hmac, agora));
 		p.confirmarPagamento(agora);
 		p.iniciarGeracao(agora);
@@ -91,7 +91,7 @@ class PurgaDePedidosDeOracaoTest {
 		var velho = enviado(conta.getId(), Duration.ofDays(30).plusSeconds(1));
 		var recente = enviado(conta.getId(), Duration.ofDays(30).minusSeconds(1));
 		var semEnvio = pedidos.saveAndFlush(Pedido.novo(new Pedido.Dados(conta.getId(), plano, null, 3000, "Ana", "ana@exemplo.com", "52998224725",
-				null, (short) 30, "F", TEXTO, Instant.now(), null, "1"), hmac, Instant.now())).getId();
+				null, (short) 30, "F", TEXTO, Instant.now(), null, "1", null), hmac, Instant.now())).getId();
 
 		assertThat(tarefa.executar(false)).isEqualTo("1 texto(s) de pedido apagados");
 
@@ -113,6 +113,20 @@ class PurgaDePedidosDeOracaoTest {
 			}
 		}
 		assertThat(achou).isTrue();
+	}
+
+	@Test
+	void purgaApagaORiscoJuntoComOTexto() {
+		var velho = enviado(null, Duration.ofDays(31));
+		jdbc.update("update pedido set risco = true where id = ?", velho);
+
+		assertThat(tarefa.executar(true)).isEqualTo("1 texto(s) de pedido seriam apagados (simulação)");
+		assertThat(pedido(velho).getRisco()).isTrue();
+
+		tarefa.executar(false);
+
+		assertThat(pedido(velho).getPedidoOracao()).isNull();
+		assertThat(pedido(velho).getRisco()).isNull();
 	}
 
 	@Test

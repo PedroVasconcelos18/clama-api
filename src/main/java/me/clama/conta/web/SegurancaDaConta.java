@@ -8,7 +8,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
-/** Login, logout e senha esquecida sao anonimos (com CSRF: o front faz um GET antes); o resto exige sessao. */
+/** Login, logout, cadastro e senha esquecida sao anonimos (com CSRF: o front faz um GET antes); o resto exige sessao. */
 @Configuration
 class SegurancaDaConta {
 
@@ -19,7 +19,7 @@ class SegurancaDaConta {
 				.securityMatcher("/api/auth/**", "/api/conta/**")
 				.authorizeHttpRequests(a -> a
 						.requestMatchers("/api/auth/login", "/api/auth/logout", "/api/auth/esqueci-senha",
-								"/api/auth/redefinicao-de-senha").permitAll()
+								"/api/auth/redefinicao-de-senha", "/api/auth/cadastro").permitAll()
 						.anyRequest().authenticated())
 				.build();
 	}

@@ -5,6 +5,7 @@ import java.util.UUID;
 import me.clama.infra.fila.Fila;
 import me.clama.infra.fila.TipoDeJob;
 import me.clama.pedido.GeracaoSolicitada;
+import me.clama.pedido.PedidoRegistrado;
 import me.clama.pedido.ReenvioSolicitado;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,9 +25,11 @@ class OuvinteDePedido {
 	private final JobGerarOracao gerar;
 	private final JobEnviarOracao enviar;
 	private final JobReenviarOracao reenviar;
+	private final JobTriarPedido triar;
 
-	OuvinteDePedido(Fila fila, JobGerarOracao gerar, JobEnviarOracao enviar, JobReenviarOracao reenviar) {
+	OuvinteDePedido(Fila fila, JobGerarOracao gerar, JobEnviarOracao enviar, JobReenviarOracao reenviar, JobTriarPedido triar) {
 		this.fila = fila;
+		this.triar = triar;
 		this.gerar = gerar;
 		this.enviar = enviar;
 		this.reenviar = reenviar;
@@ -35,6 +38,12 @@ class OuvinteDePedido {
 	@EventListener
 	void gerar(GeracaoSolicitada e) {
 		enfileirarOuAntecipar(gerar, e.pedidoId(), e.pedidoId());
+	}
+
+	/** Todo pedido novo e triado; em paralelo a geracao, que nao espera a triagem. */
+	@EventListener
+	void triar(PedidoRegistrado e) {
+		enfileirarOuAntecipar(triar, e.pedidoId(), e.pedidoId());
 	}
 
 	/**

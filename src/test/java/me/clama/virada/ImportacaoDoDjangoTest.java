@@ -178,7 +178,7 @@ class ImportacaoDoDjangoTest {
 	}
 
 	private String codigoDoFreemium(String email, String cpf) {
-		var n = new NovoPedido("Pessoa Nova", email, cpf, null, (short) 30, "feminino", "Pedido", null, null, null, true, "token");
+		var n = new NovoPedido("Pessoa Nova", email, cpf, null, (short) 30, "feminino", "Pedido", null, null, null, true, "token", null);
 		try {
 			freemium.submeter(n, "198.51.100.1");
 			return "aceito";

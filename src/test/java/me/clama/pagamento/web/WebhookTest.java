@@ -115,7 +115,7 @@ class WebhookTest {
 				returning id""", Long.class, "Pedido de Oração " + UUID.randomUUID());
 		var agora = Instant.now();
 		var d = new Pedido.Dados(null, plano, instituicao, valor, "Maria Souza", email, "52998224725", null, null, null,
-				"Pela família", agora, null, "1");
+				"Pela família", agora, null, "1", null);
 		return pedidos.saveAndFlush(Pedido.novo(d, hmac, agora)).getId();
 	}
 
@@ -302,7 +302,8 @@ class WebhookTest {
 				String.class))).as("so id, type, action e data.id").isEqualTo(Navegador.JSON.readTree("""
 						{"id": 1, "type": "payment", "action": "payment.updated", "data": {"id": "%d"}}""".formatted(PAG)));
 		assertThat(contar("select count(*) from cobranca where pedido_id = ? and paga_em is not null", id)).isEqualTo(1);
-		assertThat(caixa.aguardarPara("maria@exemplo.com", 1)).as("link de definir senha da conta nova").hasSize(1);
+		for (int i = 0; i < 500 && envio.pendentes() > 0; i++) Thread.sleep(10);
+		assertThat(caixa.para("maria@exemplo.com")).as("conta nova sem e-mail de senha: o link vai na oracao").isEmpty();
 		assertThat(caixa.para(ADMIN)).isEmpty();
 
 		// reentrega do mesmo id: nada de novo, nem GET

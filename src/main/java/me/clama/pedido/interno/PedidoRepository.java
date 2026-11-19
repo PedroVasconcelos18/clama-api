@@ -21,6 +21,9 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID>, org.sprin
 	@Query("select p from Pedido p where p.id = :id")
 	Optional<Pedido> travar(UUID id);
 
+	/** Limite de um gratuito por dia: so conta o gratuito da conta, nao o pago nem o freemium (sem usuario). */
+	boolean existsByUsuarioIdAndGratuitoTrueAndCriadoEmAfter(Long usuarioId, Instant desde);
+
 	/** O que o status publico le: sem PII, sem hidratar o {@code Pedido} (a oracao cifrada so sai por {@link #oracaoDe}). */
 	record Status(UUID id, me.clama.pedido.StatusPedido status, Long planoId, Long instituicaoId, long valorCentavos,
 			Instant criadoEm, String ultimoErro) {}
@@ -82,10 +85,10 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID>, org.sprin
 	@Query("select count(p) from Pedido p where p.enviadaEm < :antesDe and p.pedidoOracao is not null")
 	int contarTextosParaPurgar(Instant antesDe);
 
-	/** Zera o texto do pedido (a oracao fica). Irreversivel. */
+	/** Zera o texto do pedido e o risco que a triagem tirou dele (a oracao fica). Irreversivel. */
 	@Transactional
 	@Modifying(flushAutomatically = true, clearAutomatically = true)
-	@Query("update Pedido p set p.pedidoOracao = null where p.enviadaEm < :antesDe and p.pedidoOracao is not null")
+	@Query("update Pedido p set p.pedidoOracao = null, p.risco = null where p.enviadaEm < :antesDe and p.pedidoOracao is not null")
 	int purgarTextos(Instant antesDe);
 
 	@Query("select count(p) from Pedido p where p.status = me.clama.pedido.StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL and p.criadoEm < :antesDe")

@@ -67,7 +67,7 @@ class JobConfirmacaoFreemiumTest {
 
 	UUID pedido() {
 		return pedidos.criarFreemium(new NovoPedido("Maria Souza", email, "529.982.247-25", null, null, null, "Pela família", null, null,
-				null, true, null), "203.0.113.9");
+				null, true, null, null), "203.0.113.9");
 	}
 
 	String tokenDe(CaixaDeSaidaEmMemoria.Enviado e) {
@@ -159,7 +159,7 @@ class JobConfirmacaoFreemiumTest {
 
 	@Test
 	void submitEnfileiraEOJobDaFilaEnviaOEmail() {
-		var id = submit.submeter(new NovoPedido("Maria Souza", email, "529.982.247-25", null, null, null, null, null, null, null, true, null),
+		var id = submit.submeter(new NovoPedido("Maria Souza", email, "529.982.247-25", null, null, null, null, null, null, null, true, null, null),
 				"203.0.113.9");
 
 		var enviados = caixa.aguardarPara(email, 1);
@@ -185,7 +185,7 @@ class JobConfirmacaoFreemiumTest {
 		assertThat(caixa.enviados()).isEmpty();
 		assertThat(pedidos.resumo(id).orElseThrow().status()).isEqualTo(StatusPedido.AGUARDANDO_CONFIRMACAO_EMAIL);
 		assertThat(linhas(id)).as("1 tentativa + 3 retentativas, cada uma com seu link").isEqualTo(4);
-		assertThat(jdbc.queryForObject("select count(*) from scheduled_tasks where task_name <> 'confirmacao-freemium'", Integer.class))
+		assertThat(jdbc.queryForObject("select count(*) from scheduled_tasks where task_name not in ('confirmacao-freemium', 'triar-pedido')", Integer.class))
 				.as("nenhum job de alerta").isZero();
 	}
 }

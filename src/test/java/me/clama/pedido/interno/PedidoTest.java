@@ -23,7 +23,7 @@ class PedidoTest {
 
 	static Pedido novo(Long planoId, Long instituicaoId) {
 		return Pedido.novo(new Pedido.Dados(null, planoId, instituicaoId, 2000, "Maria", "maria@exemplo.com", "52998224725",
-				"11999990000", (short) 30, "F", "Pela minha familia", AGORA, "203.0.113.9", "2026-01"), HMAC, AGORA);
+				"11999990000", (short) 30, "F", "Pela minha familia", AGORA, "203.0.113.9", "2026-01", null), HMAC, AGORA);
 	}
 
 	/** Leva o pedido ao status por caminhos legitimos, para testar a transicao a partir dele. */
@@ -45,7 +45,7 @@ class PedidoTest {
 
 	static Pedido freemium() {
 		return Pedido.freemium(new Pedido.Dados(null, 1L, null, 0, "Ana", "ana@exemplo.com", "52998224725", null, null, null,
-				"Paz", AGORA, "203.0.113.9", "1"), HMAC, AGORA);
+				"Paz", AGORA, "203.0.113.9", "1", null), HMAC, AGORA);
 	}
 
 	/** Roda a acao em todo status fora de {@code permitidos}: todos devem recusar sem mexer no pedido. */
@@ -69,7 +69,7 @@ class PedidoTest {
 
 	@Test
 	void gratuitoNasceProntoParaGerar() {
-		var p = Pedido.gratuito(new Pedido.Dados(7L, 1L, null, 0, "Ana", "ana@exemplo.com", null, null, null, null, "Paz", AGORA, null, "2026-01"), HMAC, AGORA);
+		var p = Pedido.gratuito(new Pedido.Dados(7L, 1L, null, 0, "Ana", "ana@exemplo.com", null, null, null, null, "Paz", AGORA, null, "2026-01", null), HMAC, AGORA);
 		assertThat(p.getStatus()).isEqualTo(PAGO);
 		assertThat(p.isGratuito()).isTrue();
 		assertThat(p.getValorCentavos()).isZero();
@@ -85,7 +85,7 @@ class PedidoTest {
 		assertThat(p.getEmailHmac()).isEqualTo(HMAC.email("ana@exemplo.com"));
 		assertThat(p.getCpfHmac()).isEqualTo(HMAC.cpf("52998224725"));
 		assertThatThrownBy(() -> Pedido.freemium(new Pedido.Dados(null, 1L, null, 5, "Ana", "a@e.com", null, null, null, null,
-				"Paz", AGORA, null, "1"), HMAC, AGORA)).isInstanceOf(IllegalArgumentException.class);
+				"Paz", AGORA, null, "1", null), HMAC, AGORA)).isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
@@ -226,7 +226,7 @@ class PedidoTest {
 	@Test
 	void semCpfCpfHmacFicaNulo() {
 		for (var cpf : new String[] { null, "", "  " }) {
-			var p = Pedido.novo(new Pedido.Dados(null, 1L, null, 100, "A", "a@a.com", cpf, null, null, null, "t", AGORA, null, "2026-01"), HMAC, AGORA);
+			var p = Pedido.novo(new Pedido.Dados(null, 1L, null, 100, "A", "a@a.com", cpf, null, null, null, "t", AGORA, null, "2026-01", null), HMAC, AGORA);
 			assertThat(p.getCpfHmac()).isNull();
 		}
 	}
@@ -257,11 +257,11 @@ class PedidoTest {
 
 	@Test
 	void toStringNaoVazaPii() {
-		var d = new Pedido.Dados(null, 1L, null, 100, "Maria Secreta", "segredo@exemplo.com", "52998224725", "11999990000", null, null, "pedido intimo", AGORA, "203.0.113.9", "v");
+		var d = new Pedido.Dados(null, 1L, null, 100, "Maria Secreta", "segredo@exemplo.com", "52998224725", "11999990000", null, null, "pedido intimo", AGORA, "203.0.113.9", "v", null);
 		assertThat(d.toString()).doesNotContain("Secreta", "segredo", "52998224725", "intimo", "203.0");
 		var cob = new me.clama.pedido.PedidoCobravel(java.util.UUID.randomUUID(), AGORA_STATUS, 1, "Maria Secreta", "segredo@exemplo.com", "52998224725");
 		assertThat(cob.toString()).doesNotContain("Secreta", "segredo", "52998224725");
-		var dados = new me.clama.pedido.DadosParaOracao(java.util.UUID.randomUUID(), AGORA_STATUS, 1L, false, "Maria Secreta", "segredo@exemplo.com", null, null, "pedido intimo", "oracao intima", 0, null);
+		var dados = new me.clama.pedido.DadosParaOracao(java.util.UUID.randomUUID(), AGORA_STATUS, 1L, false, "Maria Secreta", "segredo@exemplo.com", null, null, "pedido intimo", 7L, null, "oracao intima", 0, null);
 		assertThat(dados.toString()).doesNotContain("Secreta", "segredo", "intimo");
 	}
 

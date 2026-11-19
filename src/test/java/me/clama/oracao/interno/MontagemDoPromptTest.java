@@ -3,22 +3,19 @@ package me.clama.oracao.interno;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.UUID;
-import me.clama.catalogo.Complexidade;
-import me.clama.catalogo.PlanoResumo;
-import me.clama.catalogo.TipoDePlano;
 import me.clama.pedido.DadosParaOracao;
 import me.clama.pedido.StatusPedido;
 import org.junit.jupiter.api.Test;
 
-/** INV:107: a mensagem do usuario no formato antigo; a instrucao segue o plano do pedido (tipo e complexidade). */
+/** A mensagem do usuario no formato antigo; desde a v2 a instrucao e a mesma para todos os planos (spec 8 P2). */
 class MontagemDoPromptTest {
 
 	static final Prompt PROMPT = new Prompt("Você é o Clama.", "Curta.", "Com versículo.", "Com profecia.", "Gratuita.");
 
 	@Test
 	void pedidoCompleto() {
-		assertThat(MontagemDoPrompt.mensagem(PROMPT, dados(false, "Maria Silva", "feminino", (short) 35,
-				"  Peço oração pela minha família.\n"), plano(Complexidade.COM_VERSICULO, TipoDePlano.COMUM))).isEqualTo("""
+		assertThat(MontagemDoPrompt.mensagem(PROMPT, dados("Maria Silva", "feminino", (short) 35, null,
+				"  Peço oração pela minha família.\n"))).isEqualTo("""
 				Com versículo.
 
 				Nome: Maria Silva
@@ -32,42 +29,36 @@ class MontagemDoPromptTest {
 	@Test
 	void opcionaisVazios() {
 		for (var sexo : new String[] { null, "" }) {
-			assertThat(MontagemDoPrompt.mensagem(PROMPT, dados(false, "Ana", sexo, sexo == null ? null : (short) 0," 　\t "),
-					plano(Complexidade.SIMPLES, TipoDePlano.COMUM)))
-					.isEqualTo("Curta.\n\nNome: Ana\nSexo: não informado\nIdade: não informada\n\nPedido: [pedido vazio]");
+			assertThat(MontagemDoPrompt.mensagem(PROMPT, dados("Ana", sexo, sexo == null ? null : (short) 0, null, " 　\t ")))
+					.isEqualTo("Com versículo.\n\nNome: Ana\nSexo: não informado\nIdade: não informada\n\nPedido: [pedido vazio]");
 		}
-		assertThat(MontagemDoPrompt.mensagem(PROMPT, dados(false, "Ana", "masculino", null, null),
-				plano(Complexidade.COM_PROFECIA_E_VERSICULOS, TipoDePlano.VALOR_LIVRE)))
-				.startsWith("Com profecia.\n\nNome: Ana\nSexo: masculino\n").endsWith("Pedido: [pedido vazio]");
+		assertThat(MontagemDoPrompt.mensagem(PROMPT, dados("Ana", "masculino", null, null, null)))
+				.startsWith("Com versículo.\n\nNome: Ana\nSexo: masculino\n").endsWith("Pedido: [pedido vazio]");
 	}
 
 	/** "Prefiro não informar" do formulario vai cru, como o build_prompt do Django manda em producao. */
 	@Test
 	void naoInformadoDoFormularioVaiCru() {
-		assertThat(MontagemDoPrompt.mensagem(PROMPT, dados(false, "Ana", "nao_informado", null, "paz"),
-				plano(Complexidade.SIMPLES, TipoDePlano.COMUM))).isEqualTo("Curta.\n\nNome: Ana\nSexo: nao_informado\nIdade: não informada\n\nPedido: paz");
+		assertThat(MontagemDoPrompt.mensagem(PROMPT, dados("Ana", "nao_informado", null, null, "paz")))
+				.isEqualTo("Com versículo.\n\nNome: Ana\nSexo: nao_informado\nIdade: não informada\n\nPedido: paz");
 	}
 
-	/** So o plano GRATUITO usa a instrucao gratuita, qualquer que seja a complexidade gravada nele. */
 	@Test
-	void planoGratuitoUsaAInstrucaoGratuita() {
-		assertThat(MontagemDoPrompt.mensagem(PROMPT, dados(true, "Ana", null, null, "paz"),
-				plano(Complexidade.COM_VERSICULO, TipoDePlano.GRATUITO))).startsWith("Gratuita.\n\nNome: Ana");
+	void usaSempreAInstrucaoComVersiculo() {
+		// a mensagem nao recebe mais o plano: gratuito ou pago, a instrucao e a mesma
+		assertThat(MontagemDoPrompt.mensagem(PROMPT, dados("Ana", null, null, null, "paz"))).startsWith(PROMPT.comVersiculo())
+				.doesNotContain(PROMPT.simples()).doesNotContain(PROMPT.gratuito());
 	}
 
-	/** Pedido tornado gratuito pelo admin recebe a oracao do plano escolhido: a marca gratuito nao muda o prompt. */
 	@Test
-	void marcaGratuitoNaoMudaOPrompt() {
-		assertThat(MontagemDoPrompt.mensagem(PROMPT, dados(true, "Ana", null, null, "paz"),
-				plano(Complexidade.COM_PROFECIA_E_VERSICULOS, TipoDePlano.COMUM))).startsWith("Com profecia.\n\n");
+	void temaEntraDepoisDaIdade() {
+		assertThat(MontagemDoPrompt.mensagem(PROMPT, dados("Ana", null, null, "luto", "paz")))
+				.contains("\nIdade: não informada\nTema: Luto\n\nPedido: ");
+		assertThat(MontagemDoPrompt.mensagem(PROMPT, dados("Ana", null, null, null, "paz"))).doesNotContain("Tema:");
 	}
 
-	static DadosParaOracao dados(boolean gratuito, String nome, String sexo, Short idade, String pedido) {
-		return new DadosParaOracao(UUID.randomUUID(), StatusPedido.PAGO, 1L, gratuito, nome, "maria@exemplo.com", idade, sexo,
-				pedido, null, 0, null);
-	}
-
-	static PlanoResumo plano(Complexidade c, TipoDePlano t) {
-		return new PlanoResumo(1L, "Plano", null, 3000, c, t);
+	static DadosParaOracao dados(String nome, String sexo, Short idade, String tema, String pedido) {
+		return new DadosParaOracao(UUID.randomUUID(), StatusPedido.PAGO, 1L, false, nome, "maria@exemplo.com", idade, sexo,
+				pedido, 7L, tema, null, 0, null);
 	}
 }

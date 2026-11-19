@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import me.clama.catalogo.Complexidade;
 import me.clama.catalogo.interno.CatalogoAdminServico;
 import me.clama.catalogo.interno.Instituicao;
@@ -43,10 +44,41 @@ class CatalogoAdminController {
 			@Min(0) @Max(Integer.MAX_VALUE) Long valorCentavos, Complexidade complexidade,
 			@Min(0) @Max(32767) Integer ordem, Boolean ativo) {}
 
-	record NovaInstituicao(@NotBlank @Size(max = 120) String nome, @Min(0) @Max(32767) Integer ordem) {}
+	record NovaInstituicao(@NotBlank @Size(max = 120) String nome, @Min(0) @Max(32767) Integer ordem,
+			@Size(max = 140) String causa, @Min(1) Long metaMensalCentavos, @Min(1) Long custoUnidadeCentavos,
+			@Size(max = 40) String unidade) {}
 
-	record MudancaDeInstituicao(@Size(max = 120) @Pattern(regexp = SO_BRANCOS) String nome,
-			@Min(0) @Max(32767) Integer ordem, Boolean ativo) {}
+	/**
+	 * Nome, ordem e ativo: nulo = deixa como esta. Os 4 campos de meta: ausente = deixa como esta, {@code null} explicito
+	 * = limpa, valor = define. Classe com setters (o Jackson so os chama quando o campo veio no JSON, nulo incluido);
+	 * a referencia nula do Optional e "ausente", Optional vazio e "limpar". {@code Optional} em record nao serve: o
+	 * Jackson 3 entrega Optional vazio tambem para o campo ausente.
+	 */
+	static class MudancaDeInstituicao {
+		@Size(max = 120) @Pattern(regexp = SO_BRANCOS) private String nome;
+		@Min(0) @Max(32767) private Integer ordem;
+		private Boolean ativo;
+		private Optional<@Size(max = 140) String> causa;
+		private Optional<@Min(1) Long> metaMensalCentavos;
+		private Optional<@Min(1) Long> custoUnidadeCentavos;
+		private Optional<@Size(max = 40) String> unidade;
+
+		public void setNome(String v) { nome = v; }
+		public void setOrdem(Integer v) { ordem = v; }
+		public void setAtivo(Boolean v) { ativo = v; }
+		public void setCausa(String v) { causa = Optional.ofNullable(v); }
+		public void setMetaMensalCentavos(Long v) { metaMensalCentavos = Optional.ofNullable(v); }
+		public void setCustoUnidadeCentavos(Long v) { custoUnidadeCentavos = Optional.ofNullable(v); }
+		public void setUnidade(String v) { unidade = Optional.ofNullable(v); }
+
+		String nome() { return nome; }
+		Integer ordem() { return ordem; }
+		Boolean ativo() { return ativo; }
+		Optional<String> causa() { return causa; }
+		Optional<Long> metaMensalCentavos() { return metaMensalCentavos; }
+		Optional<Long> custoUnidadeCentavos() { return custoUnidadeCentavos; }
+		Optional<String> unidade() { return unidade; }
+	}
 
 	private final CatalogoAdminServico servico;
 
@@ -83,13 +115,15 @@ class CatalogoAdminController {
 	@ResponseStatus(HttpStatus.CREATED)
 	InstituicaoAdmin criarInstituicao(@Valid @RequestBody NovaInstituicao c, Authentication auth) {
 		return InstituicaoAdmin.de(
-				servico.criarInstituicao(autor(auth), c.nome(), c.ordem() != null ? c.ordem() : 0), null);
+				servico.criarInstituicao(autor(auth), c.nome(), c.ordem() != null ? c.ordem() : 0, c.causa(),
+						c.metaMensalCentavos(), c.custoUnidadeCentavos(), c.unidade()), null);
 	}
 
 	@PatchMapping("/instituicoes/{id}")
 	InstituicaoAdmin alterarInstituicao(@PathVariable Long id, @Valid @RequestBody MudancaDeInstituicao c,
 			Authentication auth) {
-		var i = servico.alterarInstituicao(autor(auth), id, c.nome(), c.ordem(), c.ativo());
+		var i = servico.alterarInstituicao(autor(auth), id, c.nome(), c.ordem(), c.ativo(), c.causa(),
+				c.metaMensalCentavos(), c.custoUnidadeCentavos(), c.unidade());
 		return InstituicaoAdmin.de(i, servico.hashesDeLogo(List.of(id)).get(id));
 	}
 

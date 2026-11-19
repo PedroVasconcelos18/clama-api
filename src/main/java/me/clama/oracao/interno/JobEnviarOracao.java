@@ -3,8 +3,11 @@ package me.clama.oracao.interno;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import me.clama.conta.ContaApi;
 import me.clama.infra.email.Email;
 import me.clama.infra.email.EnviadorDeEmail;
 import me.clama.infra.email.ModelosDeEmail;
@@ -36,10 +39,12 @@ class JobEnviarOracao extends TipoDeJob<UUID> {
 	private final EnviadorDeEmail enviador;
 	private final JobAlertaAdmin alerta;
 	private final TransactionTemplate tx;
+	private final ContaApi conta;
 
 	JobEnviarOracao(PedidoApi pedidos, ModelosDeEmail modelos, EnviadorDeEmail enviador, JobAlertaAdmin alerta, TransactionTemplate tx,
-			@Value("${clama.oracao.espera-envio:30s}") Duration espera) {
+			ContaApi conta, @Value("${clama.oracao.espera-envio:30s}") Duration espera) {
 		super("enviar-oracao", UUID.class, politica(espera));
+		this.conta = conta;
 		this.pedidos = pedidos;
 		this.modelos = modelos;
 		this.enviador = enviador;
@@ -113,10 +118,16 @@ class JobEnviarOracao extends TipoDeJob<UUID> {
 		}
 	}
 
+	/**
+	 * Dono sem senha: modelo {@code oracao_ativar_conta}, com o link de ativacao (um token novo a cada tentativa, que
+	 * nao revoga os outros; a chave igual faz a Resend descartar o repetido). Senao, {@code oracao}.
+	 */
 	private Email email(DadosParaOracao d) {
 		var primeiro = primeiroNome(d.nome());
-		return modelos.montar(d.email(), "Sua oração chegou, " + primeiro, "oracao",
-				Map.of("primeiro_nome", primeiro, "oracao", d.oracao(), "whatsapp_share_url", whatsapp(d.oracao())));
+		var contexto = new HashMap<>(Map.of("primeiro_nome", primeiro, "oracao", d.oracao(), "whatsapp_share_url", whatsapp(d.oracao())));
+		var ativacao = d.usuarioId() == null ? Optional.<String>empty() : conta.linkDeAtivacao(d.usuarioId(), d.email());
+		ativacao.ifPresent(link -> contexto.put("link_ativacao", link));
+		return modelos.montar(d.email(), "Sua oração chegou, " + primeiro, ativacao.isPresent() ? "oracao_ativar_conta" : "oracao", contexto);
 	}
 
 	/** Primeira palavra do nome; "Amada" se vier vazio. */

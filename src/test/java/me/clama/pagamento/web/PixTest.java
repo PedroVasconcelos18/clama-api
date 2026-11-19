@@ -89,7 +89,7 @@ class PixTest {
 				returning id""", Long.class, "Pedido " + UUID.randomUUID());
 		var agora = Instant.now();
 		var d = new Pedido.Dados(null, plano, null, 3000, "Maria Souza", "maria@exemplo.com", cpf, null, null, null, "Pela família",
-				agora, null, "1");
+				agora, null, "1", null);
 		return pedidos.saveAndFlush(Pedido.novo(d, hmac, agora)).getId();
 	}
 

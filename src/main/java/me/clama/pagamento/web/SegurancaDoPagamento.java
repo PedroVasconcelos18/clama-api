@@ -31,6 +31,18 @@ class SegurancaDoPagamento {
 				.build();
 	}
 
+	/** Metas das instituicoes: leitura anonima e cacheavel, so GET, sem sessao (como o catalogo). */
+	@Bean
+	@Order(36)
+	SecurityFilterChain cadeiaDeMetas(HttpSecurity http, RespostasDeSeguranca respostas) throws Exception {
+		return SegurancaConfig.aplicarPadrao(http, respostas)
+				.securityMatcher("/api/metas")
+				.csrf(c -> c.disable())
+				.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				.authorizeHttpRequests(a -> a.requestMatchers(HttpMethod.GET, "/**").permitAll().anyRequest().denyAll())
+				.build();
+	}
+
 	@Bean
 	@Order(33)
 	SecurityFilterChain cadeiaDoWebhook(HttpSecurity http, RespostasDeSeguranca respostas, Environment env,

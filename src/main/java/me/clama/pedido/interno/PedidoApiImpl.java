@@ -167,6 +167,12 @@ class PedidoApiImpl implements PedidoApi {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
+	public Optional<Long> donoDe(UUID id) {
+		return pedidos.findById(id).map(Pedido::getUsuarioId);
+	}
+
+	@Override
 	@Transactional(propagation = Propagation.MANDATORY)
 	public PedidoCobravel travarParaCobranca(UUID id) {
 		var p = travado(id);
@@ -211,7 +217,7 @@ class PedidoApiImpl implements PedidoApi {
 	public DadosParaOracao dadosParaOracao(UUID id) {
 		var p = pedidos.findById(id).orElseThrow(PedidoNaoEncontradoException::new);
 		return new DadosParaOracao(p.getId(), p.getStatus(), p.getPlanoId(), p.isGratuito(), p.getNome(), p.getEmail(),
-				p.getIdade(), p.getSexo(), p.getPedidoOracao(), p.getOracao(), p.getTentativas(), p.getUltimoErro());
+				p.getIdade(), p.getSexo(), p.getPedidoOracao(), p.getUsuarioId(), p.getTema(), p.getOracao(), p.getTentativas(), p.getUltimoErro());
 	}
 
 	@Override
@@ -232,6 +238,11 @@ class PedidoApiImpl implements PedidoApi {
 	@Override
 	public void falhar(UUID id, String motivo) {
 		mudar(id, p -> p.falhar(motivo, relogio.instant()));
+	}
+
+	@Override
+	public void registrarTriagem(UUID id, boolean risco) {
+		mudar(id, p -> p.registrarTriagem(risco));
 	}
 
 	@Override
@@ -291,6 +302,8 @@ class PedidoApiImpl implements PedidoApi {
 			m.put("idade", p.getIdade());
 			m.put("sexo", p.getSexo());
 			m.put("pedidoOracao", p.getPedidoOracao());
+			m.put("tema", p.getTema());
+			m.put("risco", p.getRisco());
 			m.put("oracao", p.getOracao());
 			var consentimento = new LinkedHashMap<String, Object>();
 			consentimento.put("em", p.getConsentidoEm());

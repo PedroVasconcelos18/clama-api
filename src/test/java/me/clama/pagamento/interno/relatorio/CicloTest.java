@@ -16,6 +16,13 @@ class CicloTest {
 	}
 
 	@Test
+	void cicloEmCursoViraNoDia28() {
+		assertThat(Ciclo.emCurso(LocalDate.parse("2026-11-27"))).isEqualTo(new Ciclo(LocalDate.parse("2026-10-28"), LocalDate.parse("2026-11-27")));
+		assertThat(Ciclo.emCurso(LocalDate.parse("2026-11-28"))).isEqualTo(new Ciclo(LocalDate.parse("2026-11-28"), LocalDate.parse("2026-12-27")));
+		assertThat(Ciclo.emCurso(LocalDate.parse("2026-12-31"))).isEqualTo(new Ciclo(LocalDate.parse("2026-12-28"), LocalDate.parse("2027-01-27")));
+	}
+
+	@Test
 	void noDia28OuDepoisFechaOCicloQueTerminaNo27DoMesCorrente() {
 		ciclo("2026-11-28", "2026-10-28", "2026-11-27");
 		ciclo("2026-11-30", "2026-10-28", "2026-11-27");

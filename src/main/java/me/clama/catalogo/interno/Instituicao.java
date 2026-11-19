@@ -18,6 +18,10 @@ public class Instituicao {
 	private String nome;
 	private int ordem;
 	private boolean ativo;
+	private String causa;
+	private Long metaMensalCentavos;
+	private Long custoUnidadeCentavos;
+	private String unidade;
 
 	protected Instituicao() {}
 
@@ -33,6 +37,18 @@ public class Instituicao {
 	public String getNome() { return nome; }
 	public int getOrdem() { return ordem; }
 	public boolean isAtivo() { return ativo; }
+
+	public String getCausa() { return causa; }
+	public Long getMetaMensalCentavos() { return metaMensalCentavos; }
+	public Long getCustoUnidadeCentavos() { return custoUnidadeCentavos; }
+	public String getUnidade() { return unidade; }
+
+	public void definirMeta(String causa, Long metaMensalCentavos, Long custoUnidadeCentavos, String unidade) {
+		this.causa = causa;
+		this.metaMensalCentavos = metaMensalCentavos;
+		this.custoUnidadeCentavos = custoUnidadeCentavos;
+		this.unidade = unidade;
+	}
 
 	public void renomear(String nome) { this.nome = nome; }
 	public void reordenar(int ordem) { this.ordem = ordem; }

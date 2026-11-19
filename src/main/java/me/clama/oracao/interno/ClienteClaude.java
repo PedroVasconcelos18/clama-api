@@ -145,10 +145,26 @@ public class ClienteClaude {
 		return chamar(sistema, mensagem, List.of(), 1).texto();
 	}
 
-	private Resposta chamar(String sistema, String mensagem, List<String> fileIds, int tentativas) {
+	/**
+	 * Classificacao curta (triagem de crise): uma tentativa so, sem as retentativas do SDK e com o {@code timeout} dado
+	 * (a tela e uma thread da fila esperam por ela), com o modelo e o teto dados, system sem {@code cache_control}, sem
+	 * documentos e sem {@code thinking}. Devolve o texto ou lanca {@link Falha}. {@code texto} e o do pedido: nunca vai
+	 * para o log.
+	 */
+	public String classificar(String sistema, String texto, String modelo, long maxTokens, Duration timeout) {
+		exigirChave();
+		return enviar(cliente.withOptions(o -> o.maxRetries(0).timeout(timeout)),
+				MessageCreateParams.builder().model(modelo).maxTokens(maxTokens).system(sistema).addUserMessage(texto).build(), 1).texto();
+	}
+
+	private void exigirChave() {
 		if (cliente == null) {
 			throw new Indisponivel("ANTHROPIC_API_KEY não configurada: geração de oração indisponível", null);
 		}
+	}
+
+	private Resposta chamar(String sistema, String mensagem, List<String> fileIds, int tentativas) {
+		exigirChave();
 		var builder = MessageCreateParams.builder().model(props.modelo()).maxTokens(props.maxTokens())
 				.systemOfTextBlockParams(List.of(TextBlockParam.builder().text(sistema).cacheControl(EFEMERO).build()));
 		if (fileIds.isEmpty()) {
@@ -163,25 +179,30 @@ public class ClienteClaude {
 			blocos.add(ContentBlockParam.ofText(TextBlockParam.builder().text(mensagem).build()));
 			builder.addUserMessageOfContentBlockParams(blocos);
 		}
-		var params = builder.build();
+		return enviar(cliente, builder.build(), tentativas);
+	}
+
+	/** A chamada com a nossa retentativa e a classificacao das falhas; modelo e teto nos logs saem dos {@code params}. */
+	private Resposta enviar(AnthropicClient cliente, MessageCreateParams params, int tentativas) {
+		var modelo = params.model().asString();
 		for (int tentativa = 1;; tentativa++) {
 			var inicio = System.nanoTime();
 			Indisponivel falha;
 			boolean retentavel;
 			try {
-				return texto(cliente.messages().create(params), tentativa, inicio);
+				return texto(cliente.messages().create(params), tentativa, inicio, modelo, params.maxTokens());
 			} catch (Falha e) {
 				throw e;
 			} catch (AnthropicInvalidDataException e) {
 				throw new Falha("Resposta da Claude fora do formato", e);
 			} catch (AnthropicIoException e) {
-				LOG.warn("Claude falhou (event=claude_request, model={}, error=io, attempt={}, duration_ms={})", props.modelo(),
+				LOG.warn("Claude falhou (event=claude_request, model={}, error=io, attempt={}, duration_ms={})", modelo,
 						tentativa, ms(inicio));
 				falha = new Indisponivel("Claude inacessível (rede ou timeout)", e);
 				retentavel = true;
 			} catch (AnthropicServiceException e) {
 				var status = e.statusCode();
-				LOG.warn("Claude falhou (event=claude_request, model={}, status={}, type={}, attempt={}, duration_ms={})", props.modelo(),
+				LOG.warn("Claude falhou (event=claude_request, model={}, status={}, type={}, attempt={}, duration_ms={})", modelo,
 						status, e.errorType().map(Object::toString).orElse(null), tentativa, ms(inicio));
 				if (semCredito(e)) throw new CreditosEsgotados(e);
 				if (status == 400 || status == 404 || status == 413 || status == 422) {
@@ -190,7 +211,7 @@ public class ClienteClaude {
 				falha = new Indisponivel("Claude indisponível (HTTP " + status + ")", e);
 				retentavel = status == 529;
 			} catch (RuntimeException e) { // AnthropicException e o que mais o SDK lancar: nunca sai sem classificar
-				LOG.warn("Claude falhou (event=claude_request, model={}, error={}, attempt={}, duration_ms={})", props.modelo(),
+				LOG.warn("Claude falhou (event=claude_request, model={}, error={}, attempt={}, duration_ms={})", modelo,
 						e.getClass().getSimpleName(), tentativa, ms(inicio));
 				throw new Falha("Erro inesperado do SDK da Claude", e);
 			}
@@ -267,15 +288,15 @@ public class ClienteClaude {
 	}
 
 	/** Primeiro bloco tem de ser texto; tokens e cache no log, sem PII (o input nao e logado). */
-	private Resposta texto(Message m, int tentativa, long inicio) {
+	private Resposta texto(Message m, int tentativa, long inicio, String modelo, long maxTokens) {
 		var u = m.usage();
 		LOG.info("Claude ok (event=claude_request, model={}, attempt={}, duration_ms={}, stop_reason={}, output_tokens={}, "
-				+ "cache_creation_tokens={}, cache_read_tokens={})", props.modelo(), tentativa, ms(inicio),
+				+ "cache_creation_tokens={}, cache_read_tokens={})", modelo, tentativa, ms(inicio),
 				m.stopReason().map(Object::toString).orElse(null), u.outputTokens(), u.cacheCreationInputTokens().orElse(null),
 				u.cacheReadInputTokens().orElse(null));
 		if (m.stopReason().filter(StopReason.MAX_TOKENS::equals).isPresent()) {
-			LOG.warn("Claude parou no max_tokens: oracao possivelmente cortada (event=claude_max_tokens, model={}, max_tokens={})",
-					props.modelo(), props.maxTokens());
+			LOG.warn("Claude parou no max_tokens: resposta possivelmente cortada (event=claude_max_tokens, model={}, max_tokens={})",
+					modelo, maxTokens);
 		}
 		if (m.content().isEmpty() || !m.content().get(0).isText()) {
 			throw new Falha("Resposta da Claude sem texto no primeiro bloco", null);

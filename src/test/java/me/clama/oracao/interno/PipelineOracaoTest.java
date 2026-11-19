@@ -107,7 +107,7 @@ class PipelineOracaoTest {
 				returning id""", Long.class, "Oração Simples " + UUID.randomUUID());
 		var agora = Instant.now();
 		var d = new Pedido.Dados(null, plano, null, 3000, "Maria Souza", DOADORA, "52998224725", "11999990000", (short) 40,
-				"feminino", "Pela família", agora, null, "1");
+				"feminino", "Pela família", agora, null, "1", null);
 		return pedidos.saveAndFlush(Pedido.novo(d, hmac, agora)).getId();
 	}
 

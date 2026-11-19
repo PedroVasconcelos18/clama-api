@@ -105,7 +105,7 @@ class PedidoRepositoryTest {
 	@Test
 	void usuarioApagadoSoltaOVinculo() {
 		jdbc.update("insert into usuario (id, email, email_canonico, nome_completo, papel, ativo, criado_em) values (987654, 'x@x.com', 'x@x.com', 'X', 'CLIENTE', true, now())");
-		var p = Pedido.novo(new Pedido.Dados(987654L, plano(), null, 100, "A", "a@a.com", null, null, null, null, "t", java.time.Instant.now(), null, "2026-01"), PedidoTest.HMAC, PedidoTest.AGORA);
+		var p = Pedido.novo(new Pedido.Dados(987654L, plano(), null, 100, "A", "a@a.com", null, null, null, null, "t", java.time.Instant.now(), null, "2026-01", null), PedidoTest.HMAC, PedidoTest.AGORA);
 		pedidos.saveAndFlush(p);
 		jdbc.update("delete from usuario where id = 987654");
 		em.clear();
@@ -138,7 +138,7 @@ class PedidoRepositoryTest {
 	@Test
 	void semCpfGravaCpfHmacNulo() {
 		var p = pedidos.saveAndFlush(Pedido.novo(new Pedido.Dados(null, plano(), null, 100, "A", "a@a.com", null, null, null, null, "t",
-				PedidoTest.AGORA, null, "2026-01"), PedidoTest.HMAC, PedidoTest.AGORA));
+				PedidoTest.AGORA, null, "2026-01", null), PedidoTest.HMAC, PedidoTest.AGORA));
 		assertThat(coluna(p.getId(), "cpf_hmac")).isNull();
 	}
 

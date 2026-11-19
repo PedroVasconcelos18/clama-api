@@ -1,6 +1,7 @@
 package me.clama.pedido.interno;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import me.clama.catalogo.CatalogoApi;
@@ -11,6 +12,7 @@ import me.clama.infra.formato.Dinheiro;
 import me.clama.infra.web.ErroDeNegocio;
 import me.clama.pedido.GeracaoSolicitada;
 import me.clama.pedido.NovoPedido;
+import me.clama.pedido.PedidoRegistrado;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
@@ -61,16 +63,20 @@ public class CriacaoDePedido {
 	public Pedido criarGratuito(Long usuarioId, NovoPedido n, String ip) {
 		var plano = catalogo.planoGratuito();
 		var agora = relogio.instant();
-		var p = pedidos.saveAndFlush(Pedido.gratuito(dados(usuarioId, plano.id(), null, 0, n, ip), hmac, agora));
+		if (pedidos.existsByUsuarioIdAndGratuitoTrueAndCriadoEmAfter(usuarioId, agora.minus(Duration.ofHours(24)))) {
+			throw new ErroDeNegocio(HttpStatus.TOO_MANY_REQUESTS, "gratuito_diario", "Limite diário de orações gratuitas.",
+					"Você já recebeu uma oração gratuita nas últimas 24 horas. Volte amanhã para pedir outra — estamos com você.");
+		}
+		var p = registrar(Pedido.gratuito(dados(usuarioId, plano.id(), null, 0, n, ip), hmac, agora));
 		eventos.publishEvent(new GeracaoSolicitada(p.getId()));
 		return p;
 	}
 
-	/** Freemium: plano gratuito (503 se faltar), AGUARDANDO_CONFIRMACAO_EMAIL; sem conta e sem evento. */
+	/** Freemium: plano gratuito (503 se faltar), AGUARDANDO_CONFIRMACAO_EMAIL; sem conta e sem {@link GeracaoSolicitada}. */
 	@Transactional
 	public Pedido criarFreemium(NovoPedido n, String ip) {
 		var plano = catalogo.planoGratuito();
-		return pedidos.saveAndFlush(Pedido.freemium(dados(null, plano.id(), null, 0, n, ip), hmac, relogio.instant()));
+		return registrar(Pedido.freemium(dados(null, plano.id(), null, 0, n, ip), hmac, relogio.instant()));
 	}
 
 	private Pedido pago(Long usuarioId, NovoPedido n, Long planoEscolhido, String ip) {
@@ -90,18 +96,27 @@ public class CriacaoDePedido {
 				erros.add(new ErroDeCampo("valorCentavos", "O valor mínimo para este plano é " + Dinheiro.reais(plano.valorCentavos()) + "."));
 			}
 		}
-		if (n.instituicao() != null && catalogo.instituicaoAtiva(n.instituicao()).isEmpty()) {
+		if (n.instituicao() == null) {
+			erros.add(new ErroDeCampo("instituicao", "Escolha a instituição que vai receber parte da sua contribuição."));
+		} else if (catalogo.instituicaoAtiva(n.instituicao()).isEmpty()) {
 			erros.add(new ErroDeCampo("instituicao", "Não encontramos essa instituição. Escolha uma da lista, por favor."));
 		}
 		if (!erros.isEmpty()) throw dadosInvalidos(erros);
 		if (plano == null) plano = catalogo.inferirPlano(n.valorCentavos());
-		return pedidos.saveAndFlush(Pedido.novo(dados(usuarioId, plano.id(), n.instituicao(), n.valorCentavos(), n, ip), hmac, relogio.instant()));
+		return registrar(Pedido.novo(dados(usuarioId, plano.id(), n.instituicao(), n.valorCentavos(), n, ip), hmac, relogio.instant()));
+	}
+
+	/** Grava e publica {@link PedidoRegistrado} na mesma transacao (o {@code oracao} enfileira a triagem de crise). */
+	private Pedido registrar(Pedido novo) {
+		var p = pedidos.saveAndFlush(novo);
+		eventos.publishEvent(new PedidoRegistrado(p.getId()));
+		return p;
 	}
 
 	private Pedido.Dados dados(Long usuarioId, Long planoId, Long instituicaoId, long valor, NovoPedido n, String ip) {
 		var cpf = n.cpfCnpj().replaceAll("\\D", ""); // so digitos: o que o provedor de pagamento espera e o HMAC usa
 		return new Pedido.Dados(usuarioId, planoId, instituicaoId, valor, n.nome(), n.email(), cpf, n.telefone(), n.idade(),
-				n.sexo(), n.pedidoOracao(), relogio.instant(), ip, POLITICA_VERSAO);
+				n.sexo(), n.pedidoOracao(), relogio.instant(), ip, POLITICA_VERSAO, n.tema());
 	}
 
 	private static ErroDeNegocio dadosInvalidos(List<ErroDeCampo> erros) {

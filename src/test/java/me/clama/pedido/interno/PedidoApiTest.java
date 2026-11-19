@@ -45,7 +45,7 @@ class PedidoApiTest {
 	}
 
 	private Pedido novo(String email) {
-		return pedidos.saveAndFlush(Pedido.novo(new Pedido.Dados(null, planoId(), null, 2000, "Maria Souza", email, "52998224725", null, null, null, "Pela familia", Instant.now(), "203.0.113.9", "2026-01"), PedidoTest.HMAC, Instant.now()));
+		return pedidos.saveAndFlush(Pedido.novo(new Pedido.Dados(null, planoId(), null, 2000, "Maria Souza", email, "52998224725", null, null, null, "Pela familia", Instant.now(), "203.0.113.9", "2026-01", null), PedidoTest.HMAC, Instant.now()));
 	}
 
 	private Long planoId() {
@@ -98,7 +98,7 @@ class PedidoApiTest {
 	@Test
 	void pedidoDeContaLogadaMantemOVinculo() {
 		var u = tx.execute(s -> usuarios.saveAndFlush(me.clama.conta.interno.Usuario.novo("doador-x-" + UUID.randomUUID() + "@exemplo.com", "Fulano", me.clama.conta.interno.Papel.CLIENTE, Instant.now())));
-		var p = pedidos.saveAndFlush(Pedido.novo(new Pedido.Dados(u.getId(), planoId(), null, 2000, "Fulano", "outro-" + UUID.randomUUID() + "@exemplo.com", null, null, null, null, "t", Instant.now(), null, "2026-01"), PedidoTest.HMAC, Instant.now()));
+		var p = pedidos.saveAndFlush(Pedido.novo(new Pedido.Dados(u.getId(), planoId(), null, 2000, "Fulano", "outro-" + UUID.randomUUID() + "@exemplo.com", null, null, null, null, "t", Instant.now(), null, "2026-01", null), PedidoTest.HMAC, Instant.now()));
 		api.confirmarPagamento(p.getId());
 		assertThat(pedidos.findById(p.getId()).orElseThrow().getUsuarioId()).isEqualTo(u.getId());
 		jdbc.update("delete from pedido");
@@ -225,7 +225,7 @@ class PedidoApiTest {
 	// ---- freemium ----
 
 	private static me.clama.pedido.NovoPedido corpoFreemium(String email, String cpf) {
-		return new me.clama.pedido.NovoPedido("Ana Freemium", email, cpf, null, null, null, "Paz", null, null, null, true, null);
+		return new me.clama.pedido.NovoPedido("Ana Freemium", email, cpf, null, null, null, "Paz", null, null, null, true, null, null);
 	}
 
 	private UUID freemium(String email) {
@@ -246,7 +246,7 @@ class PedidoApiTest {
 		assertThat(p.getPlanoId()).isEqualTo(jdbc.queryForObject("select id from plano where tipo = 'GRATUITO'", Long.class));
 		assertThat(usuarios.findByEmail(email)).isEmpty();
 		assertThat(eventos.stream(GeracaoSolicitada.class)).isEmpty();
-		assertThat(jdbc.queryForObject("select count(*) from scheduled_tasks", Integer.class)).isZero();
+		assertThat(jdbc.queryForList("select task_instance from scheduled_tasks", String.class)).containsExactly("triar-pedido/" + id); // so a triagem
 	}
 
 	@Test

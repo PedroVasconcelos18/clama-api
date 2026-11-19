@@ -41,6 +41,9 @@ public interface PedidoApi {
 
 	Optional<PedidoResumo> resumo(UUID id);
 
+	/** A conta dona do pedido; vazio se o pedido nao existe ou nao tem dono. */
+	Optional<Long> donoDe(UUID id);
+
 	/** Em lote e sem PII (nem decifra nada): ids inexistentes ficam de fora. */
 	Map<UUID, PedidoResumo> resumos(Collection<UUID> ids);
 
@@ -81,6 +84,9 @@ public interface PedidoApi {
 	/** {@code motivo}: codigo curto ({@code credit_balance}, {@code pedido_preso}, {@code falha_envio}), nunca mensagem de excecao. */
 	void falhar(UUID id, String motivo);
 
+	/** Resultado da triagem de crise ({@code pedido.risco}); nao muda o status. */
+	void registrarTriagem(UUID id, boolean risco);
+
 	/** Envio concluido; repetir em ENVIADA (reenvio) nao muda o status. */
 	void marcarEnviado(UUID id);
 
@@ -103,7 +109,7 @@ public interface PedidoApi {
 
 	/**
 	 * Tudo decifrado de cada pedido, em maps (camelCase, datas {@code Instant}): id, criadoEm, status, plano,
-	 * instituicao, valorCentavos, gratuito, nome, email, cpfCnpj, telefone, idade, sexo, pedidoOracao, oracao e
+	 * instituicao, valorCentavos, gratuito, nome, email, cpfCnpj, telefone, idade, sexo, pedidoOracao, tema, risco, oracao e
 	 * consentimento {em, versao, ip}. Nunca logar o resultado.
 	 */
 	List<Map<String, Object>> exportar(Collection<UUID> ids);

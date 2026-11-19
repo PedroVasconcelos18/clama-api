@@ -111,7 +111,7 @@ abstract class LgpdBase {
 	UUID pedido(String email, Long usuarioId, Long plano, Long instituicao) {
 		var agora = Instant.now();
 		var d = new Pedido.Dados(usuarioId, plano, instituicao, 3000, "Maria Souza " + RASTRO, email, "52998224725", "11987654321",
-				(short) 41, "F", "Pela minha mae Joana " + RASTRO, agora, IP_CONSENTIMENTO, "1");
+				(short) 41, "F", "Pela minha mae Joana " + RASTRO, agora, IP_CONSENTIMENTO, "1", null);
 		return pedidos.saveAndFlush(Pedido.novo(d, hmac, agora)).getId();
 	}
 

@@ -141,6 +141,11 @@ clama:
         saida: 15.00
         cache-escrita: 3.75
         cache-leitura: 0.30
+  triagem:
+    # triagem de crise (RISCO / SEM_RISCO): o mesmo modelo da oracao; trocar por um menor e decisao do Pedro
+    modelo: ${clama.oracao.modelo}
+    max-tokens: 256
+    timeout: 10s # uma tentativa so, sem as retentativas do SDK: a tela do clamor e uma thread da fila esperam
   freemium:
     limiar-ip: 3 # bloqueios do mesmo IP na janela (inclusivo) barram o submit
     janela-ip: 1h

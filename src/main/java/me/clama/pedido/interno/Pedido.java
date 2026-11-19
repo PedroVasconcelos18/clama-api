@@ -19,6 +19,7 @@ import java.util.UUID;
 import me.clama.infra.cripto.CampoCifrado;
 import me.clama.infra.cripto.HmacDeIdentificador;
 import me.clama.pedido.StatusPedido;
+import me.clama.infra.web.ErroDeNegocio;
 import me.clama.pedido.TransicaoInvalidaException;
 import org.hibernate.annotations.DynamicUpdate;
 
@@ -34,7 +35,7 @@ public class Pedido {
 	/** Dados de um pedido novo. O {@code toString} nao imprime nada (e quase tudo PII). */
 	public record Dados(Long usuarioId, Long planoId, Long instituicaoId, long valorCentavos, String nome, String email,
 			String cpfCnpj, String telefone, Short idade, String sexo, String pedidoOracao, Instant consentidoEm,
-			String consentimentoIp, String consentimentoVersao) {
+			String consentimentoIp, String consentimentoVersao, String tema) {
 		@Override
 		public String toString() {
 			return "Pedido.Dados[...]";
@@ -73,12 +74,16 @@ public class Pedido {
 
 	private Short idade;
 	private String sexo;
+	private String tema; // categoria fixa, nao texto livre: fica em claro
 
 	@Convert(converter = CampoCifrado.class)
 	private String pedidoOracao;
 
 	@Convert(converter = CampoCifrado.class)
 	private String oracao;
+
+	/** Triagem de crise; nulo enquanto nao triado. Sai do texto do pedido: some com ele (purga, anonimizacao). */
+	private Boolean risco;
 
 	private Instant consentidoEm;
 	private String consentimentoIp;
@@ -112,6 +117,7 @@ public class Pedido {
 		p.telefone = d.telefone();
 		p.idade = d.idade();
 		p.sexo = d.sexo();
+		p.tema = d.tema();
 		p.pedidoOracao = d.pedidoOracao();
 		p.consentidoEm = d.consentidoEm();
 		p.consentimentoIp = d.consentimentoIp();
@@ -213,14 +219,27 @@ public class Pedido {
 		return c;
 	}
 
+	/** Resultado da triagem de crise. Nao e transicao: status e {@code atualizadoEm} ficam. */
+	public void registrarTriagem(boolean risco) {
+		this.risco = risco;
+	}
+
 	/** Troca o e-mail e recalcula o hash de busca. */
 	public void alterarEmail(String email, HmacDeIdentificador hmac) {
 		this.email = email;
 		this.emailHmac = hmac.email(email);
 	}
 
-	/** Correcao de dados pelo admin; nulo = deixa. Devolve os nomes dos campos que mudaram de fato. O status nao se toca. */
+	/**
+	 * Correcao de dados pelo admin; nulo = deixa. Devolve os nomes dos campos que mudaram de fato. O status nao se toca.
+	 * Freemium pendente nao troca de e-mail: a confirmacao vincularia a conta do e-mail novo e devolveria o token de
+	 * senha dela a quem tem o link (409 {@code correcao_bloqueada}). Os outros campos seguem corrigiveis.
+	 */
 	public java.util.List<String> corrigirDados(me.clama.pedido.CorrecaoDeDados c, HmacDeIdentificador hmac) {
+		if (status == AGUARDANDO_CONFIRMACAO_EMAIL && c.email() != null && !c.email().equals(email)) {
+			throw new ErroDeNegocio(org.springframework.http.HttpStatus.CONFLICT, "correcao_bloqueada", "E-mail de freemium pendente nao se corrige.",
+					"Este pedido ainda aguarda a confirmação do e-mail. Peça para a pessoa fazer um novo pedido com o e-mail certo.");
+		}
 		var mudou = new java.util.ArrayList<String>();
 		if (c.nome() != null && !c.nome().equals(nome)) { nome = c.nome(); mudou.add("nome"); }
 		if (c.email() != null && !c.email().equals(email)) { alterarEmail(c.email(), hmac); mudou.add("email"); }
@@ -249,6 +268,7 @@ public class Pedido {
 		sexo = null;
 		pedidoOracao = null;
 		oracao = null;
+		risco = null;
 		consentimentoIp = null;
 		usuarioId = null;
 	}
@@ -273,8 +293,10 @@ public class Pedido {
 	public String getTelefone() { return telefone; }
 	public Short getIdade() { return idade; }
 	public String getSexo() { return sexo; }
+	public String getTema() { return tema; }
 	public String getPedidoOracao() { return pedidoOracao; }
 	public String getOracao() { return oracao; }
+	public Boolean getRisco() { return risco; }
 	public Instant getConsentidoEm() { return consentidoEm; }
 	public String getConsentimentoIp() { return consentimentoIp; }
 	public String getConsentimentoVersao() { return consentimentoVersao; }
